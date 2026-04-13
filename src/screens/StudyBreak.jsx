@@ -8,6 +8,7 @@ export default function StudyBreak({ questions, breakNumber, onComplete }) {
 
   const current = questions[currentIdx];
   const correct = results.filter((r) => r.correct).length;
+  const isLast = currentIdx + 1 >= questions.length;
 
   function handleAnswer(optionIdx) {
     if (showResult) return;
@@ -15,18 +16,17 @@ export default function StudyBreak({ questions, breakNumber, onComplete }) {
     setShowResult(true);
 
     const isCorrect = optionIdx === current.answer;
-    const newResults = [...results, { questionId: current.id, correct: isCorrect }];
-    setResults(newResults);
+    setResults((prev) => [...prev, { questionId: current.id, correct: isCorrect }]);
+  }
 
-    setTimeout(() => {
-      if (currentIdx + 1 >= questions.length) {
-        onComplete(newResults);
-        return;
-      }
-      setSelected(null);
-      setShowResult(false);
-      setCurrentIdx((i) => i + 1);
-    }, 2000);
+  function handleNext() {
+    if (isLast) {
+      onComplete(results);
+      return;
+    }
+    setSelected(null);
+    setShowResult(false);
+    setCurrentIdx((i) => i + 1);
   }
 
   return (
@@ -65,17 +65,24 @@ export default function StudyBreak({ questions, breakNumber, onComplete }) {
         </div>
 
         {showResult && (
-          <div className={`study-feedback ${selected === current.answer ? 'correct' : 'wrong'}`}>
-            {selected === current.answer ? (
-              <span className="feedback-icon">&#10004;</span>
-            ) : (
-              <span className="feedback-icon">&#x2716;</span>
-            )}
-            <p className="study-explanation">{current.explanation}</p>
-            {selected === current.answer && (
-              <span className="coin-earned">+10 &#x1FA99;</span>
-            )}
-          </div>
+          <>
+            <div className={`study-feedback ${selected === current.answer ? 'correct' : 'wrong'}`}>
+              {selected === current.answer ? (
+                <span className="feedback-icon">&#10004;</span>
+              ) : (
+                <span className="feedback-icon">&#x2716;</span>
+              )}
+              <div className="feedback-body">
+                <p className="study-explanation">{current.explanation}</p>
+                {selected === current.answer && (
+                  <span className="coin-earned">+10 &#x1FA99;</span>
+                )}
+              </div>
+            </div>
+            <button className="btn btn-primary" onClick={handleNext}>
+              {isLast ? 'See Results' : 'Next Question'}
+            </button>
+          </>
         )}
       </div>
     </div>

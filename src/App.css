@@ -499,12 +499,42 @@ body {
 /* Game Screen */
 .game-screen {
   min-height: 100vh;
-  background: #1a1a2e;
+  background: linear-gradient(180deg, #0f2027 0%, #203a43 60%, #2c5364 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   color: white;
   position: relative;
+  padding-bottom: 20px;
+}
+
+.game-screen.v2 {
+  background: linear-gradient(180deg, #102a43 0%, #1f4068 60%, #2c5364 100%);
+}
+
+.phase-banner {
+  width: 100%;
+  max-width: 720px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  padding: 6px 0;
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  margin: 4px 0;
+  border-radius: 6px;
+}
+
+.phase-banner.batting {
+  background: linear-gradient(90deg, #27ae60, #2ecc71);
+}
+
+.field-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  padding: 0 8px;
 }
 
 .scoreboard {
@@ -562,6 +592,18 @@ body {
   border-radius: 8px;
   margin: 8px 0;
   cursor: crosshair;
+}
+
+.game-field.v2 {
+  width: 100%;
+  max-width: 720px;
+  aspect-ratio: 8 / 5;
+  border-radius: 12px;
+  margin: 8px 0;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255,255,255,0.08);
+  display: block;
 }
 
 .batter-info {
@@ -641,35 +683,82 @@ body {
 }
 
 /* Did You Know */
-.dyk-card {
+.dyk-backdrop {
   position: fixed;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.95);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.dyk-card {
+  position: relative;
+  background: #fff;
   color: var(--text);
-  padding: 16px 24px;
-  border-radius: 16px;
-  max-width: 380px;
-  width: 90%;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-  z-index: 90;
-  animation: slideUp 0.4s ease-out;
+  padding: 28px 28px 24px;
+  border-radius: 20px;
+  max-width: 460px;
+  width: 100%;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   text-align: center;
+  border: 4px solid var(--gold);
+}
+
+.dyk-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: #ecf0f1;
+  color: var(--text);
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 700;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.dyk-close:hover {
+  background: var(--red);
+  color: #fff;
+}
+
+.dyk-hint {
+  margin-top: 14px;
+  font-size: 0.85rem;
+  color: var(--text-light);
+  font-style: italic;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .dyk-label {
-  font-size: 0.8rem;
+  display: block;
+  font-size: 0.85rem;
   font-weight: 700;
-  color: var(--blue);
+  color: var(--orange);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
 }
 
 .dyk-fact {
   margin-top: 6px;
-  font-size: 1rem;
-  line-height: 1.4;
+  font-size: 1.2rem;
+  line-height: 1.45;
+  font-weight: 500;
 }
 
 @keyframes slideUp {
@@ -988,4 +1077,142 @@ body {
   font-size: 1.3rem;
   font-weight: 700;
   color: var(--orange);
+}
+
+/* Swing type selector */
+.swing-types {
+  width: 100%;
+  max-width: 720px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 8px 12px 4px;
+}
+
+.swing-type-btn {
+  font-family: 'Fredoka', sans-serif;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 10px 6px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s, background 0.15s, border-color 0.15s;
+}
+
+.swing-type-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.swing-type-btn:active {
+  transform: scale(0.96);
+}
+
+.swing-type-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.swing-type-btn.active {
+  border-color: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
+}
+
+/* Feedback body wrap (for the tap-to-continue explanation) */
+.feedback-body {
+  flex: 1;
+  text-align: left;
+}
+
+/* AI Batting screen */
+.ai-batting-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: linear-gradient(180deg, #2c3e50 0%, #1a1a2e 100%);
+  color: #fff;
+  gap: 16px;
+}
+
+.ai-batting-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+}
+
+.ai-batting-label {
+  font-weight: 800;
+  color: var(--red);
+  letter-spacing: 2px;
+  font-size: 0.85rem;
+}
+
+.ai-score-pill {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 6px 12px;
+  border-radius: 14px;
+  font-weight: 700;
+}
+
+.ai-count {
+  font-size: 0.9rem;
+  color: #bdc3c7;
+}
+
+.ai-play-card {
+  background: var(--card);
+  color: var(--text);
+  border-radius: 16px;
+  padding: 28px 24px;
+  max-width: 460px;
+  width: 100%;
+  margin: auto;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.ai-play-description {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+
+.ai-play-hint {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  font-style: italic;
+  margin-bottom: 18px;
+}
+
+/* Inning break screen */
+.inning-break-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+.inning-break-card {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 28px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.inning-sub {
+  color: var(--text-light);
+  margin: 8px 0 20px;
 }

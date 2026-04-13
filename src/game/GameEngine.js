@@ -4,7 +4,6 @@ export const GAME_PHASES = {
   BATTING: 'BATTING',
   PITCH_INCOMING: 'PITCH_INCOMING',
   SWING_RESULT: 'SWING_RESULT',
-  PLAY_RESULT: 'PLAY_RESULT',
   DID_YOU_KNOW: 'DID_YOU_KNOW',
   HALF_INNING_OVER: 'HALF_INNING_OVER',
   AI_BATTING: 'AI_BATTING',
@@ -16,24 +15,22 @@ export const GAME_PHASES = {
 export function createGameState(profile) {
   return {
     inning: 1,
-    isTopHalf: true, // true = player bats, false = AI bats
+    isTopHalf: true,
     outs: 0,
     strikes: 0,
     balls: 0,
     playerScore: 0,
     aiScore: 0,
-    bases: [false, false, false], // 1st, 2nd, 3rd
+    bases: [false, false, false],
     currentBatterIndex: 0,
     phase: GAME_PHASES.BATTING,
-    lineup: profile.lineup.map((id) => profile.roster.find((p) => p.id === id)),
+    lineup: profile.lineup.map((id) => profile.roster.find((p) => p.id === id)).filter(Boolean),
     studyBreakNumber: 0,
     coinsEarned: 0,
     studyBreakResults: [],
     pitchLocation: null,
     pitchType: null,
-    swingTiming: null,
     lastPlayDescription: '',
-    gameLog: [],
   };
 }
 
@@ -41,55 +38,92 @@ export function generatePitch(aiDifficulty) {
   const types = ['Fastball', 'Curveball', 'Changeup', 'Slider'];
   const type = types[Math.floor(Math.random() * types.length)];
 
-  // Location: 0 = center of zone, 1 = edge. >1 = ball
-  const x = (Math.random() - 0.5) * 2; // -1 to 1
-  const y = (Math.random() - 0.5) * 2; // -1 to 1
+  // Location in strike zone coords: -1..1 means edges of zone, >1 means outside
+  const baseX = (Math.random() - 0.5) * 2;
+  const baseY = (Math.random() - 0.5) * 2;
 
-  // Ball probability increases with difficulty
-  const isBall = Math.random() < 0.25 + (aiDifficulty * 0.03);
+  // Ball probability tempered so early games feel fair
+  const isBall = Math.random() < 0.3 + aiDifficulty * 0.02;
 
   return {
     type,
-    x: isBall ? x * 1.5 : x * 0.8,
-    y: isBall ? y * 1.5 : y * 0.8,
-    speed: 0.5 + (aiDifficulty * 0.05), // affects timing window
+    x: isBall ? baseX * 1.6 : baseX * 0.75,
+    y: isBall ? baseY * 1.6 : baseY * 0.75,
+    // speed is a scalar 0..1 used to pick pitch duration in ms
+    speed: Math.min(1, 0.25 + aiDifficulty * 0.07),
     isStrike: !isBall,
   };
 }
 
-export function calculateSwingResult(timing, pitch, batter) {
-  // timing: 0 = perfect, higher = worse (0-1 scale)
-  // Returns: hit type or miss
+// Map team strength to pitch duration in ms (lower = faster = harder)
+export function pitchDurationMs(teamAvg) {
+  // Starts slow (~2000ms) at avg 3, ramps to ~900ms at avg 9
+  const clamped = Math.max(2, Math.min(10, teamAvg));
+  return Math.round(2000 - (clamped - 3) * 150);
+}
 
-  const contactChance = (batter.batting / 10) * (1 - timing * 0.8);
+// Swing type modifiers
+// - normal: baseline
+// - power: bigger payoff, more miss risk
+// - bunt: tiny window, always soft contact if made
+// - half: safer (no swinging strike on close pitches), less power
+const SWING_PROFILES = {
+  normal: { contactMul: 1.0, powerMul: 1.0, missMul: 1.0, label: 'Normal' },
+  power:  { contactMul: 0.8, powerMul: 1.6, missMul: 1.4, label: 'Power' },
+  bunt:   { contactMul: 0.6, powerMul: 0.3, missMul: 1.2, label: 'Bunt' },
+  half:   { contactMul: 1.1, powerMul: 0.6, missMul: 0.6, label: 'Half Swing' },
+};
 
-  if (timing > 0.7 || Math.random() > contactChance) {
+export function calculateSwingResult(timing, pitch, batter, swingType = 'normal') {
+  // timing: 0 = perfect, 1 = worst
+  const profile = SWING_PROFILES[swingType] || SWING_PROFILES.normal;
+
+  // Pitch in zone? Distance from zone center (0,0)
+  const pitchDist = Math.sqrt(pitch.x * pitch.x + pitch.y * pitch.y);
+
+  // Chasing a ball outside the zone increases miss chance
+  const chasePenalty = Math.max(0, pitchDist - 1) * 0.4;
+  const effectiveTiming = Math.min(1, timing + chasePenalty);
+
+  const contactChance = (batter.batting / 10) * (1 - effectiveTiming * 0.85) * profile.contactMul;
+
+  // Bunt: any contact becomes a bunt-single if well-timed, else a foul or miss
+  if (swingType === 'bunt') {
+    if (effectiveTiming > 0.4 || Math.random() > contactChance) {
+      return { type: 'miss', description: 'Missed the bunt!' };
+    }
+    if (effectiveTiming > 0.25) {
+      return { type: 'foul', description: 'Bunt foul.' };
+    }
+    return { type: 'single', description: 'Bunt single!', bases: 1 };
+  }
+
+  if (effectiveTiming > 0.75 * profile.missMul || Math.random() > contactChance) {
     return { type: 'miss', description: 'Swing and a miss!' };
   }
 
-  if (timing > 0.5) {
+  if (effectiveTiming > 0.5) {
     return Math.random() < 0.6
       ? { type: 'foul', description: 'Foul ball!' }
-      : { type: 'groundout', description: 'Ground ball... out!', isOut: true };
+      : { type: 'groundout', description: 'Grounder... out!', isOut: true };
   }
 
-  // Good contact - determine outcome
-  const quality = (1 - timing) * (batter.batting / 10);
+  const quality = (1 - effectiveTiming) * (batter.batting / 10) * profile.powerMul;
   const roll = Math.random();
 
-  if (quality > 0.85 && roll < 0.3) {
+  if (quality > 0.8 && roll < 0.35) {
     return { type: 'homerun', description: 'HOME RUN!', bases: 4 };
   }
-  if (quality > 0.7 && roll < 0.3) {
-    return { type: 'triple', description: 'Triple! All the way to the wall!', bases: 3 };
+  if (quality > 0.65 && roll < 0.35) {
+    return { type: 'triple', description: 'Triple! To the wall!', bases: 3 };
   }
-  if (quality > 0.5 && roll < 0.4) {
-    return { type: 'double', description: 'Double! Into the gap!', bases: 2 };
+  if (quality > 0.45 && roll < 0.45) {
+    return { type: 'double', description: 'Double! In the gap!', bases: 2 };
   }
-  if (roll < 0.55) {
+  if (roll < 0.6) {
     return { type: 'single', description: 'Base hit!', bases: 1 };
   }
-  if (roll < 0.75) {
+  if (roll < 0.78) {
     return { type: 'flyout', description: 'Fly ball... caught! Out!', isOut: true };
   }
   return { type: 'groundout', description: 'Grounder... thrown out!', isOut: true };
@@ -100,24 +134,18 @@ export function advanceRunners(bases, hitBases) {
   const newBases = [false, false, false];
 
   if (hitBases === 4) {
-    // Home run - all runners score
     runs = 1 + bases.filter(Boolean).length;
     return { newBases, runs };
   }
 
-  // Move existing runners
   for (let i = 2; i >= 0; i--) {
     if (bases[i]) {
       const newPos = i + hitBases;
-      if (newPos >= 3) {
-        runs++;
-      } else {
-        newBases[newPos] = true;
-      }
+      if (newPos >= 3) runs++;
+      else newBases[newPos] = true;
     }
   }
 
-  // Place batter
   if (hitBases > 0 && hitBases < 4) {
     newBases[hitBases - 1] = true;
   }
@@ -125,30 +153,86 @@ export function advanceRunners(bases, hitBases) {
   return { newBases, runs };
 }
 
-export function simulateAIHalfInning(playerTeamAvg) {
-  // Simple simulation: AI gets 0-4 runs based on difficulty vs player defense
-  const difficulty = Math.max(1, playerTeamAvg - 1); // AI slightly weaker than player
-  let runs = 0;
-  let hits = 0;
+// Step-by-step AI half-inning so kids can SEE defense happening.
+// Returns an ordered list of plays that will be stepped through one tap at a time.
+export function simulateAIHalfInningSteps(playerTeamAvg) {
+  const difficulty = Math.max(1, playerTeamAvg - 1);
+  const steps = [];
   let outs = 0;
+  let bases = [false, false, false];
+  let runs = 0;
+  let runsThisInning = 0;
+  let batter = 1;
 
-  while (outs < 3) {
+  while (outs < 3 && steps.length < 12) {
     const roll = Math.random();
-    if (roll < 0.15 + difficulty * 0.02) {
-      runs += Math.random() < 0.1 ? 2 : 1; // occasional multi-run hit
-      hits++;
-    } else if (roll < 0.65) {
+    let play;
+
+    if (roll < 0.08 + difficulty * 0.015) {
+      // Home run
+      const r = 1 + bases.filter(Boolean).length;
+      runs = r;
+      runsThisInning += r;
+      bases = [false, false, false];
+      play = { description: `Batter ${batter}: HOME RUN! ${r} run${r > 1 ? 's' : ''} score.`, kind: 'hr' };
+    } else if (roll < 0.18 + difficulty * 0.02) {
+      // Extra-base hit (double)
+      const { newBases, runs: r } = advanceRunners(bases, 2);
+      bases = newBases;
+      bases[1] = true; // batter to second
+      runs = r;
+      runsThisInning += r;
+      play = { description: `Batter ${batter}: Double into the gap.${r ? ` ${r} scored.` : ''}`, kind: 'hit' };
+    } else if (roll < 0.35 + difficulty * 0.02) {
+      // Single
+      const { newBases, runs: r } = advanceRunners(bases, 1);
+      bases = newBases;
+      runs = r;
+      runsThisInning += r;
+      play = { description: `Batter ${batter}: Line-drive single.${r ? ` ${r} scored.` : ''}`, kind: 'hit' };
+    } else if (roll < 0.45) {
+      // Walk
+      const { newBases } = advanceRunners(bases, 1);
+      bases = newBases;
+      runs = 0;
+      play = { description: `Batter ${batter}: Walk.`, kind: 'walk' };
+    } else if (roll < 0.72) {
       outs++;
+      runs = 0;
+      play = { description: `Batter ${batter}: Grounded out.`, kind: 'out' };
+    } else if (roll < 0.92) {
+      outs++;
+      runs = 0;
+      play = { description: `Batter ${batter}: Fly ball, caught.`, kind: 'out' };
     } else {
-      hits++;
-      if (Math.random() < 0.3) {
-        // runner scores on a hit
-        runs += 1;
-      }
+      outs++;
+      runs = 0;
+      play = { description: `Batter ${batter}: Strikeout!`, kind: 'K' };
     }
+
+    steps.push({
+      ...play,
+      runs,
+      outs,
+      bases: [...bases],
+    });
+    batter++;
   }
 
-  return { runs: Math.min(runs, 5), hits, description: `AI scored ${runs} run${runs !== 1 ? 's' : ''} on ${hits} hit${hits !== 1 ? 's' : ''}` };
+  // Force at least 3 outs
+  while (outs < 3) {
+    outs++;
+    steps.push({
+      description: `Batter ${batter}: Routine out.`,
+      kind: 'out',
+      runs: 0,
+      outs,
+      bases,
+    });
+    batter++;
+  }
+
+  return { steps, totalRuns: runsThisInning };
 }
 
 export function checkMercyRule(playerScore, aiScore) {
