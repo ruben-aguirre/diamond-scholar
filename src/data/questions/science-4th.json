@@ -1,0 +1,615 @@
+{
+  "subject": "Science",
+  "topic": "Human Body / Anatomy",
+  "grade": 4,
+  "source": "Behold and See, 4th Edition - Catholic Heritage Curricula",
+  "questions": [
+    {
+      "id": "sci4-001",
+      "chapter": "Brain & Central Nervous System",
+      "question": "About how much will your brain weigh when you are fully grown?",
+      "options": ["1 pound", "2 pounds", "3 pounds", "5 pounds"],
+      "answer": 2,
+      "explanation": "An adult brain weighs about 3 pounds, which is roughly the weight of a cantaloupe."
+    },
+    {
+      "id": "sci4-002",
+      "chapter": "Brain & Central Nervous System",
+      "question": "What is the name of the main nerve pathway that carries messages to and from the brain?",
+      "options": ["The femur", "The spinal cord", "The esophagus", "The trachea"],
+      "answer": 1,
+      "explanation": "The spinal cord is a bundle of nerve fibers about as thick as a pencil that relays messages between your brain and the rest of your body."
+    },
+    {
+      "id": "sci4-003",
+      "chapter": "Brain & Central Nervous System",
+      "question": "What are the three main parts of the brain?",
+      "options": [
+        "Cerebrum, cerebellum, brain stem",
+        "Skull, spine, nerves",
+        "Left brain, right brain, middle brain",
+        "Cortex, marrow, membrane"
+      ],
+      "answer": 0,
+      "explanation": "The three main parts are the cerebrum (thinking), cerebellum (coordination), and brain stem (automatic functions like breathing)."
+    },
+    {
+      "id": "sci4-004",
+      "chapter": "Brain & Central Nervous System",
+      "question": "Which part of the brain is responsible for intelligence, creativity, and some emotions?",
+      "options": ["The brain stem", "The cerebellum", "The cerebrum", "The spinal cord"],
+      "answer": 2,
+      "explanation": "The cerebrum is the largest part of your brain and handles thinking, creativity, memory, and emotions."
+    },
+    {
+      "id": "sci4-005",
+      "chapter": "Brain & Central Nervous System",
+      "question": "Which part of the brain is in charge of coordinating your muscles?",
+      "options": ["The cerebrum", "The cerebellum", "The brain stem", "The spinal cord"],
+      "answer": 1,
+      "explanation": "The cerebellum controls coordination and balance, helping your muscles work together smoothly."
+    },
+    {
+      "id": "sci4-006",
+      "chapter": "Brain & Central Nervous System",
+      "question": "Which part of the brain attaches to the spinal cord and controls automatic movements like breathing?",
+      "options": ["The cerebrum", "The cerebellum", "The brain stem", "The skull"],
+      "answer": 2,
+      "explanation": "The brain stem connects to the spinal cord and controls things your body does automatically, like breathing and heartbeat."
+    },
+    {
+      "id": "sci4-007",
+      "chapter": "Brain & Central Nervous System",
+      "question": "When did your brain and nervous system begin to develop in your mother's womb?",
+      "options": ["During the last three months", "During the first three months", "At birth", "During the middle three months"],
+      "answer": 1,
+      "explanation": "Your brain and nervous system began developing during the first three months in your mother's womb."
+    },
+    {
+      "id": "sci4-008",
+      "chapter": "Brain & Central Nervous System",
+      "question": "What gas in the air is vital to brain cell function?",
+      "options": ["Carbon dioxide", "Nitrogen", "Oxygen", "Helium"],
+      "answer": 2,
+      "explanation": "Oxygen is vital for brain cells. The brain uses about 20 percent of the oxygen you breathe in!"
+    },
+    {
+      "id": "sci4-009",
+      "chapter": "Circulatory System",
+      "question": "What are the three types of blood vessels in your body?",
+      "options": [
+        "Arteries, veins, capillaries",
+        "Tubes, pipes, channels",
+        "Large, medium, small vessels",
+        "Red vessels, blue vessels, white vessels"
+      ],
+      "answer": 0,
+      "explanation": "Arteries carry blood away from the heart, veins carry blood back to the heart, and tiny capillaries connect them."
+    },
+    {
+      "id": "sci4-010",
+      "chapter": "Circulatory System",
+      "question": "About how many red blood cells die in the adult human body every second?",
+      "options": ["100", "10,000", "2-3 million", "1 billion"],
+      "answer": 2,
+      "explanation": "About 2-3 million red blood cells die every second, but the same number are made in your bone marrow each second!"
+    },
+    {
+      "id": "sci4-011",
+      "chapter": "Circulatory System",
+      "question": "How many round trips of the body does each red blood cell make before it dies?",
+      "options": ["About 100", "About 1,000", "About 25,000", "About 250,000"],
+      "answer": 3,
+      "explanation": "Each red blood cell makes approximately 250,000 round trips through your body before returning to the bone marrow to die."
+    },
+    {
+      "id": "sci4-012",
+      "chapter": "Circulatory System",
+      "question": "How long can a single red blood cell live as it circulates through your body?",
+      "options": ["About 1 week", "About 1 month", "About 4 months", "About 1 year"],
+      "answer": 2,
+      "explanation": "Each red blood cell lives for about four months while it circulates through the body, feeding a trillion other cells."
+    },
+    {
+      "id": "sci4-013",
+      "chapter": "Respiratory System",
+      "question": "What is the name of the muscle that moves up and down to help the lungs breathe?",
+      "options": ["The bicep", "The diaphragm", "The heart", "The ribcage"],
+      "answer": 1,
+      "explanation": "The diaphragm is a dome-shaped muscle below your lungs that contracts and relaxes to help you breathe."
+    },
+    {
+      "id": "sci4-014",
+      "chapter": "Respiratory System",
+      "question": "What is the epiglottis?",
+      "options": [
+        "A bone in your throat",
+        "A type of white blood cell",
+        "A flap that covers your windpipe when you swallow",
+        "The tube that leads to your stomach"
+      ],
+      "answer": 2,
+      "explanation": "The epiglottis is a small flap that covers your windpipe (trachea) when you swallow food, so food goes to your stomach instead of your lungs."
+    },
+    {
+      "id": "sci4-015",
+      "chapter": "Respiratory System",
+      "question": "What are the tiny air sacs in your lungs called?",
+      "options": ["Bronchi", "Alveoli", "Capillaries", "Ventricles"],
+      "answer": 1,
+      "explanation": "Alveoli are tiny air sacs in your lungs where oxygen enters your blood and carbon dioxide leaves. You have hundreds of millions of them!"
+    },
+    {
+      "id": "sci4-016",
+      "chapter": "Respiratory System",
+      "question": "What are the tubes called that branch off into each lung?",
+      "options": ["Alveoli", "Arteries", "Bronchi", "Tendons"],
+      "answer": 2,
+      "explanation": "The bronchi are two tubes that branch off from the trachea (windpipe) and lead into each lung."
+    },
+    {
+      "id": "sci4-017",
+      "chapter": "Respiratory System",
+      "question": "Approximately how many times do children breathe per minute when resting?",
+      "options": ["5-8 times", "12-14 times", "20-30 times", "50-60 times"],
+      "answer": 2,
+      "explanation": "Children breathe about 20-30 times per minute when resting, which is faster than adults."
+    },
+    {
+      "id": "sci4-018",
+      "chapter": "Respiratory System",
+      "question": "What gas does your body exhale as a waste product?",
+      "options": ["Oxygen", "Nitrogen", "Carbon dioxide", "Hydrogen"],
+      "answer": 2,
+      "explanation": "Your body breathes out carbon dioxide, which is a waste product made when your cells use oxygen for energy."
+    },
+    {
+      "id": "sci4-019",
+      "chapter": "Respiratory System",
+      "question": "Which lung is slightly larger than the other?",
+      "options": ["The left lung", "The right lung", "They are exactly the same size", "It depends on the person"],
+      "answer": 1,
+      "explanation": "The right lung is slightly larger than the left lung because the left side of your chest needs to make room for your heart."
+    },
+    {
+      "id": "sci4-020",
+      "chapter": "Respiratory System",
+      "question": "What is the name of the voice box in your throat?",
+      "options": ["The pharynx", "The larynx", "The trachea", "The esophagus"],
+      "answer": 1,
+      "explanation": "The larynx (voice box) contains your vocal cords, which vibrate when air passes over them to make sounds."
+    },
+    {
+      "id": "sci4-021",
+      "chapter": "Respiratory System",
+      "question": "How does a baby receive oxygen in the womb?",
+      "options": [
+        "The baby breathes air",
+        "Through the umbilical cord from the mother",
+        "The baby holds its breath",
+        "Through the baby's skin"
+      ],
+      "answer": 1,
+      "explanation": "A baby receives oxygen through the umbilical cord, which connects the baby to the mother's blood supply."
+    },
+    {
+      "id": "sci4-022",
+      "chapter": "Skeletal System",
+      "question": "How many bones are in the adult human body?",
+      "options": ["106", "156", "206", "306"],
+      "answer": 2,
+      "explanation": "Adults have 206 bones. Babies are born with about 270 bones, but some fuse together as you grow."
+    },
+    {
+      "id": "sci4-023",
+      "chapter": "Skeletal System",
+      "question": "What is the largest and strongest bone in your body?",
+      "options": ["The skull", "The spine", "The femur (thigh bone)", "The humerus (upper arm)"],
+      "answer": 2,
+      "explanation": "The femur (thigh bone) is the longest, largest, and strongest bone in your body."
+    },
+    {
+      "id": "sci4-024",
+      "chapter": "Skeletal System",
+      "question": "What hidden substance inside your bones makes new blood cells?",
+      "options": ["Cartilage", "Bone marrow", "Calcium", "Collagen"],
+      "answer": 1,
+      "explanation": "Bone marrow is the soft, jelly-like substance inside your bones that produces new blood cells."
+    },
+    {
+      "id": "sci4-025",
+      "chapter": "Skeletal System",
+      "question": "What is the name for the place where two bones meet and can bend or move?",
+      "options": ["A ligament", "A tendon", "A joint", "A fracture"],
+      "answer": 2,
+      "explanation": "A joint is where two or more bones meet. Joints allow your body to bend and move in different ways."
+    },
+    {
+      "id": "sci4-026",
+      "chapter": "Skeletal System",
+      "question": "What strong, flexible material covers the ends of bones at a joint?",
+      "options": ["Muscle", "Cartilage", "Skin", "Marrow"],
+      "answer": 1,
+      "explanation": "Cartilage is a smooth, flexible material that cushions the ends of bones so they don't grind against each other."
+    },
+    {
+      "id": "sci4-027",
+      "chapter": "Skeletal System",
+      "question": "What are the strong bands of tissue called that help hold joints in place?",
+      "options": ["Tendons", "Ligaments", "Muscles", "Nerves"],
+      "answer": 1,
+      "explanation": "Ligaments are tough, elastic bands of tissue that connect bones to other bones and help hold joints together."
+    },
+    {
+      "id": "sci4-028",
+      "chapter": "Skeletal System",
+      "question": "What is the helmet-shaped bone that protects your brain?",
+      "options": ["The sternum", "The cranium (skull)", "The pelvis", "The ribcage"],
+      "answer": 1,
+      "explanation": "The cranium (skull) is a helmet-shaped bone that surrounds and protects your brain."
+    },
+    {
+      "id": "sci4-029",
+      "chapter": "Skeletal System",
+      "question": "How many pairs of ribs protect your heart and lungs?",
+      "options": ["8 pairs", "10 pairs", "12 pairs", "14 pairs"],
+      "answer": 2,
+      "explanation": "You have 12 pairs of ribs (24 total) that form a cage to protect your heart and lungs."
+    },
+    {
+      "id": "sci4-030",
+      "chapter": "Muscular System",
+      "question": "Approximately how many skeletal muscles do you have in your body?",
+      "options": ["About 50", "About 200", "About 640", "About 1,000"],
+      "answer": 2,
+      "explanation": "You have approximately 640 skeletal muscles in your body that help you move."
+    },
+    {
+      "id": "sci4-031",
+      "chapter": "Muscular System",
+      "question": "What are the three different kinds of muscle tissue?",
+      "options": [
+        "Skeletal, smooth, cardiac",
+        "Strong, medium, weak",
+        "Arm, leg, core",
+        "Red, white, pink"
+      ],
+      "answer": 0,
+      "explanation": "The three types are skeletal (moves your bones), smooth (in organs like your stomach), and cardiac (your heart muscle)."
+    },
+    {
+      "id": "sci4-032",
+      "chapter": "Muscular System",
+      "question": "What is a tendon?",
+      "options": [
+        "A bone in your arm",
+        "A type of blood vessel",
+        "A tough cord that connects muscle to bone",
+        "A joint between two bones"
+      ],
+      "answer": 2,
+      "explanation": "A tendon is a tough, rope-like cord that attaches your muscles to your bones so muscles can move your skeleton."
+    },
+    {
+      "id": "sci4-033",
+      "chapter": "Muscular System",
+      "question": "What kind of muscle is the heart?",
+      "options": ["Skeletal muscle", "Smooth muscle", "Cardiac muscle", "Voluntary muscle"],
+      "answer": 2,
+      "explanation": "The heart is made of cardiac muscle, a special type of muscle found only in the heart that never gets tired."
+    },
+    {
+      "id": "sci4-034",
+      "chapter": "Muscular System",
+      "question": "What is the difference between voluntary and involuntary muscles?",
+      "options": [
+        "Voluntary muscles are bigger",
+        "You control voluntary muscles, but involuntary muscles work on their own",
+        "Involuntary muscles are stronger",
+        "There is no difference"
+      ],
+      "answer": 1,
+      "explanation": "Voluntary muscles (like your arm muscles) are ones you choose to move. Involuntary muscles (like your heart and stomach) work automatically without you thinking about it."
+    },
+    {
+      "id": "sci4-035",
+      "chapter": "Muscular System",
+      "question": "How are messages sent to your muscles so they can do their job?",
+      "options": [
+        "Through blood vessels",
+        "Through the bones",
+        "Through nerves from the brain",
+        "Through the skin"
+      ],
+      "answer": 2,
+      "explanation": "Your brain sends electrical messages through your nerves to tell your muscles when and how to move."
+    },
+    {
+      "id": "sci4-036",
+      "chapter": "Muscular System",
+      "question": "How do we strengthen our muscles?",
+      "options": [
+        "By sleeping more",
+        "By exercising and using them",
+        "By eating only protein",
+        "Muscles cannot be strengthened"
+      ],
+      "answer": 1,
+      "explanation": "Muscles get stronger when you exercise and use them regularly. The more you work a muscle, the stronger it becomes."
+    },
+    {
+      "id": "sci4-037",
+      "chapter": "Digestive System",
+      "question": "What does 'digestion' mean?",
+      "options": [
+        "Breathing in oxygen",
+        "The process of breaking down food so your body can use it",
+        "The movement of blood through your body",
+        "The growth of new bones"
+      ],
+      "answer": 1,
+      "explanation": "Digestion is the process of breaking down the food you eat into nutrients your body can absorb and use for energy."
+    },
+    {
+      "id": "sci4-038",
+      "chapter": "Digestive System",
+      "question": "What is the name of the tube that leads from your throat to your stomach?",
+      "options": ["The trachea", "The esophagus", "The bronchi", "The intestine"],
+      "answer": 1,
+      "explanation": "The esophagus is a muscular tube that pushes food from your throat down to your stomach using wave-like contractions."
+    },
+    {
+      "id": "sci4-039",
+      "chapter": "Digestive System",
+      "question": "What are the two purposes of saliva in digestion?",
+      "options": [
+        "Cooling food and adding flavor",
+        "Moistening food and beginning to break it down",
+        "Killing bacteria and whitening teeth",
+        "Warming food and changing its color"
+      ],
+      "answer": 1,
+      "explanation": "Saliva moistens food to make it easier to swallow and contains enzymes that begin breaking down starches."
+    },
+    {
+      "id": "sci4-040",
+      "chapter": "Digestive System",
+      "question": "Which is longer, the small intestine or the large intestine?",
+      "options": ["The large intestine", "The small intestine", "They are the same length", "It depends on the person"],
+      "answer": 1,
+      "explanation": "The small intestine is much longer (about 20 feet!) even though it's called 'small' because it's narrower than the large intestine."
+    },
+    {
+      "id": "sci4-041",
+      "chapter": "Digestive System",
+      "question": "What is the body's largest internal organ?",
+      "options": ["The stomach", "The heart", "The liver", "The lungs"],
+      "answer": 2,
+      "explanation": "The liver is the body's largest internal organ, weighing about 3 pounds. It performs over 500 functions!"
+    },
+    {
+      "id": "sci4-042",
+      "chapter": "Digestive System",
+      "question": "Which organ produces insulin, a hormone that regulates sugar in the blood?",
+      "options": ["The liver", "The stomach", "The pancreas", "The kidneys"],
+      "answer": 2,
+      "explanation": "The pancreas produces insulin, which helps control how much sugar is in your blood."
+    },
+    {
+      "id": "sci4-043",
+      "chapter": "Digestive System",
+      "question": "What is bile and what does it do?",
+      "options": [
+        "A bone that protects the stomach",
+        "A fluid that helps break down fats",
+        "A type of blood cell",
+        "A muscle in the intestine"
+      ],
+      "answer": 1,
+      "explanation": "Bile is a fluid made by the liver and stored in the gallbladder that helps break down fats in the food you eat."
+    },
+    {
+      "id": "sci4-044",
+      "chapter": "Urinary System",
+      "question": "Where are the kidneys located in your body?",
+      "options": [
+        "In your chest",
+        "In your lower back, one on each side of the spine",
+        "In your legs",
+        "In your head"
+      ],
+      "answer": 1,
+      "explanation": "Your two kidneys are located in your lower back, one on each side of your spine."
+    },
+    {
+      "id": "sci4-045",
+      "chapter": "Urinary System",
+      "question": "What two things do the kidneys do for the body?",
+      "options": [
+        "Digest food and absorb nutrients",
+        "Filter waste from the blood and balance water levels",
+        "Pump blood and deliver oxygen",
+        "Break down fat and build muscle"
+      ],
+      "answer": 1,
+      "explanation": "The kidneys filter waste products out of your blood and help balance the amount of water in your body."
+    },
+    {
+      "id": "sci4-046",
+      "chapter": "Urinary System",
+      "question": "About how much of your body mass is water?",
+      "options": ["About 25%", "About 40%", "About 60%", "About 90%"],
+      "answer": 2,
+      "explanation": "About 60% of your body weight is water. More than half of you is water!"
+    },
+    {
+      "id": "sci4-047",
+      "chapter": "Urinary System",
+      "question": "What is the name of the muscular bag that stretches to hold liquid waste?",
+      "options": ["The kidney", "The bladder", "The stomach", "The liver"],
+      "answer": 1,
+      "explanation": "The bladder is a muscular bag that stretches to store urine until you are ready to go to the bathroom."
+    },
+    {
+      "id": "sci4-048",
+      "chapter": "Urinary System",
+      "question": "How many ureters do you have, and what do they do?",
+      "options": [
+        "One, it connects the kidneys to the brain",
+        "Two, they carry urine from the kidneys to the bladder",
+        "Four, they filter blood",
+        "Two, they carry blood to the heart"
+      ],
+      "answer": 1,
+      "explanation": "You have two ureters, one from each kidney, that carry urine from the kidneys to the bladder."
+    },
+    {
+      "id": "sci4-049",
+      "chapter": "Skeletal System",
+      "question": "Humans have the same number of neck bones as which tall animal?",
+      "options": ["An elephant", "A giraffe", "A horse", "A dinosaur"],
+      "answer": 1,
+      "explanation": "Humans and giraffes both have 7 neck bones (cervical vertebrae). The giraffe's are just much longer!"
+    },
+    {
+      "id": "sci4-050",
+      "chapter": "Muscular System",
+      "question": "How many muscles does it take to frown?",
+      "options": ["13", "20", "34", "50"],
+      "answer": 2,
+      "explanation": "It takes 34 muscles to frown but only 13 to smile. Keep smiling!"
+    }
+  ],
+  "didYouKnow": [
+    {
+      "id": "dyk-001",
+      "chapter": "Brain & Central Nervous System",
+      "fact": "Your brain contains more water than blood. About 85 percent of your brain is water!"
+    },
+    {
+      "id": "dyk-002",
+      "chapter": "Brain & Central Nervous System",
+      "fact": "Your brain uses about 20 percent of all the oxygen you breathe in!"
+    },
+    {
+      "id": "dyk-003",
+      "chapter": "Brain & Central Nervous System",
+      "fact": "Your brain runs on the same amount of electrical power as a 20-watt lightbulb, but it's far more complex than any computer!"
+    },
+    {
+      "id": "dyk-004",
+      "chapter": "Brain & Central Nervous System",
+      "fact": "Your spinal cord is a bundle of nerve fibers that is about as thick as a pencil!"
+    },
+    {
+      "id": "dyk-005",
+      "chapter": "Circulatory System",
+      "fact": "About 2-3 million red blood cells die every second, and the same number are made in your bone marrow each second!"
+    },
+    {
+      "id": "dyk-006",
+      "chapter": "Circulatory System",
+      "fact": "Within a single tiny droplet of blood, there are about 5 million red blood cells!"
+    },
+    {
+      "id": "dyk-007",
+      "chapter": "Circulatory System",
+      "fact": "Each red blood cell makes about 250,000 trips around your body before it wears out!"
+    },
+    {
+      "id": "dyk-008",
+      "chapter": "Respiratory System",
+      "fact": "Your right lung is slightly larger than your left because your left side needs room for your heart!"
+    },
+    {
+      "id": "dyk-009",
+      "chapter": "Respiratory System",
+      "fact": "The surface area of your lungs, including all the air channels, is roughly the same size as half a tennis court!"
+    },
+    {
+      "id": "dyk-010",
+      "chapter": "Respiratory System",
+      "fact": "You lose about two cups of water every day just by breathing! That's the water vapor you see when you breathe on a cold window."
+    },
+    {
+      "id": "dyk-011",
+      "chapter": "Respiratory System",
+      "fact": "People who live high up in the mountains have larger lungs so they can take in more of the thinner air!"
+    },
+    {
+      "id": "dyk-012",
+      "chapter": "Skeletal System",
+      "fact": "Humans and giraffes have the same number of neck bones (7). The giraffe's are just much, much longer!"
+    },
+    {
+      "id": "dyk-013",
+      "chapter": "Skeletal System",
+      "fact": "The smallest bones in your body are found in your ear!"
+    },
+    {
+      "id": "dyk-014",
+      "chapter": "Skeletal System",
+      "fact": "When you are fully grown, your bones will be stronger than granite rock!"
+    },
+    {
+      "id": "dyk-015",
+      "chapter": "Skeletal System",
+      "fact": "If you walk one mile a day starting at age 10, you'll travel about 22,000 miles in your lifetime. That's about 50 million steps!"
+    },
+    {
+      "id": "dyk-016",
+      "chapter": "Skeletal System",
+      "fact": "The only bone in your body not connected to another bone is the hyoid, a U-shaped bone that holds your tongue!"
+    },
+    {
+      "id": "dyk-017",
+      "chapter": "Muscular System",
+      "fact": "Over the next 24 hours, the muscles in both of your eyes will move more than 100,000 times!"
+    },
+    {
+      "id": "dyk-018",
+      "chapter": "Muscular System",
+      "fact": "Taking just a single step uses about 200 muscles in your body!"
+    },
+    {
+      "id": "dyk-019",
+      "chapter": "Muscular System",
+      "fact": "It takes 34 muscles to frown but only 13 to smile. Keep smiling!"
+    },
+    {
+      "id": "dyk-020",
+      "chapter": "Muscular System",
+      "fact": "Without your muscles, your heart would not beat, you could not eat or breathe, and you could not move!"
+    },
+    {
+      "id": "dyk-021",
+      "chapter": "Digestive System",
+      "fact": "You eat about 1,885 pounds of food per year. That's about 60,000 pounds of food in a lifetime!"
+    },
+    {
+      "id": "dyk-022",
+      "chapter": "Digestive System",
+      "fact": "Muscles squeeze food down your esophagus in waves. Food would reach your stomach even if you were standing on your head!"
+    },
+    {
+      "id": "dyk-023",
+      "chapter": "Digestive System",
+      "fact": "Your liver performs over 500 functions, most of which involve controlling what should and shouldn't be in your blood!"
+    },
+    {
+      "id": "dyk-024",
+      "chapter": "Digestive System",
+      "fact": "An adult's stomach can hold approximately 1.5 quarts of food and liquid!"
+    },
+    {
+      "id": "dyk-025",
+      "chapter": "Urinary System",
+      "fact": "If your kidneys stopped working, waste substances would build up in your blood and poison your body within a few days!"
+    },
+    {
+      "id": "dyk-026",
+      "chapter": "Urinary System",
+      "fact": "More than half of your body weight is water!"
+    }
+  ]
+}
