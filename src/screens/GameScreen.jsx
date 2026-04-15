@@ -46,6 +46,64 @@ function getStudyQuestions(count = 5) {
   return selected;
 }
 
+// ---- Drawing helpers ----
+
+// Outline color used consistently across characters for the "bold-line cartoon" look
+const INK = '#1a1a1a';
+const INK_WIDTH = 2.5;
+
+function darken(hex, amount = 0.3) {
+  if (!hex) return '#555';
+  const c = hex.replace('#', '');
+  if (c.length !== 6) return hex;
+  const r = Math.max(0, Math.round(parseInt(c.substr(0, 2), 16) * (1 - amount)));
+  const g = Math.max(0, Math.round(parseInt(c.substr(2, 2), 16) * (1 - amount)));
+  const b = Math.max(0, Math.round(parseInt(c.substr(4, 2), 16) * (1 - amount)));
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function lighten(hex, amount = 0.25) {
+  if (!hex) return '#aaa';
+  const c = hex.replace('#', '');
+  if (c.length !== 6) return hex;
+  const r = Math.min(255, Math.round(parseInt(c.substr(0, 2), 16) + (255 - parseInt(c.substr(0, 2), 16)) * amount));
+  const g = Math.min(255, Math.round(parseInt(c.substr(2, 2), 16) + (255 - parseInt(c.substr(2, 2), 16)) * amount));
+  const b = Math.min(255, Math.round(parseInt(c.substr(4, 2), 16) + (255 - parseInt(c.substr(4, 2), 16)) * amount));
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function inkStroke(ctx, width = INK_WIDTH) {
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = width;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+
+function outlinedCircle(ctx, x, y, r, fillColor, strokeWidth = INK_WIDTH) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = fillColor;
+  ctx.fill();
+  inkStroke(ctx, strokeWidth);
+}
+
+function outlinedRect(ctx, x, y, w, h, fillColor, strokeWidth = INK_WIDTH) {
+  ctx.fillStyle = fillColor;
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = strokeWidth;
+  ctx.strokeRect(x, y, w, h);
+}
+
+function outlinedPath(ctx, drawPath, fillColor, strokeWidth = INK_WIDTH) {
+  ctx.beginPath();
+  drawPath(ctx);
+  ctx.fillStyle = fillColor;
+  ctx.fill();
+  inkStroke(ctx, strokeWidth);
+}
+
 // ---- Drawing ----
 
 function drawSky(ctx) {
@@ -66,22 +124,52 @@ function drawSky(ctx) {
 }
 
 function drawOutfield(ctx) {
-  // Outfield wall
+  const wallTop = CH * 0.42;
+
+  // Upper deck / stadium roof silhouette (dark band)
+  ctx.fillStyle = '#2a3447';
+  ctx.fillRect(0, wallTop - 24, CW, 24);
+  // Light-tower hints
+  ctx.fillStyle = '#f1c40f';
+  [180, 450, 680].forEach((tx) => {
+    ctx.beginPath();
+    ctx.arc(tx, wallTop - 20, 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Bleacher crowd band (speckled)
+  ctx.fillStyle = '#7a6a55';
+  ctx.fillRect(0, wallTop, CW, 18);
+  // Crowd dots
+  for (let i = 0; i < 180; i++) {
+    const cx = Math.random() * CW;
+    const cy = wallTop + 3 + Math.random() * 12;
+    ctx.fillStyle = ['#e74c3c', '#3498db', '#f1c40f', '#ecf0f1', '#9b59b6'][i % 5];
+    ctx.fillRect(cx, cy, 2, 2);
+  }
+
+  // Outfield wall (green with padding strip)
   ctx.fillStyle = '#2e7d32';
-  ctx.fillRect(0, CH * 0.48, CW, 22);
+  ctx.fillRect(0, wallTop + 18, CW, 22);
+  // Padded top rail
+  ctx.fillStyle = '#f1c40f';
+  ctx.fillRect(0, wallTop + 18, CW, 3);
+  // Wall shadow / bottom line
   ctx.fillStyle = '#1b5e20';
-  ctx.fillRect(0, CH * 0.48 + 22, CW, 6);
-  // Grass
-  const grad = ctx.createLinearGradient(0, CH * 0.5, 0, CH);
-  grad.addColorStop(0, '#5DBB4A');
+  ctx.fillRect(0, wallTop + 38, CW, 4);
+
+  // Outfield grass
+  const grad = ctx.createLinearGradient(0, wallTop + 42, 0, CH);
+  grad.addColorStop(0, '#66C84D');
   grad.addColorStop(1, '#3E9A2E');
   ctx.fillStyle = grad;
-  ctx.fillRect(0, CH * 0.5 + 10, CW, CH * 0.5);
-  // Grass stripes
-  ctx.fillStyle = 'rgba(255,255,255,0.05)';
-  for (let i = 0; i < 8; i++) {
+  ctx.fillRect(0, wallTop + 42, CW, CH - (wallTop + 42));
+
+  // Mowed grass stripes (subtle)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+  for (let i = 0; i < 10; i++) {
     if (i % 2 === 0) continue;
-    ctx.fillRect(0, CH * 0.5 + 10 + i * 28, CW, 28);
+    ctx.fillRect(0, wallTop + 42 + i * 22, CW, 22);
   }
 }
 
@@ -127,100 +215,393 @@ function drawStrikeZone(ctx) {
 }
 
 function drawPitcher(ctx, teamColor) {
-  // Simple placeholder pitcher sprite (side view, small scale)
+  // Bold-line cartoon pitcher, mid-windup, facing the batter (left on screen)
   const x = MOUND.x;
   const y = MOUND.y;
-  // Legs
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(x - 8, y + 4, 6, 22);
-  ctx.fillRect(x + 2, y + 4, 6, 22);
-  // Body
-  ctx.fillStyle = teamColor || '#c0392b';
-  ctx.fillRect(x - 10, y - 18, 20, 26);
+  const jersey = teamColor || '#c0392b';
+  const jerseyDark = darken(jersey, 0.35);
+  const pants = '#F5F1E8';        // cream/white pants
+  const pantsDark = darken(pants, 0.15);
+  const skin = '#F2C8A0';
+  const skinDark = darken(skin, 0.2);
+
+  // Back leg (planted, right side of body facing us)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x + 2, y + 4);
+    c.lineTo(x + 14, y + 4);
+    c.lineTo(x + 16, y + 30);
+    c.lineTo(x + 4, y + 30);
+    c.closePath();
+  }, pants);
+  // Cleat
+  outlinedRect(ctx, x + 2, y + 28, 18, 5, INK);
+
+  // Front leg (kicking up, bent)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x - 10, y + 4);
+    c.lineTo(x - 2, y + 4);
+    c.lineTo(x - 14, y + 22);
+    c.lineTo(x - 20, y + 18);
+    c.closePath();
+  }, pants);
+  outlinedRect(ctx, x - 22, y + 16, 10, 5, INK);
+
+  // Torso (jersey) - slight lean forward
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x - 13, y - 14);
+    c.lineTo(x + 13, y - 16);
+    c.lineTo(x + 15, y + 6);
+    c.lineTo(x - 12, y + 6);
+    c.closePath();
+  }, jersey);
+
+  // Jersey shadow wedge
+  ctx.fillStyle = jerseyDark;
+  ctx.beginPath();
+  ctx.moveTo(x - 13, y - 14);
+  ctx.lineTo(x - 5, y - 15);
+  ctx.lineTo(x - 8, y + 6);
+  ctx.lineTo(x - 12, y + 6);
+  ctx.closePath();
+  ctx.fill();
+
+  // Glove-side arm (extended forward-left, toward batter)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x - 10, y - 8);
+    c.lineTo(x - 6, y - 14);
+    c.lineTo(x - 28, y - 4);
+    c.lineTo(x - 30, y + 2);
+    c.closePath();
+  }, jersey);
+  // Glove
+  outlinedCircle(ctx, x - 32, y - 2, 8, '#6b4a2b');
+
+  // Throwing arm (cocked back over head, holding ball)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x + 8, y - 14);
+    c.lineTo(x + 14, y - 12);
+    c.lineTo(x + 22, y - 28);
+    c.lineTo(x + 16, y - 32);
+    c.closePath();
+  }, jersey);
+  // Hand
+  outlinedCircle(ctx, x + 20, y - 30, 4, skin);
+
   // Head
-  ctx.fillStyle = '#F2C8A0';
+  outlinedCircle(ctx, x, y - 24, 10, skin);
+  // Cheek/jaw shadow
+  ctx.fillStyle = skinDark;
   ctx.beginPath();
-  ctx.arc(x, y - 25, 9, 0, Math.PI * 2);
+  ctx.arc(x + 4, y - 22, 7, Math.PI * 1.7, Math.PI * 0.4);
   ctx.fill();
-  // Cap
-  ctx.fillStyle = teamColor || '#c0392b';
-  ctx.beginPath();
-  ctx.arc(x, y - 27, 9, Math.PI, Math.PI * 2);
-  ctx.fill();
-  ctx.fillRect(x - 9, y - 27, 16, 3);
+
+  // Cap (crown)
+  outlinedPath(ctx, (c) => {
+    c.arc(x, y - 28, 10, Math.PI, Math.PI * 2);
+    c.lineTo(x + 10, y - 25);
+    c.lineTo(x - 10, y - 25);
+    c.closePath();
+  }, jersey);
   // Cap brim
-  ctx.fillRect(x - 14, y - 26, 8, 2);
-  // Glove arm
-  ctx.fillStyle = teamColor || '#c0392b';
-  ctx.fillRect(x - 18, y - 10, 8, 14);
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x - 14, y - 25);
+    c.lineTo(x + 2, y - 25);
+    c.lineTo(x + 1, y - 22);
+    c.lineTo(x - 12, y - 22);
+    c.closePath();
+  }, jerseyDark);
+
+  // Sunglasses bar (tiny detail, signature bold-line style)
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - 6, y - 23);
+  ctx.lineTo(x + 6, y - 23);
+  ctx.stroke();
 }
 
 function drawCatcher(ctx) {
+  // Bold-line cartoon catcher, squatting, seen from behind-right
   const x = PLATE.x - 55;
-  const y = PLATE.y - 18;
-  ctx.fillStyle = '#5c6b73';
-  ctx.fillRect(x - 10, y, 20, 26);
-  ctx.fillStyle = '#2c3e50';
-  ctx.beginPath();
-  ctx.arc(x, y - 4, 10, 0, Math.PI * 2);
-  ctx.fill();
-  // Mitt
-  ctx.fillStyle = '#6b4a2b';
-  ctx.beginPath();
-  ctx.arc(x + 18, y + 10, 9, 0, Math.PI * 2);
-  ctx.fill();
+  const y = PLATE.y - 6;
+  const jersey = '#4a5568';       // slate gray
+  const jerseyDark = darken(jersey, 0.35);
+  const gear = '#2c3e50';          // navy gear
+  const shinGuards = '#c0392b';    // red shin guards pop against gray
+
+  // Back/squat torso
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x - 14, y - 8);
+    c.lineTo(x + 14, y - 8);
+    c.lineTo(x + 16, y + 14);
+    c.lineTo(x - 16, y + 14);
+    c.closePath();
+  }, jersey);
+
+  // Chest protector shadow
+  ctx.fillStyle = jerseyDark;
+  ctx.fillRect(x - 10, y - 4, 20, 14);
+
+  // Shin guards / knees (squatting pose)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x - 18, y + 14);
+    c.lineTo(x - 6, y + 14);
+    c.lineTo(x - 10, y + 30);
+    c.lineTo(x - 22, y + 30);
+    c.closePath();
+  }, shinGuards);
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x + 6, y + 14);
+    c.lineTo(x + 18, y + 14);
+    c.lineTo(x + 22, y + 30);
+    c.lineTo(x + 10, y + 30);
+    c.closePath();
+  }, shinGuards);
+
+  // Shin guard stripes (horizontal lines for that padded look)
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.5;
+  [20, 24].forEach((offset) => {
+    ctx.beginPath();
+    ctx.moveTo(x - 20, y + offset);
+    ctx.lineTo(x - 8, y + offset);
+    ctx.moveTo(x + 8, y + offset);
+    ctx.lineTo(x + 20, y + offset);
+    ctx.stroke();
+  });
+
+  // Mitt (left arm extended toward pitcher, slightly up)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x + 14, y - 2);
+    c.lineTo(x + 24, y - 8);
+    c.lineTo(x + 30, y - 2);
+    c.lineTo(x + 22, y + 6);
+    c.closePath();
+  }, jersey);
+  // Mitt glove
+  outlinedCircle(ctx, x + 32, y - 2, 9, '#6b4a2b');
+  outlinedCircle(ctx, x + 32, y - 2, 4, '#4e3420');
+
+  // Helmet / catcher's mask (from behind)
+  outlinedCircle(ctx, x, y - 18, 12, gear);
+  // Mask cage hint (vertical bars on the side that's visible)
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.3;
+  [-4, 0, 4].forEach((ox) => {
+    ctx.beginPath();
+    ctx.moveTo(x + ox, y - 26);
+    ctx.lineTo(x + ox, y - 10);
+    ctx.stroke();
+  });
 }
 
 function drawBatter(ctx, teamColor, batSwingT) {
-  // batSwingT: 0 (cocked) .. 1 (extended), or null
+  // Bold-line cartoon batter in 3/4 back-profile stance.
+  // batSwingT: 0 (cocked over shoulder) .. 1 (extended across plate), or null = rest.
   const x = BATTER.x;
   const y = BATTER.y;
-  // Legs
-  ctx.fillStyle = '#2c3e50';
-  ctx.fillRect(x - 9, y + 10, 8, 30);
-  ctx.fillRect(x + 1, y + 10, 8, 30);
-  // Body
-  ctx.fillStyle = teamColor || '#1f3a93';
-  ctx.fillRect(x - 14, y - 22, 28, 36);
-  // Belt
-  ctx.fillStyle = '#222';
-  ctx.fillRect(x - 14, y + 10, 28, 4);
-  // Head
-  ctx.fillStyle = '#E7B691';
-  ctx.beginPath();
-  ctx.arc(x + 4, y - 32, 12, 0, Math.PI * 2);
-  ctx.fill();
-  // Helmet
-  ctx.fillStyle = teamColor || '#1f3a93';
-  ctx.beginPath();
-  ctx.arc(x + 4, y - 34, 13, Math.PI * 0.9, Math.PI * 2.1);
-  ctx.fill();
-  ctx.fillRect(x - 9, y - 36, 18, 4);
-  // Front arm / back arm (holding bat)
-  const handsX = x + 14;
-  const handsY = y - 18;
-  ctx.fillStyle = '#E7B691';
-  ctx.fillRect(handsX - 3, handsY - 3, 10, 10);
+  const jersey = teamColor || '#1f3a93';
+  const jerseyDark = darken(jersey, 0.35);
+  const pants = '#F5F1E8';         // cream pants
+  const pantsDark = darken(pants, 0.15);
+  const skin = '#E7B691';
+  const skinDark = darken(skin, 0.18);
 
-  // Bat: rotates from cocked (-70deg) to extended (+70deg)
-  const startAngle = -Math.PI * 0.55;
-  const endAngle = Math.PI * 0.45;
-  const t = batSwingT == null ? 0 : batSwingT; // at rest, cocked
+  // ---- Legs (athletic stance, slightly wide) ----
+  // Back leg (right side, planted)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x + 2, y + 10);
+    c.lineTo(x + 14, y + 12);
+    c.lineTo(x + 16, y + 42);
+    c.lineTo(x + 4, y + 42);
+    c.closePath();
+  }, pants);
+  // Back cleat
+  outlinedRect(ctx, x, y + 40, 20, 6, INK);
+
+  // Front leg (left side, slightly forward)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x - 14, y + 10);
+    c.lineTo(x - 2, y + 10);
+    c.lineTo(x - 4, y + 42);
+    c.lineTo(x - 18, y + 42);
+    c.closePath();
+  }, pants);
+  outlinedRect(ctx, x - 22, y + 40, 22, 6, INK);
+
+  // Pants shadow stripe (simple cel-shading)
+  ctx.fillStyle = pantsDark;
+  ctx.fillRect(x - 14, y + 10, 4, 32);
+  ctx.fillRect(x + 2, y + 12, 4, 30);
+
+  // Belt
+  outlinedRect(ctx, x - 16, y + 6, 32, 6, INK);
+
+  // ---- Torso (jersey, 3/4 back view - we see back-right of player) ----
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x - 16, y - 20);
+    c.lineTo(x + 16, y - 22);
+    c.lineTo(x + 18, y + 8);
+    c.lineTo(x - 16, y + 8);
+    c.closePath();
+  }, jersey);
+
+  // Jersey shadow (back/shoulder side, facing away from camera)
+  ctx.fillStyle = jerseyDark;
+  ctx.beginPath();
+  ctx.moveTo(x - 16, y - 20);
+  ctx.lineTo(x - 4, y - 21);
+  ctx.lineTo(x - 4, y + 8);
+  ctx.lineTo(x - 16, y + 8);
+  ctx.closePath();
+  ctx.fill();
+
+  // Jersey number on back (big, bold - signature cartoon sports look)
+  ctx.fillStyle = '#F5F1E8';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.font = 'bold 18px Fredoka, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('9', x + 2, y - 6);
+  ctx.strokeText('9', x + 2, y - 6);
+
+  // ---- Head (turned toward pitcher, 3/4 view from behind-right) ----
+  const headX = x + 2;
+  const headY = y - 32;
+  outlinedCircle(ctx, headX, headY, 13, skin);
+  // Jaw shadow (darker wedge on back side)
+  ctx.fillStyle = skinDark;
+  ctx.beginPath();
+  ctx.arc(headX - 3, headY + 2, 10, Math.PI * 1.6, Math.PI * 0.3);
+  ctx.fill();
+  // Ear hint
+  outlinedCircle(ctx, headX - 10, headY + 1, 3, skin, 1.5);
+
+  // ---- Helmet ----
+  // Crown (dome)
+  outlinedPath(ctx, (c) => {
+    c.arc(headX, headY - 2, 14, Math.PI * 0.95, Math.PI * 2.05);
+    c.closePath();
+  }, jersey);
+  // Helmet shadow stripe
+  ctx.fillStyle = jerseyDark;
+  ctx.beginPath();
+  ctx.arc(headX, headY - 2, 14, Math.PI * 0.95, Math.PI * 1.3);
+  ctx.lineTo(headX, headY - 2);
+  ctx.closePath();
+  ctx.fill();
+  // Helmet brim/visor (juts forward over eye)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(headX + 4, headY - 4);
+    c.lineTo(headX + 16, headY - 1);
+    c.lineTo(headX + 15, headY + 3);
+    c.lineTo(headX + 4, headY - 1);
+    c.closePath();
+  }, jerseyDark);
+  // Ear flap (side-protector on helmet, classic batting helmet detail)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(headX - 13, headY - 1);
+    c.lineTo(headX - 8, headY + 8);
+    c.lineTo(headX - 3, headY + 6);
+    c.lineTo(headX - 4, headY - 4);
+    c.closePath();
+  }, jersey);
+
+  // Sunglasses bar (signature bold-line detail)
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(headX + 2, headY);
+  ctx.lineTo(headX + 13, headY + 1);
+  ctx.stroke();
+
+  // ---- Arms holding bat ----
+  // Hands position depends on swing state
+  const t = batSwingT == null ? 0 : batSwingT;
+  // Cocked over back shoulder at t=0, extended across plate at t=1
+  const startAngle = -Math.PI * 0.65;  // bat up and back over shoulder
+  const endAngle = Math.PI * 0.55;     // bat extended forward
   const angle = startAngle + (endAngle - startAngle) * t;
 
+  const handsX = x + 10;
+  const handsY = y - 16;
+
+  // Back arm (connects shoulder to hands) - slight flex
+  const shoulderX = x + 10;
+  const shoulderY = y - 20;
+  outlinedPath(ctx, (c) => {
+    c.moveTo(shoulderX - 4, shoulderY);
+    c.lineTo(shoulderX + 6, shoulderY - 2);
+    c.lineTo(handsX + 4, handsY + 4);
+    c.lineTo(handsX - 4, handsY + 4);
+    c.closePath();
+  }, jersey);
+
+  // Front arm (opposite shoulder, over to hands)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x - 12, y - 18);
+    c.lineTo(x - 4, y - 20);
+    c.lineTo(handsX - 2, handsY + 4);
+    c.lineTo(handsX - 10, handsY + 6);
+    c.closePath();
+  }, jersey);
+
+  // Hands (skin)
+  outlinedCircle(ctx, handsX, handsY + 2, 6, skin);
+
+  // ---- Bat ----
   ctx.save();
   ctx.translate(handsX + 2, handsY + 2);
   ctx.rotate(angle);
-  // Bat handle
-  ctx.fillStyle = '#6b4a2b';
-  ctx.fillRect(0, -3, 54, 6);
-  // Bat barrel
+  // Bat barrel (thicker end, out past the grip)
+  ctx.fillStyle = '#C9A36B';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, -3.5);
+  ctx.lineTo(48, -6);
+  ctx.lineTo(66, -7);
+  ctx.lineTo(66, 7);
+  ctx.lineTo(48, 6);
+  ctx.lineTo(0, 3.5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Wood grain shadow stripe
   ctx.fillStyle = '#8B5E34';
-  ctx.fillRect(42, -5, 18, 10);
-  // Grip
+  ctx.beginPath();
+  ctx.moveTo(48, 2);
+  ctx.lineTo(66, 3);
+  ctx.lineTo(66, 7);
+  ctx.lineTo(48, 6);
+  ctx.closePath();
+  ctx.fill();
+  // Grip tape (black wrap near handle)
   ctx.fillStyle = '#222';
-  ctx.fillRect(0, -3, 6, 6);
+  ctx.fillRect(0, -4, 12, 8);
+  ctx.strokeRect(0, -4, 12, 8);
+  // Knob at end
+  ctx.beginPath();
+  ctx.arc(-2, 0, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#C9A36B';
+  ctx.fill();
+  ctx.stroke();
   ctx.restore();
+
+  // Swing streak effect during active swing
+  if (batSwingT != null && batSwingT > 0.1 && batSwingT < 0.9) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    const arcCenterX = handsX + 2;
+    const arcCenterY = handsY + 2;
+    ctx.arc(arcCenterX, arcCenterY, 48, startAngle, angle);
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 function drawBall(ctx, x, y, size = 7) {
