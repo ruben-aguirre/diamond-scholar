@@ -18,11 +18,13 @@ import scienceQuestions from '../data/questions/science-4th.json';
 const CW = 800;
 const CH = 500;
 
-// Scene anchor points
-const MOUND = { x: 560, y: 265 };
-const PLATE = { x: 210, y: 430 };
-const BATTER = { x: 165, y: 380 };
-const ZONE = { cx: 210, cy: 355, w: 90, h: 100 }; // strike zone rectangle (center + size)
+// Scene anchor points - CATCHER CAM PERSPECTIVE
+// Camera sits behind home plate looking toward center field.
+// Depth axis: far (small, high on screen) -> near (big, low on screen)
+const MOUND = { x: 400, y: 270 };        // pitcher's mound, centered in middle distance
+const PLATE = { x: 400, y: 475 };        // home plate, bottom center foreground
+const BATTER = { x: 560, y: 430 };       // right-handed batter, right of plate, large
+const ZONE = { cx: 395, cy: 370, w: 100, h: 130 }; // strike zone floats above the plate
 
 const SWING_TYPES = [
   { id: 'normal', label: 'Swing', color: '#3498db' },
@@ -124,481 +126,544 @@ function drawSky(ctx) {
 }
 
 function drawOutfield(ctx) {
-  const wallTop = CH * 0.42;
+  // Stadium wraps behind the field. Curved wall reads as "we're inside a stadium"
+  // rather than "we're in a 2D level." Higher on the sides, dips in the center
+  // where the camera's axis meets center field.
 
-  // Upper deck / stadium roof silhouette (dark band)
+  // Upper-deck shadow (pitched roofline that curves toward center)
   ctx.fillStyle = '#2a3447';
-  ctx.fillRect(0, wallTop - 24, CW, 24);
-  // Light-tower hints
+  ctx.beginPath();
+  ctx.moveTo(0, 140);
+  ctx.quadraticCurveTo(CW / 2, 200, CW, 140);
+  ctx.lineTo(CW, 185);
+  ctx.quadraticCurveTo(CW / 2, 240, 0, 185);
+  ctx.closePath();
+  ctx.fill();
+
+  // Light tower dots across roofline
   ctx.fillStyle = '#f1c40f';
-  [180, 450, 680].forEach((tx) => {
+  [80, 220, 360, 500, 640, 720].forEach((tx, i) => {
+    const ty = 155 + Math.abs((tx - CW / 2)) * -0.05 + 20;
     ctx.beginPath();
-    ctx.arc(tx, wallTop - 20, 3, 0, Math.PI * 2);
+    ctx.arc(tx, ty, 2.5, 0, Math.PI * 2);
     ctx.fill();
   });
 
-  // Bleacher crowd band (speckled)
-  ctx.fillStyle = '#7a6a55';
-  ctx.fillRect(0, wallTop, CW, 18);
-  // Crowd dots
-  for (let i = 0; i < 180; i++) {
-    const cx = Math.random() * CW;
-    const cy = wallTop + 3 + Math.random() * 12;
-    ctx.fillStyle = ['#e74c3c', '#3498db', '#f1c40f', '#ecf0f1', '#9b59b6'][i % 5];
-    ctx.fillRect(cx, cy, 2, 2);
+  // Scoreboard silhouette on roof (center)
+  ctx.fillStyle = '#1a252f';
+  ctx.fillRect(CW / 2 - 60, 168, 120, 22);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(CW / 2 - 60, 168, 120, 22);
+  // Fake LEDs on scoreboard
+  ctx.fillStyle = '#e74c3c';
+  for (let i = 0; i < 8; i++) {
+    ctx.fillRect(CW / 2 - 55 + i * 14, 173, 4, 4);
   }
 
-  // Outfield wall (green with padding strip)
+  // Bleacher crowd band - curved to match the wraparound feel
+  // Draw as a band that dips in the middle
+  ctx.fillStyle = '#7a6a55';
+  ctx.beginPath();
+  ctx.moveTo(0, 195);
+  ctx.quadraticCurveTo(CW / 2, 230, CW, 195);
+  ctx.lineTo(CW, 225);
+  ctx.quadraticCurveTo(CW / 2, 260, 0, 225);
+  ctx.closePath();
+  ctx.fill();
+
+  // Crowd speckle (deterministic positions so they don't flicker between frames)
+  const crowdColors = ['#e74c3c', '#3498db', '#f1c40f', '#ecf0f1', '#9b59b6', '#27ae60'];
+  for (let i = 0; i < 220; i++) {
+    const tx = (i * 37) % CW;
+    const centerOffset = (tx - CW / 2);
+    const curveDip = 30 - Math.abs(centerOffset * 0.05);
+    const ty = 205 + (i * 13) % 25 - curveDip * 0.3;
+    ctx.fillStyle = crowdColors[i % crowdColors.length];
+    ctx.fillRect(tx, ty, 2.5, 2.5);
+  }
+
+  // Outfield wall (green, curved - higher edges, lower center)
   ctx.fillStyle = '#2e7d32';
-  ctx.fillRect(0, wallTop + 18, CW, 22);
-  // Padded top rail
+  ctx.beginPath();
+  ctx.moveTo(0, 230);
+  ctx.quadraticCurveTo(CW / 2, 265, CW, 230);
+  ctx.lineTo(CW, 270);
+  ctx.quadraticCurveTo(CW / 2, 305, 0, 270);
+  ctx.closePath();
+  ctx.fill();
+
+  // Yellow padded top rail on the wall
   ctx.fillStyle = '#f1c40f';
-  ctx.fillRect(0, wallTop + 18, CW, 3);
-  // Wall shadow / bottom line
-  ctx.fillStyle = '#1b5e20';
-  ctx.fillRect(0, wallTop + 38, CW, 4);
+  ctx.beginPath();
+  ctx.moveTo(0, 230);
+  ctx.quadraticCurveTo(CW / 2, 265, CW, 230);
+  ctx.lineTo(CW, 234);
+  ctx.quadraticCurveTo(CW / 2, 269, 0, 234);
+  ctx.closePath();
+  ctx.fill();
 
-  // Outfield grass
-  const grad = ctx.createLinearGradient(0, wallTop + 42, 0, CH);
-  grad.addColorStop(0, '#66C84D');
-  grad.addColorStop(1, '#3E9A2E');
+  // Outfield grass - fills from wall down, gets brighter toward foreground
+  const grad = ctx.createLinearGradient(0, 270, 0, CH);
+  grad.addColorStop(0, '#4FA53A');       // darker far
+  grad.addColorStop(0.5, '#5DBB4A');     // mid
+  grad.addColorStop(1, '#6DCF52');       // brighter near
   ctx.fillStyle = grad;
-  ctx.fillRect(0, wallTop + 42, CW, CH - (wallTop + 42));
+  ctx.beginPath();
+  ctx.moveTo(0, 270);
+  ctx.quadraticCurveTo(CW / 2, 305, CW, 270);
+  ctx.lineTo(CW, CH);
+  ctx.lineTo(0, CH);
+  ctx.closePath();
+  ctx.fill();
 
-  // Mowed grass stripes (subtle)
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
-  for (let i = 0; i < 10; i++) {
+  // Mowed grass stripes - curve slightly to follow the field (perspective cue)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+  for (let i = 0; i < 7; i++) {
     if (i % 2 === 0) continue;
-    ctx.fillRect(0, wallTop + 42 + i * 22, CW, 22);
+    const stripeY = 285 + i * 28;
+    ctx.beginPath();
+    ctx.moveTo(0, stripeY);
+    ctx.quadraticCurveTo(CW / 2, stripeY + 15, CW, stripeY);
+    ctx.lineTo(CW, stripeY + 16);
+    ctx.quadraticCurveTo(CW / 2, stripeY + 31, 0, stripeY + 16);
+    ctx.closePath();
+    ctx.fill();
   }
 }
 
 function drawInfield(ctx) {
-  // Infield dirt arc around home
+  // Infield dirt - big foreground wedge that fans out toward the camera (lower = wider)
   ctx.fillStyle = '#D2A06B';
   ctx.beginPath();
-  ctx.ellipse(PLATE.x + 180, PLATE.y + 20, 460, 180, 0, Math.PI, 0, true);
-  ctx.fill();
-  // Pitcher's mound
-  ctx.fillStyle = '#C08B5C';
-  ctx.beginPath();
-  ctx.ellipse(MOUND.x, MOUND.y + 20, 55, 18, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Home plate
-  ctx.fillStyle = '#FFFFFF';
-  ctx.beginPath();
-  ctx.moveTo(PLATE.x - 30, PLATE.y);
-  ctx.lineTo(PLATE.x + 30, PLATE.y);
-  ctx.lineTo(PLATE.x + 30, PLATE.y + 14);
-  ctx.lineTo(PLATE.x, PLATE.y + 26);
-  ctx.lineTo(PLATE.x - 30, PLATE.y + 14);
+  ctx.moveTo(260, 305);                    // far-left edge near outfield
+  ctx.quadraticCurveTo(400, 340, 540, 305); // arc across back of infield
+  ctx.lineTo(760, CH);                      // bottom-right corner (close to camera)
+  ctx.lineTo(40, CH);                       // bottom-left corner
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 2;
+
+  // Foul lines - chalk lines converging toward home plate = perspective cues
+  ctx.strokeStyle = '#F5F1E8';
+  ctx.lineWidth = 3;
+  // Third-base line (from plate to left outfield)
+  ctx.beginPath();
+  ctx.moveTo(PLATE.x - 10, PLATE.y - 4);
+  ctx.lineTo(40, CH);
   ctx.stroke();
+  // First-base line (from plate to right outfield) - obscured by batter later
+  ctx.beginPath();
+  ctx.moveTo(PLATE.x + 10, PLATE.y - 4);
+  ctx.lineTo(760, CH);
+  ctx.stroke();
+
+  // Pitcher's mound - small because it's far (perspective)
+  ctx.fillStyle = '#C08B5C';
+  ctx.beginPath();
+  ctx.ellipse(MOUND.x, MOUND.y + 18, 55, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Mound rubber (white strip on top)
+  ctx.fillStyle = '#F5F1E8';
+  ctx.fillRect(MOUND.x - 10, MOUND.y + 15, 20, 3);
+
+  // Batter's box (chalk outline to the right of home plate where batter stands)
+  ctx.strokeStyle = 'rgba(245, 241, 232, 0.7)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(495, 430);     // near-left corner of box
+  ctx.lineTo(640, 430);     // near-right corner
+  ctx.lineTo(615, 490);     // far-right corner (perspective)
+  ctx.lineTo(460, 490);     // far-left corner (perspective)
+  ctx.closePath();
+  ctx.stroke();
+
+  // Home plate - pentagon, larger than before because it's close to camera
+  ctx.save();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(PLATE.x - 42, PLATE.y - 14);   // back-left corner
+  ctx.lineTo(PLATE.x + 42, PLATE.y - 14);   // back-right corner
+  ctx.lineTo(PLATE.x + 48, PLATE.y + 2);    // mid-right
+  ctx.lineTo(PLATE.x, PLATE.y + 18);        // point toward camera
+  ctx.lineTo(PLATE.x - 48, PLATE.y + 2);    // mid-left
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawStrikeZone(ctx) {
+  // Strike zone is the vertical "box" floating above home plate where the ball
+  // needs to pass through. In catcher cam it reads as a semi-transparent target
+  // plane hovering in mid-scene.
   const x = ZONE.cx - ZONE.w / 2;
   const y = ZONE.cy - ZONE.h / 2;
   ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+  // Soft fill so it feels like a target zone, not a drawn-on wall
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+  ctx.fillRect(x, y, ZONE.w, ZONE.h);
+  // Dashed bold outline
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
   ctx.lineWidth = 3;
   ctx.setLineDash([8, 6]);
   ctx.strokeRect(x, y, ZONE.w, ZONE.h);
+  // Center crosshair
   ctx.setLineDash([]);
-  // Subtle fill
-  ctx.fillStyle = 'rgba(255,255,255,0.08)';
-  ctx.fillRect(x, y, ZONE.w, ZONE.h);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(ZONE.cx - 6, ZONE.cy);
+  ctx.lineTo(ZONE.cx + 6, ZONE.cy);
+  ctx.moveTo(ZONE.cx, ZONE.cy - 6);
+  ctx.lineTo(ZONE.cx, ZONE.cy + 6);
+  ctx.stroke();
   ctx.restore();
 }
 
 function drawPitcher(ctx, teamColor) {
-  // Bold-line cartoon pitcher, mid-windup, facing the batter (left on screen)
+  // Catcher-cam view: pitcher is SMALL (far away on the mound), facing the camera
+  // head-on. We see his front, not his profile. Mid-windup pose: glove up,
+  // throwing arm back.
   const x = MOUND.x;
   const y = MOUND.y;
-  const jersey = teamColor || '#c0392b';
+  const jersey = '#c0392b';              // opponent jersey (red - contrasts with our team colors)
   const jerseyDark = darken(jersey, 0.35);
-  const pants = '#F5F1E8';        // cream/white pants
-  const pantsDark = darken(pants, 0.15);
+  const pants = '#F5F1E8';
+  const pantsDark = darken(pants, 0.2);
   const skin = '#F2C8A0';
-  const skinDark = darken(skin, 0.2);
 
-  // Back leg (planted, right side of body facing us)
+  // Legs (planted stance, both facing camera)
+  // Right leg (from viewer's perspective)
   outlinedPath(ctx, (c) => {
-    c.moveTo(x + 2, y + 4);
-    c.lineTo(x + 14, y + 4);
-    c.lineTo(x + 16, y + 30);
-    c.lineTo(x + 4, y + 30);
+    c.moveTo(x + 1, y + 4);
+    c.lineTo(x + 9, y + 4);
+    c.lineTo(x + 11, y + 22);
+    c.lineTo(x + 3, y + 22);
     c.closePath();
   }, pants);
-  // Cleat
-  outlinedRect(ctx, x + 2, y + 28, 18, 5, INK);
+  outlinedRect(ctx, x + 1, y + 20, 12, 4, INK);
 
-  // Front leg (kicking up, bent)
+  // Left leg
   outlinedPath(ctx, (c) => {
-    c.moveTo(x - 10, y + 4);
-    c.lineTo(x - 2, y + 4);
-    c.lineTo(x - 14, y + 22);
-    c.lineTo(x - 20, y + 18);
+    c.moveTo(x - 9, y + 4);
+    c.lineTo(x - 1, y + 4);
+    c.lineTo(x - 3, y + 22);
+    c.lineTo(x - 11, y + 22);
     c.closePath();
   }, pants);
-  outlinedRect(ctx, x - 22, y + 16, 10, 5, INK);
+  outlinedRect(ctx, x - 13, y + 20, 12, 4, INK);
 
-  // Torso (jersey) - slight lean forward
+  // Belt
+  outlinedRect(ctx, x - 11, y + 2, 22, 3, INK);
+
+  // Torso (facing camera)
   outlinedPath(ctx, (c) => {
-    c.moveTo(x - 13, y - 14);
-    c.lineTo(x + 13, y - 16);
-    c.lineTo(x + 15, y + 6);
-    c.lineTo(x - 12, y + 6);
+    c.moveTo(x - 12, y - 14);
+    c.lineTo(x + 12, y - 14);
+    c.lineTo(x + 11, y + 4);
+    c.lineTo(x - 11, y + 4);
     c.closePath();
   }, jersey);
-
-  // Jersey shadow wedge
+  // Shadow stripe down the left side (cel shading)
   ctx.fillStyle = jerseyDark;
-  ctx.beginPath();
-  ctx.moveTo(x - 13, y - 14);
-  ctx.lineTo(x - 5, y - 15);
-  ctx.lineTo(x - 8, y + 6);
-  ctx.lineTo(x - 12, y + 6);
-  ctx.closePath();
-  ctx.fill();
+  ctx.fillRect(x - 12, y - 14, 4, 18);
 
-  // Glove-side arm (extended forward-left, toward batter)
+  // Glove arm (raised/out, glove in front of chest - mid-windup)
   outlinedPath(ctx, (c) => {
-    c.moveTo(x - 10, y - 8);
-    c.lineTo(x - 6, y - 14);
-    c.lineTo(x - 28, y - 4);
-    c.lineTo(x - 30, y + 2);
+    c.moveTo(x - 12, y - 12);
+    c.lineTo(x - 5, y - 14);
+    c.lineTo(x - 2, y - 4);
+    c.lineTo(x - 10, y - 2);
     c.closePath();
   }, jersey);
-  // Glove
-  outlinedCircle(ctx, x - 32, y - 2, 8, '#6b4a2b');
+  // Glove (in front of torso, center)
+  outlinedCircle(ctx, x - 4, y - 4, 5, '#6b4a2b');
+  outlinedCircle(ctx, x - 4, y - 4, 2, '#4e3420');
 
-  // Throwing arm (cocked back over head, holding ball)
+  // Throwing arm (cocked back - up and to the right from camera view)
   outlinedPath(ctx, (c) => {
     c.moveTo(x + 8, y - 14);
     c.lineTo(x + 14, y - 12);
-    c.lineTo(x + 22, y - 28);
-    c.lineTo(x + 16, y - 32);
+    c.lineTo(x + 20, y - 22);
+    c.lineTo(x + 14, y - 24);
     c.closePath();
   }, jersey);
-  // Hand
-  outlinedCircle(ctx, x + 20, y - 30, 4, skin);
+  // Throwing hand (small circle - holding ball)
+  outlinedCircle(ctx, x + 17, y - 23, 3, skin);
 
-  // Head
-  outlinedCircle(ctx, x, y - 24, 10, skin);
-  // Cheek/jaw shadow
-  ctx.fillStyle = skinDark;
+  // Head (facing camera)
+  outlinedCircle(ctx, x, y - 22, 8, skin);
+
+  // Cap (crown + brim, seen from the front)
+  outlinedPath(ctx, (c) => {
+    c.arc(x, y - 26, 8, Math.PI, Math.PI * 2);
+    c.lineTo(x + 8, y - 23);
+    c.lineTo(x - 8, y - 23);
+    c.closePath();
+  }, jersey);
+  // Brim (front, wider than crown)
+  outlinedRect(ctx, x - 10, y - 23, 20, 3, jerseyDark);
+
+  // Simple face: two eye dots (bold-line cartoon style)
+  ctx.fillStyle = INK;
   ctx.beginPath();
-  ctx.arc(x + 4, y - 22, 7, Math.PI * 1.7, Math.PI * 0.4);
+  ctx.arc(x - 3, y - 20, 1.3, 0, Math.PI * 2);
+  ctx.arc(x + 3, y - 20, 1.3, 0, Math.PI * 2);
   ctx.fill();
-
-  // Cap (crown)
-  outlinedPath(ctx, (c) => {
-    c.arc(x, y - 28, 10, Math.PI, Math.PI * 2);
-    c.lineTo(x + 10, y - 25);
-    c.lineTo(x - 10, y - 25);
-    c.closePath();
-  }, jersey);
-  // Cap brim
-  outlinedPath(ctx, (c) => {
-    c.moveTo(x - 14, y - 25);
-    c.lineTo(x + 2, y - 25);
-    c.lineTo(x + 1, y - 22);
-    c.lineTo(x - 12, y - 22);
-    c.closePath();
-  }, jerseyDark);
-
-  // Sunglasses bar (tiny detail, signature bold-line style)
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(x - 6, y - 23);
-  ctx.lineTo(x + 6, y - 23);
-  ctx.stroke();
 }
 
 function drawCatcher(ctx) {
-  // Bold-line cartoon catcher, squatting, seen from behind-right
-  const x = PLATE.x - 55;
-  const y = PLATE.y - 6;
-  const jersey = '#4a5568';       // slate gray
-  const jerseyDark = darken(jersey, 0.35);
-  const gear = '#2c3e50';          // navy gear
-  const shinGuards = '#c0392b';    // red shin guards pop against gray
+  // In catcher-cam, the camera IS the catcher. We show only the TOP of his
+  // helmet peeking up from the bottom of the frame as a perspective cue -
+  // confirms "you're looking over his shoulder" without obscuring the view.
+  const x = PLATE.x - 60;  // slightly left of home plate (catcher offset)
+  const y = CH - 8;         // right at the bottom of the canvas
+  const gear = '#2c3e50';
 
-  // Back/squat torso
-  outlinedPath(ctx, (c) => {
-    c.moveTo(x - 14, y - 8);
-    c.lineTo(x + 14, y - 8);
-    c.lineTo(x + 16, y + 14);
-    c.lineTo(x - 16, y + 14);
-    c.closePath();
-  }, jersey);
-
-  // Chest protector shadow
-  ctx.fillStyle = jerseyDark;
-  ctx.fillRect(x - 10, y - 4, 20, 14);
-
-  // Shin guards / knees (squatting pose)
-  outlinedPath(ctx, (c) => {
-    c.moveTo(x - 18, y + 14);
-    c.lineTo(x - 6, y + 14);
-    c.lineTo(x - 10, y + 30);
-    c.lineTo(x - 22, y + 30);
-    c.closePath();
-  }, shinGuards);
-  outlinedPath(ctx, (c) => {
-    c.moveTo(x + 6, y + 14);
-    c.lineTo(x + 18, y + 14);
-    c.lineTo(x + 22, y + 30);
-    c.lineTo(x + 10, y + 30);
-    c.closePath();
-  }, shinGuards);
-
-  // Shin guard stripes (horizontal lines for that padded look)
+  // Just the crown of the catcher's helmet/mask poking up
+  ctx.fillStyle = gear;
+  ctx.beginPath();
+  ctx.arc(x, y, 28, Math.PI, Math.PI * 2);
+  ctx.closePath();
+  ctx.fill();
   ctx.strokeStyle = INK;
-  ctx.lineWidth = 1.5;
-  [20, 24].forEach((offset) => {
-    ctx.beginPath();
-    ctx.moveTo(x - 20, y + offset);
-    ctx.lineTo(x - 8, y + offset);
-    ctx.moveTo(x + 8, y + offset);
-    ctx.lineTo(x + 20, y + offset);
-    ctx.stroke();
-  });
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
 
-  // Mitt (left arm extended toward pitcher, slightly up)
-  outlinedPath(ctx, (c) => {
-    c.moveTo(x + 14, y - 2);
-    c.lineTo(x + 24, y - 8);
-    c.lineTo(x + 30, y - 2);
-    c.lineTo(x + 22, y + 6);
-    c.closePath();
-  }, jersey);
-  // Mitt glove
-  outlinedCircle(ctx, x + 32, y - 2, 9, '#6b4a2b');
-  outlinedCircle(ctx, x + 32, y - 2, 4, '#4e3420');
-
-  // Helmet / catcher's mask (from behind)
-  outlinedCircle(ctx, x, y - 18, 12, gear);
-  // Mask cage hint (vertical bars on the side that's visible)
+  // Mask cage hint (vertical bars on the visible crown)
   ctx.strokeStyle = INK;
   ctx.lineWidth = 1.3;
-  [-4, 0, 4].forEach((ox) => {
+  [-8, 0, 8].forEach((ox) => {
     ctx.beginPath();
     ctx.moveTo(x + ox, y - 26);
-    ctx.lineTo(x + ox, y - 10);
+    ctx.lineTo(x + ox, y);
     ctx.stroke();
   });
 }
 
-function drawBatter(ctx, teamColor, batSwingT) {
-  // Bold-line cartoon batter in 3/4 back-profile stance.
-  // batSwingT: 0 (cocked over shoulder) .. 1 (extended across plate), or null = rest.
+function drawBatter(ctx, teamColor, batSwingT, teamNameShort) {
+  // CATCHER-CAM: batter is LARGE, in FOREGROUND, seen from BEHIND.
+  // Right-handed batter stands on the LEFT side of home plate from the pitcher's
+  // view, which is the RIGHT side of the catcher's view. So he's right-of-center.
+  // We see his back.
   const x = BATTER.x;
   const y = BATTER.y;
   const jersey = teamColor || '#1f3a93';
   const jerseyDark = darken(jersey, 0.35);
-  const pants = '#F5F1E8';         // cream pants
-  const pantsDark = darken(pants, 0.15);
+  const jerseyLight = lighten(jersey, 0.2);
+  const pants = '#F5F1E8';
+  const pantsDark = darken(pants, 0.2);
   const skin = '#E7B691';
-  const skinDark = darken(skin, 0.18);
+  const skinDark = darken(skin, 0.2);
 
-  // ---- Legs (athletic stance, slightly wide) ----
-  // Back leg (right side, planted)
+  // ---- Legs (wide athletic stance, seen from behind) ----
+  // Left leg (from batter's POV) = LEFT on screen (near side to pitcher)
   outlinedPath(ctx, (c) => {
-    c.moveTo(x + 2, y + 10);
-    c.lineTo(x + 14, y + 12);
-    c.lineTo(x + 16, y + 42);
-    c.lineTo(x + 4, y + 42);
+    c.moveTo(x - 28, y + 15);
+    c.lineTo(x - 8, y + 15);
+    c.lineTo(x - 10, y + 65);
+    c.lineTo(x - 32, y + 65);
     c.closePath();
   }, pants);
-  // Back cleat
-  outlinedRect(ctx, x, y + 40, 20, 6, INK);
-
-  // Front leg (left side, slightly forward)
-  outlinedPath(ctx, (c) => {
-    c.moveTo(x - 14, y + 10);
-    c.lineTo(x - 2, y + 10);
-    c.lineTo(x - 4, y + 42);
-    c.lineTo(x - 18, y + 42);
-    c.closePath();
-  }, pants);
-  outlinedRect(ctx, x - 22, y + 40, 22, 6, INK);
-
-  // Pants shadow stripe (simple cel-shading)
+  // Left cleat
+  outlinedRect(ctx, x - 36, y + 62, 30, 8, INK);
+  // Shadow stripe
   ctx.fillStyle = pantsDark;
-  ctx.fillRect(x - 14, y + 10, 4, 32);
-  ctx.fillRect(x + 2, y + 12, 4, 30);
+  ctx.fillRect(x - 28, y + 15, 5, 48);
+
+  // Right leg = RIGHT on screen
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x + 8, y + 15);
+    c.lineTo(x + 28, y + 15);
+    c.lineTo(x + 32, y + 65);
+    c.lineTo(x + 10, y + 65);
+    c.closePath();
+  }, pants);
+  outlinedRect(ctx, x + 6, y + 62, 30, 8, INK);
+  ctx.fillStyle = pantsDark;
+  ctx.fillRect(x + 23, y + 15, 5, 48);
 
   // Belt
-  outlinedRect(ctx, x - 16, y + 6, 32, 6, INK);
+  outlinedRect(ctx, x - 32, y + 8, 64, 8, INK);
 
-  // ---- Torso (jersey, 3/4 back view - we see back-right of player) ----
+  // ---- Torso (back view, BIG) ----
   outlinedPath(ctx, (c) => {
-    c.moveTo(x - 16, y - 20);
-    c.lineTo(x + 16, y - 22);
-    c.lineTo(x + 18, y + 8);
-    c.lineTo(x - 16, y + 8);
+    c.moveTo(x - 38, y - 48);   // left shoulder
+    c.lineTo(x + 38, y - 48);   // right shoulder
+    c.lineTo(x + 34, y + 12);   // right hip
+    c.lineTo(x - 34, y + 12);   // left hip
     c.closePath();
   }, jersey);
 
-  // Jersey shadow (back/shoulder side, facing away from camera)
+  // Spine shadow down center (cel-shading hint)
+  ctx.fillStyle = jerseyDark;
+  ctx.fillRect(x - 4, y - 48, 8, 60);
+  // Side shadow on left (lighting from upper-right)
   ctx.fillStyle = jerseyDark;
   ctx.beginPath();
-  ctx.moveTo(x - 16, y - 20);
-  ctx.lineTo(x - 4, y - 21);
-  ctx.lineTo(x - 4, y + 8);
-  ctx.lineTo(x - 16, y + 8);
+  ctx.moveTo(x - 38, y - 48);
+  ctx.lineTo(x - 26, y - 48);
+  ctx.lineTo(x - 30, y + 12);
+  ctx.lineTo(x - 34, y + 12);
   ctx.closePath();
   ctx.fill();
 
-  // Jersey number on back (big, bold - signature cartoon sports look)
+  // BIG jersey number on back - centered, bold outlined
+  ctx.save();
   ctx.fillStyle = '#F5F1E8';
   ctx.strokeStyle = INK;
-  ctx.lineWidth = 2;
-  ctx.font = 'bold 18px Fredoka, sans-serif';
+  ctx.lineWidth = 3;
+  ctx.font = 'bold 42px Fredoka, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('9', x + 2, y - 6);
-  ctx.strokeText('9', x + 2, y - 6);
+  ctx.strokeText('9', x, y - 18);
+  ctx.fillText('9', x, y - 18);
+  ctx.restore();
 
-  // ---- Head (turned toward pitcher, 3/4 view from behind-right) ----
-  const headX = x + 2;
-  const headY = y - 32;
-  outlinedCircle(ctx, headX, headY, 13, skin);
-  // Jaw shadow (darker wedge on back side)
-  ctx.fillStyle = skinDark;
-  ctx.beginPath();
-  ctx.arc(headX - 3, headY + 2, 10, Math.PI * 1.6, Math.PI * 0.3);
-  ctx.fill();
-  // Ear hint
-  outlinedCircle(ctx, headX - 10, headY + 1, 3, skin, 1.5);
+  // Team name across shoulders (tiny detail - adds polish)
+  ctx.save();
+  ctx.fillStyle = '#F5F1E8';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.5;
+  ctx.font = 'bold 11px Fredoka, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const label = (teamNameShort || 'TEAM').toUpperCase().substring(0, 8);
+  ctx.strokeText(label, x, y - 40);
+  ctx.fillText(label, x, y - 40);
+  ctx.restore();
 
-  // ---- Helmet ----
-  // Crown (dome)
-  outlinedPath(ctx, (c) => {
-    c.arc(headX, headY - 2, 14, Math.PI * 0.95, Math.PI * 2.05);
-    c.closePath();
-  }, jersey);
-  // Helmet shadow stripe
+  // ---- Head (back of head, turned slightly left toward pitcher) ----
+  const headX = x - 4;  // shifted slightly left (he's looking at pitcher on left)
+  const headY = y - 70;
+
+  // Neck (visible strip between helmet and jersey)
+  outlinedRect(ctx, headX - 8, y - 54, 16, 8, skin);
+
+  // Helmet (back view) - big dome with ear flap on left side (facing pitcher)
+  outlinedCircle(ctx, headX, headY, 22, jersey);
+  // Helmet shadow on right (back side from light)
   ctx.fillStyle = jerseyDark;
   ctx.beginPath();
-  ctx.arc(headX, headY - 2, 14, Math.PI * 0.95, Math.PI * 1.3);
-  ctx.lineTo(headX, headY - 2);
+  ctx.arc(headX, headY, 22, Math.PI * 1.7, Math.PI * 0.3);
+  ctx.lineTo(headX, headY);
   ctx.closePath();
   ctx.fill();
-  // Helmet brim/visor (juts forward over eye)
+  // Re-stroke helmet outline on top
+  ctx.beginPath();
+  ctx.arc(headX, headY, 22, 0, Math.PI * 2);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Ear flap on left side (protecting the ear facing the pitcher)
   outlinedPath(ctx, (c) => {
-    c.moveTo(headX + 4, headY - 4);
-    c.lineTo(headX + 16, headY - 1);
-    c.lineTo(headX + 15, headY + 3);
-    c.lineTo(headX + 4, headY - 1);
+    c.moveTo(headX - 18, headY - 4);
+    c.lineTo(headX - 22, headY + 8);
+    c.lineTo(headX - 16, headY + 14);
+    c.lineTo(headX - 8, headY + 8);
+    c.closePath();
+  }, jersey);
+
+  // Helmet logo dot (tiny center-of-back detail)
+  ctx.fillStyle = jerseyLight;
+  ctx.beginPath();
+  ctx.arc(headX, headY - 2, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Tiny sliver of cheek on left side (turning toward pitcher)
+  ctx.fillStyle = skin;
+  ctx.beginPath();
+  ctx.arc(headX - 20, headY + 2, 4, Math.PI * 0.5, Math.PI * 1.5);
+  ctx.fill();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // ---- Bat: held high, cocked over RIGHT shoulder (from batter's POV = RIGHT on screen since back view) ----
+  // Pivot point: hands, roughly at right shoulder height
+  const handsX = x + 30;
+  const handsY = y - 42;
+  // Hands (skin)
+  outlinedCircle(ctx, handsX, handsY, 7, skin);
+  outlinedCircle(ctx, handsX + 4, handsY - 2, 6, skin);
+
+  // Arms wrap up to the hands
+  // Right arm (near side of camera) - bent up to hands
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x + 30, y - 46);      // right shoulder
+    c.lineTo(x + 42, y - 42);      // upper arm
+    c.lineTo(handsX + 2, handsY + 6);  // forearm to hands
+    c.lineTo(handsX - 8, handsY + 6);
+    c.closePath();
+  }, jersey);
+  // Left arm wraps across back
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x - 34, y - 46);
+    c.lineTo(x - 20, y - 46);
+    c.lineTo(handsX - 4, handsY + 4);
+    c.lineTo(x - 30, y - 36);
     c.closePath();
   }, jerseyDark);
-  // Ear flap (side-protector on helmet, classic batting helmet detail)
-  outlinedPath(ctx, (c) => {
-    c.moveTo(headX - 13, headY - 1);
-    c.lineTo(headX - 8, headY + 8);
-    c.lineTo(headX - 3, headY + 6);
-    c.lineTo(headX - 4, headY - 4);
-    c.closePath();
-  }, jersey);
 
-  // Sunglasses bar (signature bold-line detail)
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2.2;
-  ctx.beginPath();
-  ctx.moveTo(headX + 2, headY);
-  ctx.lineTo(headX + 13, headY + 1);
-  ctx.stroke();
-
-  // ---- Arms holding bat ----
-  // Hands position depends on swing state
+  // Bat animation: at rest = cocked up-and-back (pointing up-right from hands)
+  // Swing = sweeps across horizontally to left (toward pitcher)
   const t = batSwingT == null ? 0 : batSwingT;
-  // Cocked over back shoulder at t=0, extended across plate at t=1
-  const startAngle = -Math.PI * 0.65;  // bat up and back over shoulder
-  const endAngle = Math.PI * 0.55;     // bat extended forward
+  const startAngle = -Math.PI * 0.45;  // up and right (cocked over shoulder)
+  const endAngle = -Math.PI * 1.15;    // extended left-and-up (toward pitcher)
   const angle = startAngle + (endAngle - startAngle) * t;
 
-  const handsX = x + 10;
-  const handsY = y - 16;
-
-  // Back arm (connects shoulder to hands) - slight flex
-  const shoulderX = x + 10;
-  const shoulderY = y - 20;
-  outlinedPath(ctx, (c) => {
-    c.moveTo(shoulderX - 4, shoulderY);
-    c.lineTo(shoulderX + 6, shoulderY - 2);
-    c.lineTo(handsX + 4, handsY + 4);
-    c.lineTo(handsX - 4, handsY + 4);
-    c.closePath();
-  }, jersey);
-
-  // Front arm (opposite shoulder, over to hands)
-  outlinedPath(ctx, (c) => {
-    c.moveTo(x - 12, y - 18);
-    c.lineTo(x - 4, y - 20);
-    c.lineTo(handsX - 2, handsY + 4);
-    c.lineTo(handsX - 10, handsY + 6);
-    c.closePath();
-  }, jersey);
-
-  // Hands (skin)
-  outlinedCircle(ctx, handsX, handsY + 2, 6, skin);
-
-  // ---- Bat ----
   ctx.save();
-  ctx.translate(handsX + 2, handsY + 2);
+  ctx.translate(handsX, handsY);
   ctx.rotate(angle);
-  // Bat barrel (thicker end, out past the grip)
+  // Bat shaft
   ctx.fillStyle = '#C9A36B';
   ctx.strokeStyle = INK;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.moveTo(0, -3.5);
-  ctx.lineTo(48, -6);
-  ctx.lineTo(66, -7);
-  ctx.lineTo(66, 7);
-  ctx.lineTo(48, 6);
-  ctx.lineTo(0, 3.5);
+  ctx.moveTo(0, -5);
+  ctx.lineTo(60, -8);
+  ctx.lineTo(82, -10);
+  ctx.lineTo(82, 10);
+  ctx.lineTo(60, 8);
+  ctx.lineTo(0, 5);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  // Wood grain shadow stripe
+  // Wood grain shadow along bottom
   ctx.fillStyle = '#8B5E34';
   ctx.beginPath();
-  ctx.moveTo(48, 2);
-  ctx.lineTo(66, 3);
-  ctx.lineTo(66, 7);
-  ctx.lineTo(48, 6);
+  ctx.moveTo(60, 3);
+  ctx.lineTo(82, 4);
+  ctx.lineTo(82, 10);
+  ctx.lineTo(60, 8);
   ctx.closePath();
   ctx.fill();
-  // Grip tape (black wrap near handle)
+  // Grip tape (black wrap)
   ctx.fillStyle = '#222';
-  ctx.fillRect(0, -4, 12, 8);
-  ctx.strokeRect(0, -4, 12, 8);
-  // Knob at end
+  ctx.fillRect(0, -5, 16, 10);
+  ctx.strokeRect(0, -5, 16, 10);
+  // Knob
   ctx.beginPath();
-  ctx.arc(-2, 0, 4, 0, Math.PI * 2);
+  ctx.arc(-3, 0, 5, 0, Math.PI * 2);
   ctx.fillStyle = '#C9A36B';
   ctx.fill();
   ctx.stroke();
   ctx.restore();
 
-  // Swing streak effect during active swing
+  // Swing streak effect
   if (batSwingT != null && batSwingT > 0.1 && batSwingT < 0.9) {
     ctx.save();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    const arcCenterX = handsX + 2;
-    const arcCenterY = handsY + 2;
-    ctx.arc(arcCenterX, arcCenterY, 48, startAngle, angle);
+    ctx.arc(handsX, handsY, 60, startAngle, angle, startAngle > angle);
     ctx.stroke();
     ctx.restore();
   }
@@ -645,15 +710,17 @@ function computeLanding(pitch) {
 }
 
 function computeBallAt(pitch, t) {
-  // Start at pitcher's hand, arc to landing point
+  // Catcher cam: ball starts tiny at pitcher's release point (far away) and
+  // grows dramatically as it approaches the camera. This is the key depth cue.
   const land = computeLanding(pitch);
-  const sx = MOUND.x - 10;
-  const sy = MOUND.y - 18;
+  const sx = MOUND.x + 17;   // pitcher's throwing hand (cocked back)
+  const sy = MOUND.y - 23;
   const x = sx + (land.x - sx) * t;
-  // Arc: parabolic lift in the middle
-  const arc = Math.sin(t * Math.PI) * -28;
+  // Slight arc so the pitch has some air
+  const arc = Math.sin(t * Math.PI) * -20;
   const y = sy + (land.y - sy) * t + arc;
-  const size = 5 + t * 4;
+  // Ball size grows from 2px (far) to 14px (near) - strong perspective cue
+  const size = 2.5 + t * 11;
   return { x, y, size, land };
 }
 
@@ -685,12 +752,18 @@ export default function GameScreen({ profile, onGameEnd }) {
     const render = () => {
       if (!alive) return;
       ctx.clearRect(0, 0, CW, CH);
-      drawSky(ctx);
-      drawOutfield(ctx);
-      drawInfield(ctx);
-      drawCatcher(ctx);
 
-      // Strike zone (only during batting-ish phases)
+      // Catcher-cam depth layering: far -> near
+      // 1. Sky (furthest)
+      drawSky(ctx);
+      // 2. Stadium / outfield (far background)
+      drawOutfield(ctx);
+      // 3. Pitcher on the mound (mid-distance)
+      drawPitcher(ctx, profile.teamColor?.primary);
+      // 4. Infield (dirt, foul lines, batter's box, home plate - foreground ground)
+      drawInfield(ctx);
+
+      // 5. Strike zone overlay (floats in mid-scene - only during batting phases)
       if (
         game.phase === GAME_PHASES.BATTING ||
         game.phase === GAME_PHASES.PITCH_INCOMING ||
@@ -699,9 +772,22 @@ export default function GameScreen({ profile, onGameEnd }) {
         drawStrikeZone(ctx);
       }
 
-      drawPitcher(ctx, profile.teamColor?.primary);
+      // 6. Ball in flight (drawn before batter so batter obscures ball if it passes behind him)
+      if (pitchRef.current) {
+        const p = pitchRef.current;
+        const t = Math.min(1, (Date.now() - p.startTime) / p.duration);
+        const ball = computeBallAt(p.pitch, t);
+        drawLandingMarker(ctx, ball.land.x, ball.land.y, t);
+        drawBall(ctx, ball.x, ball.y, ball.size);
+        if (t >= 1 && !p.resolved) {
+          p.resolved = true;
+          pitchRef.current = null;
+          if (p.pitch.isStrike) resolveStrike();
+          else resolveBall();
+        }
+      }
 
-      // Bat position
+      // 7. Batter (big foreground character)
       let batT = null;
       if (batRef.current) {
         const bt = (Date.now() - batRef.current.startTime) / batRef.current.duration;
@@ -712,25 +798,12 @@ export default function GameScreen({ profile, onGameEnd }) {
           batT = bt;
         }
       }
-      drawBatter(ctx, profile.teamColor?.secondary || '#1f3a93', batT);
+      drawBatter(ctx, profile.teamColor?.primary || '#1f3a93', batT, profile.teamName);
 
-      // Pitch ball + landing marker
-      if (pitchRef.current) {
-        const p = pitchRef.current;
-        const t = Math.min(1, (Date.now() - p.startTime) / p.duration);
-        const ball = computeBallAt(p.pitch, t);
-        drawLandingMarker(ctx, ball.land.x, ball.land.y, t);
-        drawBall(ctx, ball.x, ball.y, ball.size);
-        // Auto-resolve when pitch completes without a swing
-        if (t >= 1 && !p.resolved) {
-          p.resolved = true;
-          pitchRef.current = null;
-          if (p.pitch.isStrike) resolveStrike();
-          else resolveBall();
-        }
-      }
+      // 8. Catcher helmet peek at very bottom (foreground-most, confirms camera placement)
+      drawCatcher(ctx);
 
-      // Bases indicator (small diamond inset, top-right of canvas)
+      // 9. HUD overlay (bases inset)
       drawBasesInset(ctx, game.bases, profile.teamColor?.primary || '#e74c3c');
 
       rafRef.current = requestAnimationFrame(render);
