@@ -4,7 +4,7 @@ export default function DidYouKnowCard({ fact, onClose }) {
   const [canClose, setCanClose] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setCanClose(true), 10000);
+    const t = setTimeout(() => setCanClose(true), 5000);
     return () => clearTimeout(t);
   }, [fact]);
 
@@ -18,7 +18,6 @@ export default function DidYouKnowCard({ fact, onClose }) {
         )}
         <span className="dyk-label">Did You Know?</span>
         <p className="dyk-fact">{fact.fact}</p>
-        {!canClose && <div className="dyk-hint">Reading time...</div>}
       </div>
     </div>
   );
