@@ -24,7 +24,7 @@ const CH = 500;
 const MOUND = { x: 400, y: 270 };        // pitcher's mound, centered in middle distance
 const PLATE = { x: 400, y: 475 };        // home plate, bottom center foreground
 const BATTER = { x: 560, y: 430 };       // right-handed batter, right of plate, large
-const ZONE = { cx: 395, cy: 370, w: 100, h: 130 }; // strike zone floats above the plate
+const ZONE = { cx: 400, cy: 390, w: 70, h: 90 }; // strike zone centered on home plate
 
 const SWING_TYPES = [
   { id: 'normal', label: 'Swing', color: '#3498db' },
@@ -832,14 +832,22 @@ export default function GameScreen({ profile, onGameEnd }) {
     if (!p || p.resolved) return;
 
     const t = (Date.now() - p.startTime) / p.duration;
-    // Sweet spot centered at 0.85 (ball reaching plate)
-    const timing = Math.min(1, Math.abs(t - 0.85) / 0.3);
+    // Sweet spot centered at 0.92 (ball nearly at plate) with wider window
+    const rawOffset = t - 0.92;
+    const timing = Math.min(1, Math.abs(rawOffset) / 0.45);
 
     batRef.current = { startTime: Date.now(), duration: 260 };
     p.resolved = true;
     pitchRef.current = null;
 
     const result = calculateSwingResult(timing, p.pitch, currentBatter, swingType);
+    // Add early/late feedback to help players learn timing
+    if (result.type === 'miss' || result.type === 'foul') {
+      if (rawOffset < -0.15) result.description += ' (way too early)';
+      else if (rawOffset < -0.05) result.description += ' (a little early)';
+      else if (rawOffset > 0.15) result.description += ' (way too late)';
+      else if (rawOffset > 0.05) result.description += ' (a little late)';
+    }
     setSwingResult(result);
 
     if (result.type === 'miss') {
