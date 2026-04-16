@@ -852,7 +852,27 @@ export default function GameScreen({ profile, onGameEnd }) {
     setSwingResult(result);
 
     if (result.type === 'miss') {
-      setTimeout(() => { setSwingResult(null); resolveStrike(); }, 1200);
+      const wasThirdStrike = game.strikes >= 2;
+      if (wasThirdStrike) {
+        result.description = 'Strike three — you\'re out!';
+      }
+      // Count the strike in game state but keep the swing result
+      // (with timing hint) visible — no second overlay
+      setGame((g) => {
+        const newStrikes = g.strikes + 1;
+        if (newStrikes >= 3) {
+          return { ...g, strikes: 0, balls: 0, outs: g.outs + 1, phase: GAME_PHASES.SWING_RESULT };
+        }
+        return { ...g, strikes: newStrikes, phase: GAME_PHASES.SWING_RESULT };
+      });
+      setTimeout(() => {
+        setSwingResult(null);
+        if (wasThirdStrike) {
+          afterPlay(true);
+        } else {
+          setGame((g) => ({ ...g, phase: GAME_PHASES.BATTING }));
+        }
+      }, wasThirdStrike ? 1800 : 1500);
       return;
     }
     if (result.type === 'foul') {
