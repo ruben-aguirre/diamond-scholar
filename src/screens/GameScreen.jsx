@@ -841,14 +841,16 @@ export default function GameScreen({ profile, onGameEnd }) {
     pitchRef.current = null;
 
     const result = calculateSwingResult(timing, p.pitch, currentBatter, swingType);
-    // Timing feedback on every swing
-    const isGoodOutcome = result.bases > 0; // hit (single/double/triple/HR)
+    // Timing feedback on every swing — always show direction
+    const isHit = result.bases > 0;
     if (rawOffset < -0.15) result.timingHint = 'Way too early!';
     else if (rawOffset < -0.05) result.timingHint = 'A little early';
+    else if (rawOffset < 0 && !isHit) result.timingHint = 'Slightly early';
     else if (rawOffset > 0.15) result.timingHint = 'Way too late!';
     else if (rawOffset > 0.05) result.timingHint = 'A little late';
-    else if (isGoodOutcome) result.timingHint = 'Great timing!';
-    else result.timingHint = 'Close — just missed it';
+    else if (rawOffset > 0 && !isHit) result.timingHint = 'Slightly late';
+    else if (isHit) result.timingHint = 'Great timing!';
+    else result.timingHint = rawOffset <= 0 ? 'Slightly early' : 'Slightly late';
     setSwingResult(result);
 
     if (result.type === 'miss') {
