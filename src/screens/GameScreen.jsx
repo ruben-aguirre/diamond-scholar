@@ -841,13 +841,12 @@ export default function GameScreen({ profile, onGameEnd }) {
     pitchRef.current = null;
 
     const result = calculateSwingResult(timing, p.pitch, currentBatter, swingType);
-    // Add early/late feedback to help players learn timing
-    if (result.type === 'miss' || result.type === 'foul') {
-      if (rawOffset < -0.15) result.description += ' (way too early)';
-      else if (rawOffset < -0.05) result.description += ' (a little early)';
-      else if (rawOffset > 0.15) result.description += ' (way too late)';
-      else if (rawOffset > 0.05) result.description += ' (a little late)';
-    }
+    // Add timing feedback on every swing so players learn
+    if (rawOffset < -0.15) result.timingHint = 'Way too early!';
+    else if (rawOffset < -0.05) result.timingHint = 'A little early';
+    else if (rawOffset > 0.15) result.timingHint = 'Way too late!';
+    else if (rawOffset > 0.05) result.timingHint = 'A little late';
+    else result.timingHint = 'Good timing!';
     setSwingResult(result);
 
     if (result.type === 'miss') {
@@ -1201,6 +1200,9 @@ export default function GameScreen({ profile, onGameEnd }) {
         {swingResult && (
           <div className={`swing-result ${swingResult.type}`}>
             {swingResult.description}
+            {swingResult.timingHint && (
+              <div className="timing-hint">{swingResult.timingHint}</div>
+            )}
           </div>
         )}
       </div>
