@@ -443,6 +443,57 @@ function drawCatcher(ctx) {
   });
 }
 
+// Compute hand position and bat angle for a given swing progress t (0..1).
+// Used by both the bat drawing and the swing-trail streak so they stay in sync.
+function swingPoseAt(x, y, t) {
+  const restHX = x + 30;
+  const restHY = y - 42;
+  let handDX = 0;
+  let handDY = 0;
+  let angle;
+
+  if (t <= 0) {
+    angle = -Math.PI * 0.42;
+  } else if (t < 0.35) {
+    // LOAD: pull hands slightly back and down, bat tips back further
+    const k = t / 0.35;
+    handDX = 4 * k;
+    handDY = 2 * k;
+    angle = -Math.PI * 0.42 + (-Math.PI * 0.18) * k;
+  } else if (t < 0.65) {
+    // DRIVE through the zone — quadratic ease-in for explosive feel
+    const k = (t - 0.35) / 0.30;
+    const ease = k * k;
+    handDX = 4 - 50 * ease;
+    handDY = 2 + 8 * ease;
+    // Bat goes from cocked (~ -0.60π) to level at contact (~ -1.05π)
+    angle = -Math.PI * 0.60 + (-Math.PI * 0.45) * ease;
+  } else {
+    // FOLLOW-THROUGH: hands continue up-and-across, bat wraps over left shoulder
+    const k = (t - 0.65) / 0.35;
+    const ease = 1 - (1 - k) * (1 - k);
+    handDX = -46 - 14 * ease;
+    handDY = 10 - 22 * ease;
+    angle = -Math.PI * 1.05 + (-Math.PI * 0.55) * ease;
+  }
+
+  return {
+    handsX: restHX + handDX,
+    handsY: restHY + handDY,
+    angle,
+  };
+}
+
+// Position of the bat tip (barrel end) at swing progress t — used for the trail.
+function swingTipAt(x, y, t) {
+  const p = swingPoseAt(x, y, t);
+  const BARREL = 82;  // matches bat-shaft length used in drawing
+  return {
+    x: p.handsX + Math.cos(p.angle) * BARREL,
+    y: p.handsY + Math.sin(p.angle) * BARREL,
+  };
+}
+
 function drawBatter(ctx, teamColor, batSwingT, teamNameShort) {
   // CATCHER-CAM: batter is LARGE, in FOREGROUND, seen from BEHIND.
   // Right-handed batter stands on the LEFT side of home plate from the pitcher's
@@ -585,38 +636,49 @@ function drawBatter(ctx, teamColor, batSwingT, teamNameShort) {
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  // ---- Bat: held high, cocked over RIGHT shoulder (from batter's POV = RIGHT on screen since back view) ----
-  // Pivot point: hands, roughly at right shoulder height
-  const handsX = x + 30;
-  const handsY = y - 42;
-  // Hands (skin)
-  outlinedCircle(ctx, handsX, handsY, 7, skin);
-  outlinedCircle(ctx, handsX + 4, handsY - 2, 6, skin);
+  // ---- Bat & swing animation ----
+  // A real swing has THREE phases — load (cock back), drive (hands extend through
+  // the zone, bat whips from vertical to level at contact), follow-through (wrap).
+  // We move the hands AND change the bat angle non-linearly so the bat traces a
+  // real swing path, not just a circle around a fixed pivot.
+  const t = batSwingT == null ? 0 : batSwingT;
+  const pose = swingPoseAt(x, y, t);
+  const handsX = pose.handsX;
+  const handsY = pose.handsY;
+  const angle = pose.angle;
 
-  // Arms wrap up to the hands
-  // Right arm (near side of camera) - bent up to hands
+  // Right arm (near camera) — origin at right shoulder, follows hands
   outlinedPath(ctx, (c) => {
-    c.moveTo(x + 30, y - 46);      // right shoulder
-    c.lineTo(x + 42, y - 42);      // upper arm
-    c.lineTo(handsX + 2, handsY + 6);  // forearm to hands
+    const shX = x + 30;
+    const shY = y - 46;
+    // Elbow drifts toward hands as arm extends
+    const elbowX = shX + (handsX - shX) * 0.45 + 8;
+    const elbowY = shY + (handsY - shY) * 0.45 - 2;
+    c.moveTo(shX, shY);
+    c.lineTo(shX + 12, shY + 4);
+    c.lineTo(elbowX, elbowY);
+    c.lineTo(handsX + 2, handsY + 6);
     c.lineTo(handsX - 8, handsY + 6);
+    c.lineTo(elbowX - 6, elbowY + 4);
     c.closePath();
   }, jersey);
-  // Left arm wraps across back
+  // Left arm — origin at left shoulder, also tracks hands (both hands on bat)
   outlinedPath(ctx, (c) => {
-    c.moveTo(x - 34, y - 46);
-    c.lineTo(x - 20, y - 46);
+    const shX = x - 34;
+    const shY = y - 46;
+    const elbowX = shX + (handsX - shX) * 0.5;
+    const elbowY = shY + (handsY - shY) * 0.5 + 4;
+    c.moveTo(shX, shY);
+    c.lineTo(shX + 14, shY);
+    c.lineTo(elbowX + 4, elbowY - 2);
     c.lineTo(handsX - 4, handsY + 4);
-    c.lineTo(x - 30, y - 36);
+    c.lineTo(elbowX - 4, elbowY + 4);
     c.closePath();
   }, jerseyDark);
 
-  // Bat animation: at rest = cocked up-and-back (pointing up-right from hands)
-  // Swing = sweeps across horizontally to left (toward pitcher)
-  const t = batSwingT == null ? 0 : batSwingT;
-  const startAngle = -Math.PI * 0.45;  // up and right (cocked over shoulder)
-  const endAngle = -Math.PI * 1.15;    // extended left-and-up (toward pitcher)
-  const angle = startAngle + (endAngle - startAngle) * t;
+  // Hands (skin) — drawn AFTER arms so they sit on top
+  outlinedCircle(ctx, handsX, handsY, 7, skin);
+  outlinedCircle(ctx, handsX + 4, handsY - 2, 6, skin);
 
   ctx.save();
   ctx.translate(handsX, handsY);
@@ -656,14 +718,23 @@ function drawBatter(ctx, teamColor, batSwingT, teamNameShort) {
   ctx.stroke();
   ctx.restore();
 
-  // Swing streak effect
-  if (batSwingT != null && batSwingT > 0.1 && batSwingT < 0.9) {
+  // Swing streak — trail behind the bat barrel through the drive/follow-through.
+  // Sample the swing path at a few points so the trail follows the real arc
+  // (not a perfect circle around fixed hands).
+  if (batSwingT != null && batSwingT > 0.35 && batSwingT < 0.95) {
     ctx.save();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
     ctx.lineWidth = 4;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.arc(handsX, handsY, 60, startAngle, angle, startAngle > angle);
+    const samples = 8;
+    const trailStart = Math.max(0.35, t - 0.25);
+    for (let i = 0; i <= samples; i++) {
+      const ts = trailStart + (t - trailStart) * (i / samples);
+      const p = swingTipAt(x, y, ts);
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    }
     ctx.stroke();
     ctx.restore();
   }
