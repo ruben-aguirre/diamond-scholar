@@ -443,51 +443,93 @@ function drawCatcher(ctx) {
   });
 }
 
-// Compute hand position and bat angle for a given swing progress t (0..1).
-// Used by both the bat drawing and the swing-trail streak so they stay in sync.
+// Compute the batter's pose at swing progress t (0..1).
+//
+// This is catcher-cam — the camera is BEHIND the batter looking toward the
+// pitcher. A real swing in this view goes from cocked-up-and-back (visible
+// side-on, full length) → driving FORWARD into the screen toward the pitcher
+// (foreshortened, almost edge-on to the camera, looks like a stub) → wrapping
+// AROUND the body to the left (re-extends visible across screen).
+//
+// Modeling the bat as a fixed-length 2D stick that just rotates always reads
+// as a circle. The fix is to vary the visible bat length with the swing phase
+// — that's what baseball video games do to sell the 3D motion in 2D art.
 function swingPoseAt(x, y, t) {
   const restHX = x + 30;
   const restHY = y - 42;
   let handDX = 0;
   let handDY = 0;
   let angle;
+  let lengthMul;     // 1 = full visible length, 0.15 = foreshortened stub at contact
+  let widthMul;      // bat reads slightly THICKER when foreshortened (we see it end-on)
 
   if (t <= 0) {
+    // STANCE: cocked over right shoulder, full length visible
     angle = -Math.PI * 0.42;
-  } else if (t < 0.35) {
-    // LOAD: pull hands slightly back and down, bat tips back further
-    const k = t / 0.35;
-    handDX = 4 * k;
+    lengthMul = 1;
+    widthMul = 1;
+  } else if (t < 0.30) {
+    // LOAD: tip the bat back further, hands pull back slightly
+    const k = t / 0.30;
+    handDX = 5 * k;
     handDY = 2 * k;
-    angle = -Math.PI * 0.42 + (-Math.PI * 0.18) * k;
-  } else if (t < 0.65) {
-    // DRIVE through the zone — quadratic ease-in for explosive feel
-    const k = (t - 0.35) / 0.30;
+    angle = -Math.PI * 0.42 + (-Math.PI * 0.20) * k;
+    lengthMul = 1 - 0.05 * k;   // very slight shorten as it tips toward back
+    widthMul = 1;
+  } else if (t < 0.55) {
+    // DRIVE TOWARD CAMERA: this is the key change. The bat is swinging from
+    // behind the batter toward the pitcher — i.e., AWAY from the camera. In
+    // 2D that reads as the bat foreshortening dramatically and the hands
+    // shooting forward (leftward on screen toward the pitcher).
+    const k = (t - 0.30) / 0.25;
     const ease = k * k;
-    handDX = 4 - 50 * ease;
-    handDY = 2 + 8 * ease;
-    // Bat goes from cocked (~ -0.60π) to level at contact (~ -1.05π)
-    angle = -Math.PI * 0.60 + (-Math.PI * 0.45) * ease;
+    handDX = 5 - 35 * ease;
+    handDY = 2 + 10 * ease;
+    // Angle rotates fast toward "pointing at pitcher" (angle ~ PI = pure left)
+    angle = -Math.PI * 0.62 - Math.PI * 0.55 * ease;
+    // Foreshortening: bat is pointing roughly at pitcher (away from camera)
+    // so its visible length collapses. Width grows slightly (we see the barrel
+    // end-on rather than side-on).
+    lengthMul = 1 - 0.85 * ease;     // 1.0 → 0.15
+    widthMul = 1 + 0.6 * ease;       // 1.0 → 1.6
+  } else if (t < 0.72) {
+    // CONTACT/EXTENSION: bat is at its most foreshortened — barrel pointing
+    // out toward the pitcher. Hands are fully extended forward.
+    const k = (t - 0.55) / 0.17;
+    const ease = k;
+    handDX = -30 - 25 * ease;
+    handDY = 12 - 4 * ease;
+    // Bat starts to come around — angle rotates past pure-left toward
+    // wrapping back across the chest
+    angle = -Math.PI * 1.17 - Math.PI * 0.35 * ease;
+    // Length grows back as the barrel comes back into the side profile
+    lengthMul = 0.15 + 0.55 * ease;
+    widthMul = 1.6 - 0.5 * ease;
   } else {
-    // FOLLOW-THROUGH: hands continue up-and-across, bat wraps over left shoulder
-    const k = (t - 0.65) / 0.35;
+    // FOLLOW-THROUGH: bat wraps around to the left side of the body, fully
+    // visible side-on again, hands rise into the wrap.
+    const k = (t - 0.72) / 0.28;
     const ease = 1 - (1 - k) * (1 - k);
-    handDX = -46 - 14 * ease;
-    handDY = 10 - 22 * ease;
-    angle = -Math.PI * 1.05 + (-Math.PI * 0.55) * ease;
+    handDX = -55 - 8 * ease;
+    handDY = 8 - 22 * ease;
+    angle = -Math.PI * 1.52 - Math.PI * 0.30 * ease;
+    lengthMul = 0.70 + 0.30 * ease;  // back toward full length
+    widthMul = 1.10 - 0.10 * ease;
   }
 
   return {
     handsX: restHX + handDX,
     handsY: restHY + handDY,
     angle,
+    lengthMul,
+    widthMul,
   };
 }
 
 // Position of the bat tip (barrel end) at swing progress t — used for the trail.
 function swingTipAt(x, y, t) {
   const p = swingPoseAt(x, y, t);
-  const BARREL = 82;  // matches bat-shaft length used in drawing
+  const BARREL = 82 * p.lengthMul;
   return {
     x: p.handsX + Math.cos(p.angle) * BARREL,
     y: p.handsY + Math.sin(p.angle) * BARREL,
@@ -646,6 +688,8 @@ function drawBatter(ctx, teamColor, batSwingT, teamNameShort) {
   const handsX = pose.handsX;
   const handsY = pose.handsY;
   const angle = pose.angle;
+  const lengthMul = pose.lengthMul;
+  const widthMul = pose.widthMul;
 
   // Right arm (near camera) — origin at right shoulder, follows hands
   outlinedPath(ctx, (c) => {
@@ -683,10 +727,16 @@ function drawBatter(ctx, teamColor, batSwingT, teamNameShort) {
   ctx.save();
   ctx.translate(handsX, handsY);
   ctx.rotate(angle);
+  // Foreshortening: scale the bat along its axis (lengthMul) and across (widthMul).
+  // When the bat is swinging toward the pitcher (away from the camera) lengthMul
+  // shrinks dramatically and widthMul grows — the bat reads as a stub coming
+  // straight at us, not a stick sweeping through frame.
+  ctx.scale(lengthMul, widthMul);
+
   // Bat shaft
   ctx.fillStyle = '#C9A36B';
   ctx.strokeStyle = INK;
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = 2.5 / Math.max(0.4, Math.min(lengthMul, widthMul)); // keep outline crisp
   ctx.beginPath();
   ctx.moveTo(0, -5);
   ctx.lineTo(60, -8);
@@ -718,17 +768,20 @@ function drawBatter(ctx, teamColor, batSwingT, teamNameShort) {
   ctx.stroke();
   ctx.restore();
 
-  // Swing streak — trail behind the bat barrel through the drive/follow-through.
-  // Sample the swing path at a few points so the trail follows the real arc
-  // (not a perfect circle around fixed hands).
-  if (batSwingT != null && batSwingT > 0.35 && batSwingT < 0.95) {
+  // Swing streak — trail behind the bat barrel through drive + follow-through.
+  // Samples the actual bat-tip path so the trail bends the way the swing bends.
+  if (batSwingT != null && batSwingT > 0.30 && batSwingT < 0.95) {
     ctx.save();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+    // Fade in/out at the edges of the swing
+    const fade = batSwingT < 0.40 ? (batSwingT - 0.30) / 0.10
+               : batSwingT > 0.85 ? (0.95 - batSwingT) / 0.10
+               : 1;
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.55 * fade})`;
     ctx.lineWidth = 4;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    const samples = 8;
-    const trailStart = Math.max(0.35, t - 0.25);
+    const samples = 10;
+    const trailStart = Math.max(0.30, t - 0.22);
     for (let i = 0; i <= samples; i++) {
       const ts = trailStart + (t - trailStart) * (i / samples);
       const p = swingTipAt(x, y, ts);
