@@ -461,51 +461,57 @@ function drawCatcher(ctx) {
 //   3. Body weight shifts forward during the drive (bodyShift) so the whole
 //      torso/head leans into the pitch — adds the "stepping into it" feel.
 function swingPoseAt(x, y, t) {
-  const restHX = x + 22;     // hands start cocked behind right shoulder
+  // Hand origin starts BEHIND the right shoulder (high), ends in FRONT of the
+  // left shoulder (high) — total horizontal travel ~100px so the bat truly
+  // slides across the body instead of rotating around a near-fixed pivot.
+  const restHX = x + 22;
   const restHY = y - 50;
   let handDX = 0;
   let handDY = 0;
   let angle;
-  let bodyShift = 0;         // horizontal lean toward pitcher (negative = forward/left)
+  let bodyShift = 0;       // horizontal lean toward pitcher
+  let torsoTilt = 0;       // shoulder-line rotation (rad), positive = front shoulder dips
 
   if (t <= 0) {
     // STANCE: bat cocked vertically behind right shoulder
-    angle = -Math.PI * 0.50;  // straight up
-  } else if (t < 0.25) {
-    // LOAD: small back-tip and weight shift back, hands stay near shoulder
-    const k = t / 0.25;
-    handDX = 4 * k;
-    handDY = -1 * k;
-    angle = -Math.PI * 0.50 + (-Math.PI * 0.10) * k;  // tips back to ~-0.60π
-    bodyShift = 1.5 * k;
-  } else if (t < 0.55) {
-    // DRIVE through the strike zone — this is the EXPLOSIVE part. Bat sweeps
-    // from behind-shoulder (~-0.60π) all the way to horizontal-left (-π).
-    // Hands shoot FORWARD toward the pitcher (handDX goes negative).
-    const k = (t - 0.25) / 0.30;
-    const ease = k * k;                 // quadratic ease-in for snap
-    handDX = 4 - 30 * ease;             // hands drive 30px forward
-    handDY = -1 + 14 * ease;            // hands drop into the zone
-    angle = -Math.PI * 0.60 - Math.PI * 0.45 * ease;  // ~-0.60π → ~-1.05π (just past horizontal)
-    bodyShift = 1.5 - 6 * ease;         // weight transfers ~6px toward pitcher
+    angle = -Math.PI * 0.55;
+  } else if (t < 0.20) {
+    // LOAD: pull hands back-and-up, weight shifts onto back leg, slight tilt
+    const k = t / 0.20;
+    handDX = 8 * k;
+    handDY = -4 * k;
+    angle = -Math.PI * 0.55 + (-Math.PI * 0.12) * k;  // tips further back
+    bodyShift = 2 * k;
+    torsoTilt = -0.05 * k;
+  } else if (t < 0.50) {
+    // DRIVE through the zone — explosive. Hands shoot all the way across the
+    // body (90px translation). Bat angle rotates from cocked to past-horizontal.
+    const k = (t - 0.20) / 0.30;
+    const ease = k * k;
+    handDX = 8 - 90 * ease;             // +8 to -82 — full body crossing
+    handDY = -4 + 18 * ease;             // hands drop into the zone
+    angle = -Math.PI * 0.67 - Math.PI * 0.50 * ease;  // -0.67π → -1.17π
+    bodyShift = 2 - 9 * ease;            // body lunges 9px forward
+    torsoTilt = -0.05 + 0.20 * ease;     // shoulder rotates open (front shoulder lifts)
   } else if (t < 0.78) {
-    // CONTACT-TO-WRAP: bat continues across body, decelerating as it wraps
-    // around the left shoulder. Hands pull up and across.
-    const k = (t - 0.55) / 0.23;
-    const ease = 1 - (1 - k) * (1 - k); // ease-out
-    handDX = -26 - 14 * ease;           // continue across, slower
-    handDY = 13 - 18 * ease;            // hands rise into wrap
-    angle = -Math.PI * 1.05 - Math.PI * 0.55 * ease;  // ~-1.05π → ~-1.60π (pointing down-left/behind)
-    bodyShift = -4.5 + 1 * ease;
+    // FOLLOW-THROUGH: hands continue past the front shoulder and up-back into
+    // the wrap, bat sweeps to point DOWN-AND-BACK behind the left shoulder.
+    const k = (t - 0.50) / 0.28;
+    const ease = 1 - (1 - k) * (1 - k);
+    handDX = -82 + 30 * ease;            // hands come slightly back as they rise
+    handDY = 14 - 38 * ease;             // hands rise sharply (wrap over shoulder)
+    angle = -Math.PI * 1.17 - Math.PI * 0.55 * ease;  // -1.17π → -1.72π
+    bodyShift = -7 + 3 * ease;
+    torsoTilt = 0.15 + 0.05 * ease;      // shoulder fully open
   } else {
-    // FOLLOW-THROUGH: bat finishes pointing down-and-back across left shoulder.
-    // Body settles, slight overshoot then return.
+    // SETTLE: body recovers, bat hangs at finish position
     const k = (t - 0.78) / 0.22;
     const ease = 1 - (1 - k) * (1 - k);
-    handDX = -40 - 4 * ease;
-    handDY = -5 - 4 * ease;
-    angle = -Math.PI * 1.60 - Math.PI * 0.20 * ease;  // settles at ~-1.80π (pointing down-back)
-    bodyShift = -3.5 + 3 * ease;        // recovers most of the way
+    handDX = -52 - 2 * ease;
+    handDY = -24 - 2 * ease;
+    angle = -Math.PI * 1.72 - Math.PI * 0.10 * ease;
+    bodyShift = -4 + 2 * ease;
+    torsoTilt = 0.20 - 0.05 * ease;
   }
 
   return {
@@ -513,6 +519,7 @@ function swingPoseAt(x, y, t) {
     handsY: restHY + handDY,
     angle,
     bodyShift,
+    torsoTilt,
   };
 }
 
