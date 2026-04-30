@@ -445,91 +445,81 @@ function drawCatcher(ctx) {
 
 // Compute the batter's pose at swing progress t (0..1).
 //
-// This is catcher-cam — the camera is BEHIND the batter looking toward the
-// pitcher. A real swing in this view goes from cocked-up-and-back (visible
-// side-on, full length) → driving FORWARD into the screen toward the pitcher
-// (foreshortened, almost edge-on to the camera, looks like a stub) → wrapping
-// AROUND the body to the left (re-extends visible across screen).
+// SIDE VIEW: the batter is rendered in profile (3/4 view facing the camera).
+// The pitcher is at the LEFT of the screen, the batter on the RIGHT. A real
+// swing in this view sweeps the bat from cocked-up-and-back (vertical, behind
+// the right shoulder) → through the strike zone (horizontal, across the body
+// pointing LEFT toward the pitcher) → wrapped around (pointing down-and-back
+// across the left shoulder).
 //
-// Modeling the bat as a fixed-length 2D stick that just rotates always reads
-// as a circle. The fix is to vary the visible bat length with the swing phase
-// — that's what baseball video games do to sell the 3D motion in 2D art.
+// Three things we animate to break the "circle" look:
+//   1. Hand position moves along a small forward-and-back arc, not pinned at
+//      the shoulder. The lead (front) shoulder dips during contact, the back
+//      hand drives across the body.
+//   2. Bat angle changes non-linearly: slow during the load, fast through the
+//      zone, slow through the wrap. (Real swings are explosive at contact.)
+//   3. Body weight shifts forward during the drive (bodyShift) so the whole
+//      torso/head leans into the pitch — adds the "stepping into it" feel.
 function swingPoseAt(x, y, t) {
-  const restHX = x + 30;
-  const restHY = y - 42;
+  const restHX = x + 22;     // hands start cocked behind right shoulder
+  const restHY = y - 50;
   let handDX = 0;
   let handDY = 0;
   let angle;
-  let lengthMul;     // 1 = full visible length, 0.15 = foreshortened stub at contact
-  let widthMul;      // bat reads slightly THICKER when foreshortened (we see it end-on)
+  let bodyShift = 0;         // horizontal lean toward pitcher (negative = forward/left)
 
   if (t <= 0) {
-    // STANCE: cocked over right shoulder, full length visible
-    angle = -Math.PI * 0.42;
-    lengthMul = 1;
-    widthMul = 1;
-  } else if (t < 0.30) {
-    // LOAD: tip the bat back further, hands pull back slightly
-    const k = t / 0.30;
-    handDX = 5 * k;
-    handDY = 2 * k;
-    angle = -Math.PI * 0.42 + (-Math.PI * 0.20) * k;
-    lengthMul = 1 - 0.05 * k;   // very slight shorten as it tips toward back
-    widthMul = 1;
+    // STANCE: bat cocked vertically behind right shoulder
+    angle = -Math.PI * 0.50;  // straight up
+  } else if (t < 0.25) {
+    // LOAD: small back-tip and weight shift back, hands stay near shoulder
+    const k = t / 0.25;
+    handDX = 4 * k;
+    handDY = -1 * k;
+    angle = -Math.PI * 0.50 + (-Math.PI * 0.10) * k;  // tips back to ~-0.60π
+    bodyShift = 1.5 * k;
   } else if (t < 0.55) {
-    // DRIVE TOWARD CAMERA: this is the key change. The bat is swinging from
-    // behind the batter toward the pitcher — i.e., AWAY from the camera. In
-    // 2D that reads as the bat foreshortening dramatically and the hands
-    // shooting forward (leftward on screen toward the pitcher).
-    const k = (t - 0.30) / 0.25;
-    const ease = k * k;
-    handDX = 5 - 35 * ease;
-    handDY = 2 + 10 * ease;
-    // Angle rotates fast toward "pointing at pitcher" (angle ~ PI = pure left)
-    angle = -Math.PI * 0.62 - Math.PI * 0.55 * ease;
-    // Foreshortening: bat is pointing roughly at pitcher (away from camera)
-    // so its visible length collapses. Width grows slightly (we see the barrel
-    // end-on rather than side-on).
-    lengthMul = 1 - 0.85 * ease;     // 1.0 → 0.15
-    widthMul = 1 + 0.6 * ease;       // 1.0 → 1.6
-  } else if (t < 0.72) {
-    // CONTACT/EXTENSION: bat is at its most foreshortened — barrel pointing
-    // out toward the pitcher. Hands are fully extended forward.
-    const k = (t - 0.55) / 0.17;
-    const ease = k;
-    handDX = -30 - 25 * ease;
-    handDY = 12 - 4 * ease;
-    // Bat starts to come around — angle rotates past pure-left toward
-    // wrapping back across the chest
-    angle = -Math.PI * 1.17 - Math.PI * 0.35 * ease;
-    // Length grows back as the barrel comes back into the side profile
-    lengthMul = 0.15 + 0.55 * ease;
-    widthMul = 1.6 - 0.5 * ease;
+    // DRIVE through the strike zone — this is the EXPLOSIVE part. Bat sweeps
+    // from behind-shoulder (~-0.60π) all the way to horizontal-left (-π).
+    // Hands shoot FORWARD toward the pitcher (handDX goes negative).
+    const k = (t - 0.25) / 0.30;
+    const ease = k * k;                 // quadratic ease-in for snap
+    handDX = 4 - 30 * ease;             // hands drive 30px forward
+    handDY = -1 + 14 * ease;            // hands drop into the zone
+    angle = -Math.PI * 0.60 - Math.PI * 0.45 * ease;  // ~-0.60π → ~-1.05π (just past horizontal)
+    bodyShift = 1.5 - 6 * ease;         // weight transfers ~6px toward pitcher
+  } else if (t < 0.78) {
+    // CONTACT-TO-WRAP: bat continues across body, decelerating as it wraps
+    // around the left shoulder. Hands pull up and across.
+    const k = (t - 0.55) / 0.23;
+    const ease = 1 - (1 - k) * (1 - k); // ease-out
+    handDX = -26 - 14 * ease;           // continue across, slower
+    handDY = 13 - 18 * ease;            // hands rise into wrap
+    angle = -Math.PI * 1.05 - Math.PI * 0.55 * ease;  // ~-1.05π → ~-1.60π (pointing down-left/behind)
+    bodyShift = -4.5 + 1 * ease;
   } else {
-    // FOLLOW-THROUGH: bat wraps around to the left side of the body, fully
-    // visible side-on again, hands rise into the wrap.
-    const k = (t - 0.72) / 0.28;
+    // FOLLOW-THROUGH: bat finishes pointing down-and-back across left shoulder.
+    // Body settles, slight overshoot then return.
+    const k = (t - 0.78) / 0.22;
     const ease = 1 - (1 - k) * (1 - k);
-    handDX = -55 - 8 * ease;
-    handDY = 8 - 22 * ease;
-    angle = -Math.PI * 1.52 - Math.PI * 0.30 * ease;
-    lengthMul = 0.70 + 0.30 * ease;  // back toward full length
-    widthMul = 1.10 - 0.10 * ease;
+    handDX = -40 - 4 * ease;
+    handDY = -5 - 4 * ease;
+    angle = -Math.PI * 1.60 - Math.PI * 0.20 * ease;  // settles at ~-1.80π (pointing down-back)
+    bodyShift = -3.5 + 3 * ease;        // recovers most of the way
   }
 
   return {
     handsX: restHX + handDX,
     handsY: restHY + handDY,
     angle,
-    lengthMul,
-    widthMul,
+    bodyShift,
   };
 }
 
 // Position of the bat tip (barrel end) at swing progress t — used for the trail.
 function swingTipAt(x, y, t) {
   const p = swingPoseAt(x, y, t);
-  const BARREL = 82 * p.lengthMul;
+  const BARREL = 82;
   return {
     x: p.handsX + Math.cos(p.angle) * BARREL,
     y: p.handsY + Math.sin(p.angle) * BARREL,
@@ -537,12 +527,16 @@ function swingTipAt(x, y, t) {
 }
 
 function drawBatter(ctx, teamColor, batSwingT, teamNameShort) {
-  // CATCHER-CAM: batter is LARGE, in FOREGROUND, seen from BEHIND.
-  // Right-handed batter stands on the LEFT side of home plate from the pitcher's
-  // view, which is the RIGHT side of the catcher's view. So he's right-of-center.
-  // We see his back.
-  const x = BATTER.x;
-  const y = BATTER.y;
+  // SIDE-VIEW: batter rendered in 3/4 profile on the right side of the canvas,
+  // pitcher on the left. We compute the swing pose first so we can shift the
+  // whole body slightly with the swing (weight transfer toward the pitcher).
+  const t = batSwingT == null ? 0 : batSwingT;
+  const xBase = BATTER.x;
+  const yBase = BATTER.y;
+  const pose = swingPoseAt(xBase, yBase, t);
+  // Apply body shift: lean the whole batter toward the pitcher during contact
+  const x = xBase + pose.bodyShift;
+  const y = yBase;
   const jersey = teamColor || '#1f3a93';
   const jerseyDark = darken(jersey, 0.35);
   const jerseyLight = lighten(jersey, 0.2);
@@ -679,17 +673,11 @@ function drawBatter(ctx, teamColor, batSwingT, teamNameShort) {
   ctx.stroke();
 
   // ---- Bat & swing animation ----
-  // A real swing has THREE phases — load (cock back), drive (hands extend through
-  // the zone, bat whips from vertical to level at contact), follow-through (wrap).
-  // We move the hands AND change the bat angle non-linearly so the bat traces a
-  // real swing path, not just a circle around a fixed pivot.
-  const t = batSwingT == null ? 0 : batSwingT;
-  const pose = swingPoseAt(x, y, t);
-  const handsX = pose.handsX;
+  // Pose was computed at the top of the function. Hands ride along with the
+  // body shift so they stay attached to the shoulders.
+  const handsX = pose.handsX + pose.bodyShift;
   const handsY = pose.handsY;
   const angle = pose.angle;
-  const lengthMul = pose.lengthMul;
-  const widthMul = pose.widthMul;
 
   // Right arm (near camera) — origin at right shoulder, follows hands
   outlinedPath(ctx, (c) => {
@@ -731,12 +719,10 @@ function drawBatter(ctx, teamColor, batSwingT, teamNameShort) {
   // When the bat is swinging toward the pitcher (away from the camera) lengthMul
   // shrinks dramatically and widthMul grows — the bat reads as a stub coming
   // straight at us, not a stick sweeping through frame.
-  ctx.scale(lengthMul, widthMul);
-
   // Bat shaft
   ctx.fillStyle = '#C9A36B';
   ctx.strokeStyle = INK;
-  ctx.lineWidth = 2.5 / Math.max(0.4, Math.min(lengthMul, widthMul)); // keep outline crisp
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
   ctx.moveTo(0, -5);
   ctx.lineTo(60, -8);
