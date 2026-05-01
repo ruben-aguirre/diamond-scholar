@@ -949,9 +949,10 @@ export default function GameScreen({ profile, onGameEnd }) {
     if (!p || p.resolved) return;
 
     const t = (Date.now() - p.startTime) / p.duration;
-    // Sweet spot centered at 0.92 (ball nearly at plate) with wider window
+    // Sweet spot centered at 0.92 (ball nearly at plate). Wider window so any
+    // swing within ~65% of pitch duration of perfect still has a real shot.
     const rawOffset = t - 0.92;
-    const timing = Math.min(1, Math.abs(rawOffset) / 0.45);
+    const timing = Math.min(1, Math.abs(rawOffset) / 0.65);
 
     batRef.current = { startTime: Date.now(), duration: 260 };
     p.resolved = true;

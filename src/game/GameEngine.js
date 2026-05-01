@@ -42,8 +42,8 @@ export function generatePitch(aiDifficulty) {
   const baseX = (Math.random() - 0.5) * 2;
   const baseY = (Math.random() - 0.5) * 2;
 
-  // Ball probability tempered so early games feel fair
-  const isBall = Math.random() < 0.3 + aiDifficulty * 0.02;
+  // Ball probability tempered so early games feel fair (more strikes = more chances to swing)
+  const isBall = Math.random() < 0.18 + aiDifficulty * 0.02;
 
   return {
     type,
@@ -57,9 +57,9 @@ export function generatePitch(aiDifficulty) {
 
 // Map team strength to pitch duration in ms (lower = faster = harder)
 export function pitchDurationMs(teamAvg) {
-  // Starts slow (~2000ms) at avg 3, ramps to ~900ms at avg 9
+  // Starts slow (~2400ms) at avg 3, ramps to ~1200ms at avg 9 — gentler curve
   const clamped = Math.max(2, Math.min(10, teamAvg));
-  return Math.round(2000 - (clamped - 3) * 150);
+  return Math.round(2400 - (clamped - 3) * 200);
 }
 
 // Swing type modifiers
@@ -81,11 +81,13 @@ export function calculateSwingResult(timing, pitch, batter, swingType = 'normal'
   // Pitch in zone? Distance from zone center (0,0)
   const pitchDist = Math.sqrt(pitch.x * pitch.x + pitch.y * pitch.y);
 
-  // Chasing a ball outside the zone increases miss chance
-  const chasePenalty = Math.max(0, pitchDist - 1) * 0.4;
+  // Chasing a ball outside the zone increases miss chance (gentler than before)
+  const chasePenalty = Math.max(0, pitchDist - 1) * 0.25;
   const effectiveTiming = Math.min(1, timing + chasePenalty);
 
-  const contactChance = (batter.batting / 10) * (1 - effectiveTiming * 0.85) * profile.contactMul;
+  // Contact chance: floor of 0.4 so even bad batters aren't hopeless
+  const rawContact = (0.45 + batter.batting / 14) * (1 - effectiveTiming * 0.6) * profile.contactMul;
+  const contactChance = Math.max(0.4, Math.min(0.98, rawContact));
 
   // Bunt: any contact becomes a bunt-single if well-timed, else a foul or miss
   if (swingType === 'bunt') {
@@ -98,12 +100,14 @@ export function calculateSwingResult(timing, pitch, batter, swingType = 'normal'
     return { type: 'single', description: 'Bunt single!', bases: 1 };
   }
 
-  if (effectiveTiming > 0.75 * profile.missMul || Math.random() > contactChance) {
+  // Only the truly awful swings whiff completely
+  if (effectiveTiming > 0.92 * profile.missMul || Math.random() > contactChance) {
     return { type: 'miss', description: 'Swing and a miss!' };
   }
 
-  if (effectiveTiming > 0.5) {
-    return Math.random() < 0.6
+  // Rough timing → mostly fouls (which keep the at-bat alive) instead of outs
+  if (effectiveTiming > 0.65) {
+    return Math.random() < 0.75
       ? { type: 'foul', description: 'Foul ball!' }
       : { type: 'groundout', description: 'Grounder... out!', isOut: true };
   }
