@@ -23,7 +23,7 @@ const CH = 500;
 // Depth axis: far (small, high on screen) -> near (big, low on screen)
 const MOUND = { x: 400, y: 270 };        // pitcher's mound, centered in middle distance
 const PLATE = { x: 400, y: 475 };        // home plate, bottom center foreground
-const BATTER = { x: 290, y: 430 };       // right-handed batter, LEFT batter's box (3rd-base side), back-3/4 view
+const BATTER = { x: 280, y: 400 };       // right-handed batter, LEFT batter's box (3rd-base side), back-3/4 view
 const ZONE = { cx: 400, cy: 390, w: 70, h: 90 }; // strike zone centered on home plate
 
 const SWING_TYPES = [
@@ -414,35 +414,6 @@ function drawPitcher(ctx, teamColor) {
   ctx.fill();
 }
 
-function drawCatcher(ctx) {
-  // In catcher-cam, the camera IS the catcher. We show only the TOP of his
-  // helmet peeking up from the bottom of the frame as a perspective cue -
-  // confirms "you're looking over his shoulder" without obscuring the view.
-  const x = PLATE.x - 60;  // slightly left of home plate (catcher offset)
-  const y = CH - 8;         // right at the bottom of the canvas
-  const gear = '#2c3e50';
-
-  // Just the crown of the catcher's helmet/mask poking up
-  ctx.fillStyle = gear;
-  ctx.beginPath();
-  ctx.arc(x, y, 28, Math.PI, Math.PI * 2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2.5;
-  ctx.stroke();
-
-  // Mask cage hint (vertical bars on the visible crown)
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 1.3;
-  [-8, 0, 8].forEach((ox) => {
-    ctx.beginPath();
-    ctx.moveTo(x + ox, y - 26);
-    ctx.lineTo(x + ox, y);
-    ctx.stroke();
-  });
-}
-
 // =============================================================================
 // CHIBI BACK-3/4 BATTER — Baseball-9 style camera (behind home plate, looking
 // at the pitcher in the distance). Right-handed batter standing in the LEFT
@@ -470,12 +441,12 @@ const SWING_KEYFRAMES = {
   stance: {
     bodyRot: 0,           // body rotation (rad) around hips, + = clockwise from camera
     frontFactor: 0.40,    // we see some front-right of the body
-    handsX: 22, handsY: -56,
-    batAngle: -Math.PI * 0.50,  // bat straight up
+    handsX: 26, handsY: -48,    // hands behind right shoulder
+    batAngle: -Math.PI * 0.38,  // bat cocked back over right shoulder (not straight up)
     batLen: 1.0,
     headTwist: -0.15,     // head turned slightly toward pitcher (left)
-    leadFootDX: -16,      // front (left) foot toward pitcher
-    backFootDX: 18,       // back (right) foot away from pitcher
+    leadFootDX: -28,      // front (left) foot toward pitcher — wide stance
+    backFootDX: 28,       // back (right) foot away from pitcher
     hipShift: 0,
   },
   contact: {
@@ -485,8 +456,8 @@ const SWING_KEYFRAMES = {
     batAngle: -Math.PI * 1.02,  // bat horizontal, pointing left toward pitcher
     batLen: 0.55,         // FORESHORTENED — barrel is pointing into the screen
     headTwist: -0.05,     // head still tracks ball
-    leadFootDX: -18,      // front foot has stepped slightly forward
-    backFootDX: 14,       // back foot pivoting (heel up — modeled as slight inward shift)
+    leadFootDX: -32,      // front foot stepped forward
+    backFootDX: 22,       // back foot pivoting inward
     hipShift: -3,         // hips driven toward pitcher
   },
   extension: {
@@ -496,8 +467,8 @@ const SWING_KEYFRAMES = {
     batAngle: -Math.PI * 1.55,  // bat wrapped pointing down-and-back behind left side
     batLen: 0.95,         // back to mostly full length (now visible side-on again)
     headTwist: 0.20,      // head following the swing through
-    leadFootDX: -18,
-    backFootDX: 8,        // back foot turned, on toe
+    leadFootDX: -32,
+    backFootDX: 14,       // back foot turned, on toe
     hipShift: -2,
   },
 };
@@ -754,12 +725,15 @@ function drawBatter(ctx, teamColor, batSwingT, teamNameShort) {
   // Helmet base (full circle)
   outlinedCircle(ctx, headX, headY, headR, helmet);
 
-  // Helmet shading: dark crescent on the SIDE that's away from the light.
-  // We light from upper-right consistently, but as the head rotates with the
-  // body, the dark side migrates. At stance dark is on right (back), at
-  // extension dark is on left (back-now).
-  const helmetShadowStart = lerp(Math.PI * 1.7, Math.PI * 0.7, rot);
-  const helmetShadowEnd = lerp(Math.PI * 0.3, Math.PI * 1.3, rot);
+  // Helmet shading: dark crescent on the BACK side of the helmet (away from
+  // pitcher). At stance the back of the head is on the RIGHT side of the
+  // helmet (camera sees back-right of batter, so helmet right edge = back).
+  // As body rotates clockwise, the back rotates further around — at extension
+  // we see his pure back, so the dark side is now on the LEFT of helmet
+  // (back is now wrapped around to that side).
+  // Arc goes from (start) to (end) clockwise, covering ~140° on the back.
+  const helmetShadowStart = lerp(-Math.PI * 0.30, Math.PI * 0.70, rot);
+  const helmetShadowEnd   = lerp(Math.PI * 0.50,  Math.PI * 1.50, rot);
   ctx.fillStyle = helmetDark;
   ctx.beginPath();
   ctx.arc(headX, headY, headR, helmetShadowStart, helmetShadowEnd);
@@ -771,55 +745,80 @@ function drawBatter(ctx, teamColor, batSwingT, teamNameShort) {
   ctx.arc(headX, headY, headR, 0, Math.PI * 2);
   inkStroke(ctx);
 
-  // Helmet brim (chibi proportion: short bill on the front)
-  // Bill is on the side facing the pitcher — left at stance, swings around with rot
-  const billAngle = lerp(Math.PI, Math.PI * 1.5, rot);
-  const billX = headX + Math.cos(billAngle) * (headR - 2);
-  const billY = headY + Math.sin(billAngle) * (headR - 2);
-  outlinedCircle(ctx, billX, billY + 2, 5, helmet);
+  // Helmet bill — flat ellipse on the FRONT of the helmet (pitcher-facing).
+  // At stance, front-of-helmet = LEFT side of head (toward pitcher). Bill
+  // angle migrates with body rotation as head turns through the swing.
+  const billAngle = lerp(Math.PI * 0.95, Math.PI * 1.45, rot);
+  const billCX = headX + Math.cos(billAngle) * (headR - 4);
+  const billCY = headY + Math.sin(billAngle) * (headR - 4);
+  ctx.save();
+  ctx.translate(billCX, billCY);
+  ctx.rotate(billAngle - Math.PI);  // bill points outward
+  ctx.fillStyle = helmet;
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 14, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // Bill underside shadow
+  ctx.fillStyle = helmetDark;
+  ctx.beginPath();
+  ctx.ellipse(0, 2, 13, 3, 0, 0, Math.PI);
+  ctx.fill();
+  ctx.restore();
 
-  // Helmet highlight (small light circle for chibi shine)
+  // Helmet highlight (small light circle on the LIT side — upper-front)
   ctx.fillStyle = helmetLight;
   ctx.globalAlpha = 0.7;
+  const hlAngle = lerp(Math.PI * 1.20, Math.PI * 1.65, rot);
+  const hlX = headX + Math.cos(hlAngle) * (headR * 0.55);
+  const hlY = headY + Math.sin(hlAngle) * (headR * 0.55);
   ctx.beginPath();
-  ctx.arc(headX - 8 + rot * 14, headY - 12, 5, 0, Math.PI * 2);
+  ctx.arc(hlX, hlY, 5, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  // FACE — only visible when front > 0.2 (early in swing). Crossfade out as
-  // batter rotates. We show: cheek, ear-flap on near side, sliver of nose.
+  // FACE — only visible while front > 0.10. The face is on the FRONT-LEFT of
+  // the helmet (pitcher-facing side) at stance. We draw cheek + ear-flap +
+  // single dot eye. As batter rotates, frontFactor → 0 fades it out.
   if (front > 0.10) {
     ctx.save();
-    ctx.globalAlpha = Math.min(1, front * 1.8);
+    ctx.globalAlpha = Math.min(1, front * 2.2);
 
-    // Cheek visible on the LEFT side of helmet (toward pitcher)
+    // Anchor face elements on the LEFT side of helmet (toward pitcher).
+    // faceCX/faceCY = front-of-helmet point at the equator.
+    const faceCX = headX - headR + 7;
+    const faceCY = headY + 2;
+
+    // Cheek (rounded protrusion on the front-left)
     ctx.fillStyle = skin;
     ctx.beginPath();
-    ctx.arc(headX - headR + 4, headY + 4, 7, Math.PI * 0.5, Math.PI * 1.5);
+    ctx.arc(faceCX - 1, faceCY + 4, 8, Math.PI * 0.4, Math.PI * 1.6);
     ctx.fill();
     ctx.strokeStyle = INK;
     ctx.lineWidth = 1.5;
     ctx.stroke();
-    // Cheek shadow
+
+    // Cheek shadow under the chin
     ctx.fillStyle = skinDark;
     ctx.beginPath();
-    ctx.arc(headX - headR + 4, headY + 7, 3, Math.PI * 0.5, Math.PI * 1.5);
+    ctx.arc(faceCX - 1, faceCY + 8, 4, Math.PI * 0.5, Math.PI * 1.5);
     ctx.fill();
 
-    // Ear flap (helmet extension covering ear)
-    ctx.fillStyle = helmetDark;
+    // Ear flap (jersey-color) covering the ear, sits on the helmet edge
     outlinedPath(ctx, (c) => {
-      c.moveTo(headX - headR + 6, headY - 4);
-      c.lineTo(headX - headR + 2, headY + 8);
-      c.lineTo(headX - headR + 10, headY + 14);
-      c.lineTo(headX - headR + 16, headY + 6);
+      c.moveTo(faceCX + 6, faceCY - 8);
+      c.lineTo(faceCX + 2, faceCY + 4);
+      c.lineTo(faceCX + 8, faceCY + 12);
+      c.lineTo(faceCX + 14, faceCY + 4);
       c.closePath();
     }, helmetDark);
 
-    // Tiny eye (single dot, since chibi)
+    // Single eye dot (chibi style)
     ctx.fillStyle = INK;
     ctx.beginPath();
-    ctx.arc(headX - headR + 12, headY - 1, 2, 0, Math.PI * 2);
+    ctx.arc(faceCX + 1, faceCY - 2, 2, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
@@ -1021,8 +1020,7 @@ export default function GameScreen({ profile, onGameEnd }) {
       }
       drawBatter(ctx, profile.teamColor?.primary || '#1f3a93', batT, profile.teamName);
 
-      // 8. Catcher helmet peek at very bottom (foreground-most, confirms camera placement)
-      drawCatcher(ctx);
+      // (Catcher removed — batter on the left side is now the foreground anchor)
 
       // 9. HUD overlay (bases inset)
       drawBasesInset(ctx, game.bases, profile.teamColor?.primary || '#e74c3c');
