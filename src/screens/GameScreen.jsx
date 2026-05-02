@@ -23,7 +23,7 @@ const CH = 500;
 // Depth axis: far (small, high on screen) -> near (big, low on screen)
 const MOUND = { x: 400, y: 270 };        // pitcher's mound, centered in middle distance
 const PLATE = { x: 400, y: 475 };        // home plate, bottom center foreground
-const BATTER = { x: 560, y: 430 };       // right-handed batter, right of plate, large
+const BATTER = { x: 290, y: 430 };       // right-handed batter, LEFT batter's box (3rd-base side), back-3/4 view
 const ZONE = { cx: 400, cy: 390, w: 70, h: 90 }; // strike zone centered on home plate
 
 const SWING_TYPES = [
@@ -266,14 +266,14 @@ function drawInfield(ctx) {
   ctx.fillStyle = '#F5F1E8';
   ctx.fillRect(MOUND.x - 10, MOUND.y + 15, 20, 3);
 
-  // Batter's box (chalk outline to the right of home plate where batter stands)
+  // Batter's box (chalk outline to the LEFT of home plate where right-handed batter stands)
   ctx.strokeStyle = 'rgba(245, 241, 232, 0.7)';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(495, 430);     // near-left corner of box
-  ctx.lineTo(640, 430);     // near-right corner
-  ctx.lineTo(615, 490);     // far-right corner (perspective)
-  ctx.lineTo(460, 490);     // far-left corner (perspective)
+  ctx.moveTo(160, 430);     // far-left corner of box
+  ctx.lineTo(305, 430);     // far-right corner (closer to plate)
+  ctx.lineTo(340, 490);     // near-right corner (perspective)
+  ctx.lineTo(140, 490);     // near-left corner (perspective)
   ctx.closePath();
   ctx.stroke();
 
@@ -443,316 +443,422 @@ function drawCatcher(ctx) {
   });
 }
 
-// Compute the batter's pose at swing progress t (0..1).
+// =============================================================================
+// CHIBI BACK-3/4 BATTER — Baseball-9 style camera (behind home plate, looking
+// at the pitcher in the distance). Right-handed batter standing in the LEFT
+// batter's box.
 //
-// SIDE VIEW: the batter is rendered in profile (3/4 view facing the camera).
-// The pitcher is at the LEFT of the screen, the batter on the RIGHT. A real
-// swing in this view sweeps the bat from cocked-up-and-back (vertical, behind
-// the right shoulder) → through the strike zone (horizontal, across the body
-// pointing LEFT toward the pitcher) → wrapped around (pointing down-and-back
-// across the left shoulder).
+// Pre-swing: we see his back-right side (~25% front visible at the helmet, the
+// rest is back+right shoulder). The bat is cocked vertically over his right
+// shoulder. As he swings, his whole body rotates ~90° clockwise (camera POV) —
+// front shoulder pulls back toward 3rd base, back shoulder drives toward 1st.
+// At extension we see his full back; the jersey number "9" rotates into view.
 //
-// Three things we animate to break the "circle" look:
-//   1. Hand position moves along a small forward-and-back arc, not pinned at
-//      the shoulder. The lead (front) shoulder dips during contact, the back
-//      hand drives across the body.
-//   2. Bat angle changes non-linearly: slow during the load, fast through the
-//      zone, slow through the wrap. (Real swings are explosive at contact.)
-//   3. Body weight shifts forward during the drive (bodyShift) so the whole
-//      torso/head leans into the pitch — adds the "stepping into it" feel.
-function swingPoseAt(x, y, t) {
-  // Hand origin starts BEHIND the right shoulder (high), ends in FRONT of the
-  // left shoulder (high) — total horizontal travel ~100px so the bat truly
-  // slides across the body instead of rotating around a near-fixed pivot.
-  const restHX = x + 22;
-  const restHY = y - 50;
-  let handDX = 0;
-  let handDY = 0;
-  let angle;
-  let bodyShift = 0;       // horizontal lean toward pitcher
-  let torsoTilt = 0;       // shoulder-line rotation (rad), positive = front shoulder dips
+// We model this as THREE keyframes (Stance, Contact, Extension) interpolated
+// over swing progress t∈[0,1]. Each keyframe stores: body rotation, hand
+// position, bat angle, and a torso-twist factor that controls how much of the
+// front vs. back of the batter is visible (0 = all back, 1 = some front).
+// =============================================================================
 
-  if (t <= 0) {
-    // STANCE: bat cocked vertically behind right shoulder
-    angle = -Math.PI * 0.55;
-  } else if (t < 0.20) {
-    // LOAD: pull hands back-and-up, weight shifts onto back leg, slight tilt
-    const k = t / 0.20;
-    handDX = 8 * k;
-    handDY = -4 * k;
-    angle = -Math.PI * 0.55 + (-Math.PI * 0.12) * k;  // tips further back
-    bodyShift = 2 * k;
-    torsoTilt = -0.05 * k;
-  } else if (t < 0.50) {
-    // DRIVE through the zone — explosive. Hands shoot all the way across the
-    // body (90px translation). Bat angle rotates from cocked to past-horizontal.
-    const k = (t - 0.20) / 0.30;
-    const ease = k * k;
-    handDX = 8 - 90 * ease;             // +8 to -82 — full body crossing
-    handDY = -4 + 18 * ease;             // hands drop into the zone
-    angle = -Math.PI * 0.67 - Math.PI * 0.50 * ease;  // -0.67π → -1.17π
-    bodyShift = 2 - 9 * ease;            // body lunges 9px forward
-    torsoTilt = -0.05 + 0.20 * ease;     // shoulder rotates open (front shoulder lifts)
-  } else if (t < 0.78) {
-    // FOLLOW-THROUGH: hands continue past the front shoulder and up-back into
-    // the wrap, bat sweeps to point DOWN-AND-BACK behind the left shoulder.
-    const k = (t - 0.50) / 0.28;
-    const ease = 1 - (1 - k) * (1 - k);
-    handDX = -82 + 30 * ease;            // hands come slightly back as they rise
-    handDY = 14 - 38 * ease;             // hands rise sharply (wrap over shoulder)
-    angle = -Math.PI * 1.17 - Math.PI * 0.55 * ease;  // -1.17π → -1.72π
-    bodyShift = -7 + 3 * ease;
-    torsoTilt = 0.15 + 0.05 * ease;      // shoulder fully open
+function lerp(a, b, k) { return a + (b - a) * k; }
+function easeOut(k) { return 1 - (1 - k) * (1 - k); }
+
+// Three keyframes. All offsets are relative to BATTER (x, y).
+// frontFactor: 0 = pure back view, 1 = some front-right visible (helmet face,
+// chest stripe). At stance we still see a bit of front; at extension we see only back.
+const SWING_KEYFRAMES = {
+  stance: {
+    bodyRot: 0,           // body rotation (rad) around hips, + = clockwise from camera
+    frontFactor: 0.40,    // we see some front-right of the body
+    handsX: 22, handsY: -56,
+    batAngle: -Math.PI * 0.50,  // bat straight up
+    batLen: 1.0,
+    headTwist: -0.15,     // head turned slightly toward pitcher (left)
+    leadFootDX: -16,      // front (left) foot toward pitcher
+    backFootDX: 18,       // back (right) foot away from pitcher
+    hipShift: 0,
+  },
+  contact: {
+    bodyRot: 0.55,        // body has rotated ~32° clockwise
+    frontFactor: 0.10,    // mostly back now, just sliver of front
+    handsX: -28, handsY: -42,
+    batAngle: -Math.PI * 1.02,  // bat horizontal, pointing left toward pitcher
+    batLen: 0.55,         // FORESHORTENED — barrel is pointing into the screen
+    headTwist: -0.05,     // head still tracks ball
+    leadFootDX: -18,      // front foot has stepped slightly forward
+    backFootDX: 14,       // back foot pivoting (heel up — modeled as slight inward shift)
+    hipShift: -3,         // hips driven toward pitcher
+  },
+  extension: {
+    bodyRot: 1.0,         // body fully turned, we see full back
+    frontFactor: 0.0,     // pure back view, jersey "9" facing camera
+    handsX: -38, handsY: -68,  // hands wrapped up over left shoulder
+    batAngle: -Math.PI * 1.55,  // bat wrapped pointing down-and-back behind left side
+    batLen: 0.95,         // back to mostly full length (now visible side-on again)
+    headTwist: 0.20,      // head following the swing through
+    leadFootDX: -18,
+    backFootDX: 8,        // back foot turned, on toe
+    hipShift: -2,
+  },
+};
+
+function swingPoseAt(t) {
+  if (t <= 0) return { ...SWING_KEYFRAMES.stance };
+  if (t >= 1) return { ...SWING_KEYFRAMES.extension };
+
+  const kf = SWING_KEYFRAMES;
+  let from, to, k;
+  if (t < 0.50) {
+    // Stance → Contact (load + drive). Slow load, snappy drive.
+    const u = t / 0.50;
+    from = kf.stance; to = kf.contact;
+    k = u < 0.4 ? u * 0.5 : 0.20 + (u - 0.4) * 1.33;  // slow first 40%, fast next 60%
+    k = Math.min(1, k);
   } else {
-    // SETTLE: body recovers, bat hangs at finish position
-    const k = (t - 0.78) / 0.22;
-    const ease = 1 - (1 - k) * (1 - k);
-    handDX = -52 - 2 * ease;
-    handDY = -24 - 2 * ease;
-    angle = -Math.PI * 1.72 - Math.PI * 0.10 * ease;
-    bodyShift = -4 + 2 * ease;
-    torsoTilt = 0.20 - 0.05 * ease;
+    // Contact → Extension (follow-through). Ease-out.
+    const u = (t - 0.50) / 0.50;
+    from = kf.contact; to = kf.extension;
+    k = easeOut(u);
   }
 
   return {
-    handsX: restHX + handDX,
-    handsY: restHY + handDY,
-    angle,
-    bodyShift,
-    torsoTilt,
+    bodyRot: lerp(from.bodyRot, to.bodyRot, k),
+    frontFactor: lerp(from.frontFactor, to.frontFactor, k),
+    handsX: lerp(from.handsX, to.handsX, k),
+    handsY: lerp(from.handsY, to.handsY, k),
+    batAngle: lerp(from.batAngle, to.batAngle, k),
+    batLen: lerp(from.batLen, to.batLen, k),
+    headTwist: lerp(from.headTwist, to.headTwist, k),
+    leadFootDX: lerp(from.leadFootDX, to.leadFootDX, k),
+    backFootDX: lerp(from.backFootDX, to.backFootDX, k),
+    hipShift: lerp(from.hipShift, to.hipShift, k),
   };
 }
 
-// Position of the bat tip (barrel end) at swing progress t — used for the trail.
+// Bat tip position for the swing-trail effect.
 function swingTipAt(x, y, t) {
-  const p = swingPoseAt(x, y, t);
-  const BARREL = 82;
+  const p = swingPoseAt(t);
+  const handsX = x + p.handsX + p.hipShift;
+  const handsY = y + p.handsY;
+  const len = 78 * p.batLen;
   return {
-    x: p.handsX + Math.cos(p.angle) * BARREL,
-    y: p.handsY + Math.sin(p.angle) * BARREL,
+    x: handsX + Math.cos(p.batAngle) * len,
+    y: handsY + Math.sin(p.batAngle) * len,
   };
 }
 
 function drawBatter(ctx, teamColor, batSwingT, teamNameShort) {
-  // SIDE-VIEW: batter rendered in 3/4 profile on the right side of the canvas,
-  // pitcher on the left. We compute the swing pose first so we can shift the
-  // whole body slightly with the swing (weight transfer toward the pitcher).
+  const x = BATTER.x;
+  const y = BATTER.y;
   const t = batSwingT == null ? 0 : batSwingT;
-  const xBase = BATTER.x;
-  const yBase = BATTER.y;
-  const pose = swingPoseAt(xBase, yBase, t);
-  // Apply body shift: lean the whole batter toward the pitcher during contact
-  const x = xBase + pose.bodyShift;
-  const y = yBase;
+  const pose = swingPoseAt(t);
+
   const jersey = teamColor || '#1f3a93';
   const jerseyDark = darken(jersey, 0.35);
-  const jerseyLight = lighten(jersey, 0.2);
+  const jerseyLight = lighten(jersey, 0.20);
   const pants = '#F5F1E8';
-  const pantsDark = darken(pants, 0.2);
+  const pantsDark = darken(pants, 0.18);
   const skin = '#E7B691';
-  const skinDark = darken(skin, 0.2);
+  const skinDark = darken(skin, 0.18);
+  const helmet = jersey;
+  const helmetDark = jerseyDark;
+  const helmetLight = jerseyLight;
 
-  // ---- Legs (wide athletic stance, seen from behind) ----
-  // Left leg (from batter's POV) = LEFT on screen (near side to pitcher)
+  const front = pose.frontFactor;       // 0 = pure back, 1 = some front
+  const rot = pose.bodyRot;             // 0 = stance, 1 = extension
+  const hx = pose.hipShift;             // horizontal hip shift toward pitcher
+
+  // ---- LEGS (chibi: short and chunky, planted wide) ----
+  // Lead leg = LEFT on screen (toward pitcher). Back leg = RIGHT.
+  // During the swing the lead foot stays planted, the back foot pivots inward.
+  const leadFX = x + pose.leadFootDX;
+  const backFX = x + pose.backFootDX;
+  const footY = y + 62;
+  const kneeY = y + 30;
+
+  // Back leg (drawn first so lead leg sits in front)
   outlinedPath(ctx, (c) => {
-    c.moveTo(x - 28, y + 15);
-    c.lineTo(x - 8, y + 15);
-    c.lineTo(x - 10, y + 65);
-    c.lineTo(x - 32, y + 65);
+    c.moveTo(backFX - 11, footY - 4);
+    c.lineTo(backFX + 13, footY - 4);
+    c.lineTo(x + 10 + hx, kneeY);
+    c.lineTo(x - 4 + hx, kneeY);
     c.closePath();
   }, pants);
-  // Left cleat
-  outlinedRect(ctx, x - 36, y + 62, 30, 8, INK);
-  // Shadow stripe
+  // Back leg shadow (right side)
   ctx.fillStyle = pantsDark;
-  ctx.fillRect(x - 28, y + 15, 5, 48);
+  ctx.beginPath();
+  ctx.moveTo(backFX + 8, footY - 4);
+  ctx.lineTo(backFX + 13, footY - 4);
+  ctx.lineTo(x + 10 + hx, kneeY);
+  ctx.lineTo(x + 4 + hx, kneeY);
+  ctx.closePath();
+  ctx.fill();
+  // Back cleat
+  outlinedRect(ctx, backFX - 14, footY - 2, 30, 10, INK);
 
-  // Right leg = RIGHT on screen
+  // Lead leg
   outlinedPath(ctx, (c) => {
-    c.moveTo(x + 8, y + 15);
-    c.lineTo(x + 28, y + 15);
-    c.lineTo(x + 32, y + 65);
-    c.lineTo(x + 10, y + 65);
+    c.moveTo(leadFX - 13, footY - 4);
+    c.lineTo(leadFX + 11, footY - 4);
+    c.lineTo(x + 4 + hx, kneeY);
+    c.lineTo(x - 10 + hx, kneeY);
     c.closePath();
   }, pants);
-  outlinedRect(ctx, x + 6, y + 62, 30, 8, INK);
   ctx.fillStyle = pantsDark;
-  ctx.fillRect(x + 23, y + 15, 5, 48);
+  ctx.beginPath();
+  ctx.moveTo(leadFX + 6, footY - 4);
+  ctx.lineTo(leadFX + 11, footY - 4);
+  ctx.lineTo(x + 4 + hx, kneeY);
+  ctx.lineTo(x - 2 + hx, kneeY);
+  ctx.closePath();
+  ctx.fill();
+  // Lead cleat
+  outlinedRect(ctx, leadFX - 16, footY - 2, 30, 10, INK);
 
-  // Belt
-  outlinedRect(ctx, x - 32, y + 8, 64, 8, INK);
+  // ---- HIPS / BELT ----
+  outlinedRect(ctx, x - 26 + hx, y + 10, 52, 9, INK);
 
-  // ---- Torso (back view, BIG) ----
+  // ---- TORSO (chibi: short, wide; rotates with bodyRot) ----
+  // Width tapers from "wider front-3/4" (stance) to "narrower pure-back" (extension)
+  // because we lose perspective width as he turns. Use rot to drive it.
+  const torsoTopY = y - 44;
+  const torsoBotY = y + 10;
+  const torsoWide = lerp(36, 30, rot);   // shoulder half-width
+  const torsoNarrow = lerp(28, 24, rot); // hip half-width
+
   outlinedPath(ctx, (c) => {
-    c.moveTo(x - 38, y - 48);   // left shoulder
-    c.lineTo(x + 38, y - 48);   // right shoulder
-    c.lineTo(x + 34, y + 12);   // right hip
-    c.lineTo(x - 34, y + 12);   // left hip
+    c.moveTo(x - torsoWide + hx, torsoTopY);
+    c.lineTo(x + torsoWide + hx, torsoTopY);
+    c.lineTo(x + torsoNarrow + hx, torsoBotY);
+    c.lineTo(x - torsoNarrow + hx, torsoBotY);
     c.closePath();
   }, jersey);
 
-  // Spine shadow down center (cel-shading hint)
-  ctx.fillStyle = jerseyDark;
-  ctx.fillRect(x - 4, y - 48, 8, 60);
-  // Side shadow on left (lighting from upper-right)
+  // Torso shading: a dark vertical band on the FAR side (right when stance,
+  // left when extension), and a light highlight band on the NEAR side. This
+  // is what gives the chibi its 3D feel without true rendering.
+  // At stance, front-right is lit (jerseyLight on right), back is dark.
+  // At extension, the lighting flips because he's now seen from behind.
+  // We approximate by interpolating the shadow x-position with rot.
+  const shadowX = lerp(x - torsoWide * 0.9, x + torsoWide * 0.1, rot) + hx;
   ctx.fillStyle = jerseyDark;
   ctx.beginPath();
-  ctx.moveTo(x - 38, y - 48);
-  ctx.lineTo(x - 26, y - 48);
-  ctx.lineTo(x - 30, y + 12);
-  ctx.lineTo(x - 34, y + 12);
+  ctx.moveTo(shadowX, torsoTopY);
+  ctx.lineTo(shadowX + 10, torsoTopY);
+  ctx.lineTo(shadowX + 8, torsoBotY);
+  ctx.lineTo(shadowX - 2, torsoBotY);
   ctx.closePath();
   ctx.fill();
 
-  // BIG jersey number on back - centered, bold outlined
-  ctx.save();
-  ctx.fillStyle = '#F5F1E8';
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 3;
-  ctx.font = 'bold 42px Fredoka, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.strokeText('9', x, y - 18);
-  ctx.fillText('9', x, y - 18);
-  ctx.restore();
-
-  // Team name across shoulders (tiny detail - adds polish)
-  ctx.save();
-  ctx.fillStyle = '#F5F1E8';
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 1.5;
-  ctx.font = 'bold 11px Fredoka, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  const label = (teamNameShort || 'TEAM').toUpperCase().substring(0, 8);
-  ctx.strokeText(label, x, y - 40);
-  ctx.fillText(label, x, y - 40);
-  ctx.restore();
-
-  // ---- Head (back of head, turned slightly left toward pitcher) ----
-  const headX = x - 4;  // shifted slightly left (he's looking at pitcher on left)
-  const headY = y - 70;
-
-  // Neck (visible strip between helmet and jersey)
-  outlinedRect(ctx, headX - 8, y - 54, 16, 8, skin);
-
-  // Helmet (back view) - big dome with ear flap on left side (facing pitcher)
-  outlinedCircle(ctx, headX, headY, 22, jersey);
-  // Helmet shadow on right (back side from light)
-  ctx.fillStyle = jerseyDark;
-  ctx.beginPath();
-  ctx.arc(headX, headY, 22, Math.PI * 1.7, Math.PI * 0.3);
-  ctx.lineTo(headX, headY);
-  ctx.closePath();
-  ctx.fill();
-  // Re-stroke helmet outline on top
-  ctx.beginPath();
-  ctx.arc(headX, headY, 22, 0, Math.PI * 2);
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2.5;
-  ctx.stroke();
-
-  // Ear flap on left side (protecting the ear facing the pitcher)
-  outlinedPath(ctx, (c) => {
-    c.moveTo(headX - 18, headY - 4);
-    c.lineTo(headX - 22, headY + 8);
-    c.lineTo(headX - 16, headY + 14);
-    c.lineTo(headX - 8, headY + 8);
-    c.closePath();
-  }, jersey);
-
-  // Helmet logo dot (tiny center-of-back detail)
+  // Highlight band (subtle)
+  const highlightX = lerp(x + torsoWide * 0.4, x - torsoWide * 0.4, rot) + hx;
   ctx.fillStyle = jerseyLight;
+  ctx.globalAlpha = 0.5;
   ctx.beginPath();
-  ctx.arc(headX, headY - 2, 4, 0, Math.PI * 2);
+  ctx.moveTo(highlightX, torsoTopY + 4);
+  ctx.lineTo(highlightX + 6, torsoTopY + 4);
+  ctx.lineTo(highlightX + 4, torsoBotY - 4);
+  ctx.lineTo(highlightX - 2, torsoBotY - 4);
+  ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
+  ctx.globalAlpha = 1;
 
-  // Tiny sliver of cheek on left side (turning toward pitcher)
-  ctx.fillStyle = skin;
-  ctx.beginPath();
-  ctx.arc(headX - 20, headY + 2, 4, Math.PI * 0.5, Math.PI * 1.5);
-  ctx.fill();
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
+  // ---- JERSEY GRAPHIC ----
+  // When front-facing (front > 0.2): show team name + small chest logo on front.
+  // When back-facing (front < 0.3): show big jersey number on back.
+  // Crossfade between them based on front.
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
 
-  // ---- Bat & swing animation ----
-  // Pose was computed at the top of the function. Hands ride along with the
-  // body shift so they stay attached to the shoulders.
-  const handsX = pose.handsX + pose.bodyShift;
-  const handsY = pose.handsY;
-  const angle = pose.angle;
+  if (front > 0.05) {
+    // Front-facing chest text (small team label)
+    ctx.globalAlpha = front;
+    ctx.fillStyle = '#F5F1E8';
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 1.5;
+    ctx.font = 'bold 10px Fredoka, sans-serif';
+    const label = (teamNameShort || 'TEAM').toUpperCase().substring(0, 8);
+    ctx.strokeText(label, x + hx, y - 28);
+    ctx.fillText(label, x + hx, y - 28);
+  }
+  if (front < 0.5) {
+    // Back-facing jersey number (big "9")
+    ctx.globalAlpha = 1 - front * 1.5;
+    if (ctx.globalAlpha > 0) {
+      ctx.fillStyle = '#F5F1E8';
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 3;
+      ctx.font = 'bold 38px Fredoka, sans-serif';
+      ctx.strokeText('9', x + hx, y - 16);
+      ctx.fillText('9', x + hx, y - 16);
+    }
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
 
-  // Right arm (near camera) — origin at right shoulder, follows hands
+  // ---- ARMS ----
+  // Both arms hold the bat. Right (back) arm is closer to camera at stance,
+  // hidden behind torso at extension. Left (front) arm sweeps across the body.
+  // We render them as simple sleeve-quads from shoulder to hands.
+  const handsAbsX = x + pose.handsX + hx;
+  const handsAbsY = y + pose.handsY;
+
+  // Right shoulder anchor — moves toward the LEFT of the torso as body rotates
+  // (because the right shoulder rotates around to where we now see his back)
+  const rShoulderX = lerp(x + 28, x - 18, rot) + hx;
+  const rShoulderY = torsoTopY + 4;
+  // Left shoulder — moves the opposite way
+  const lShoulderX = lerp(x - 22, x + 26, rot) + hx;
+  const lShoulderY = torsoTopY + 4;
+
+  // Back arm (right) — drawn first so front arm overlaps it
   outlinedPath(ctx, (c) => {
-    const shX = x + 30;
-    const shY = y - 46;
-    // Elbow drifts toward hands as arm extends
-    const elbowX = shX + (handsX - shX) * 0.45 + 8;
-    const elbowY = shY + (handsY - shY) * 0.45 - 2;
-    c.moveTo(shX, shY);
-    c.lineTo(shX + 12, shY + 4);
-    c.lineTo(elbowX, elbowY);
-    c.lineTo(handsX + 2, handsY + 6);
-    c.lineTo(handsX - 8, handsY + 6);
+    c.moveTo(rShoulderX - 6, rShoulderY);
+    c.lineTo(rShoulderX + 10, rShoulderY);
+    const elbowX = (rShoulderX + handsAbsX) / 2 + 6;
+    const elbowY = (rShoulderY + handsAbsY) / 2 - 2;
+    c.lineTo(elbowX + 4, elbowY);
+    c.lineTo(handsAbsX + 4, handsAbsY + 6);
+    c.lineTo(handsAbsX - 6, handsAbsY + 6);
     c.lineTo(elbowX - 6, elbowY + 4);
-    c.closePath();
-  }, jersey);
-  // Left arm — origin at left shoulder, also tracks hands (both hands on bat)
-  outlinedPath(ctx, (c) => {
-    const shX = x - 34;
-    const shY = y - 46;
-    const elbowX = shX + (handsX - shX) * 0.5;
-    const elbowY = shY + (handsY - shY) * 0.5 + 4;
-    c.moveTo(shX, shY);
-    c.lineTo(shX + 14, shY);
-    c.lineTo(elbowX + 4, elbowY - 2);
-    c.lineTo(handsX - 4, handsY + 4);
-    c.lineTo(elbowX - 4, elbowY + 4);
     c.closePath();
   }, jerseyDark);
 
-  // Hands (skin) — drawn AFTER arms so they sit on top
-  outlinedCircle(ctx, handsX, handsY, 7, skin);
-  outlinedCircle(ctx, handsX + 4, handsY - 2, 6, skin);
+  // Front arm (left) — bright jersey
+  outlinedPath(ctx, (c) => {
+    c.moveTo(lShoulderX - 8, lShoulderY);
+    c.lineTo(lShoulderX + 4, lShoulderY);
+    const elbowX = (lShoulderX + handsAbsX) / 2;
+    const elbowY = (lShoulderY + handsAbsY) / 2 + 4;
+    c.lineTo(elbowX + 2, elbowY);
+    c.lineTo(handsAbsX, handsAbsY + 4);
+    c.lineTo(handsAbsX - 8, handsAbsY + 4);
+    c.lineTo(elbowX - 4, elbowY + 4);
+    c.closePath();
+  }, jersey);
 
+  // ---- HANDS (skin) ----
+  outlinedCircle(ctx, handsAbsX, handsAbsY, 7, skin);
+  outlinedCircle(ctx, handsAbsX + 4, handsAbsY - 2, 6, skin);
+
+  // ---- HEAD + HELMET (chibi: oversized ~1.4× normal proportions) ----
+  // Head sits above shoulders with a slight tilt that comes from headTwist.
+  const headY = torsoTopY - 18;
+  const headX = x + hx + Math.sin(pose.headTwist) * 6;
+  const headR = 26;  // chibi: BIG head
+
+  // Neck
+  outlinedRect(ctx, headX - 8, torsoTopY - 4, 16, 8, skin);
+
+  // Helmet base (full circle)
+  outlinedCircle(ctx, headX, headY, headR, helmet);
+
+  // Helmet shading: dark crescent on the SIDE that's away from the light.
+  // We light from upper-right consistently, but as the head rotates with the
+  // body, the dark side migrates. At stance dark is on right (back), at
+  // extension dark is on left (back-now).
+  const helmetShadowStart = lerp(Math.PI * 1.7, Math.PI * 0.7, rot);
+  const helmetShadowEnd = lerp(Math.PI * 0.3, Math.PI * 1.3, rot);
+  ctx.fillStyle = helmetDark;
+  ctx.beginPath();
+  ctx.arc(headX, headY, headR, helmetShadowStart, helmetShadowEnd);
+  ctx.lineTo(headX, headY);
+  ctx.closePath();
+  ctx.fill();
+  // Re-stroke helmet outline
+  ctx.beginPath();
+  ctx.arc(headX, headY, headR, 0, Math.PI * 2);
+  inkStroke(ctx);
+
+  // Helmet brim (chibi proportion: short bill on the front)
+  // Bill is on the side facing the pitcher — left at stance, swings around with rot
+  const billAngle = lerp(Math.PI, Math.PI * 1.5, rot);
+  const billX = headX + Math.cos(billAngle) * (headR - 2);
+  const billY = headY + Math.sin(billAngle) * (headR - 2);
+  outlinedCircle(ctx, billX, billY + 2, 5, helmet);
+
+  // Helmet highlight (small light circle for chibi shine)
+  ctx.fillStyle = helmetLight;
+  ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.arc(headX - 8 + rot * 14, headY - 12, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // FACE — only visible when front > 0.2 (early in swing). Crossfade out as
+  // batter rotates. We show: cheek, ear-flap on near side, sliver of nose.
+  if (front > 0.10) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, front * 1.8);
+
+    // Cheek visible on the LEFT side of helmet (toward pitcher)
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.arc(headX - headR + 4, headY + 4, 7, Math.PI * 0.5, Math.PI * 1.5);
+    ctx.fill();
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Cheek shadow
+    ctx.fillStyle = skinDark;
+    ctx.beginPath();
+    ctx.arc(headX - headR + 4, headY + 7, 3, Math.PI * 0.5, Math.PI * 1.5);
+    ctx.fill();
+
+    // Ear flap (helmet extension covering ear)
+    ctx.fillStyle = helmetDark;
+    outlinedPath(ctx, (c) => {
+      c.moveTo(headX - headR + 6, headY - 4);
+      c.lineTo(headX - headR + 2, headY + 8);
+      c.lineTo(headX - headR + 10, headY + 14);
+      c.lineTo(headX - headR + 16, headY + 6);
+      c.closePath();
+    }, helmetDark);
+
+    // Tiny eye (single dot, since chibi)
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    ctx.arc(headX - headR + 12, headY - 1, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // ---- BAT ----
+  // Drawn AFTER body so it's on top. Bat is foreshortened during contact via batLen.
   ctx.save();
-  ctx.translate(handsX, handsY);
-  ctx.rotate(angle);
-  // Foreshortening: scale the bat along its axis (lengthMul) and across (widthMul).
-  // When the bat is swinging toward the pitcher (away from the camera) lengthMul
-  // shrinks dramatically and widthMul grows — the bat reads as a stub coming
-  // straight at us, not a stick sweeping through frame.
-  // Bat shaft
+  ctx.translate(handsAbsX, handsAbsY);
+  ctx.rotate(pose.batAngle);
+  ctx.scale(pose.batLen, lerp(1.0, 1.3, 1 - pose.batLen));  // length shrinks, width grows when foreshortened
+
+  // Bat shaft (tapered from grip to barrel)
   ctx.fillStyle = '#C9A36B';
   ctx.strokeStyle = INK;
   ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.moveTo(0, -5);
-  ctx.lineTo(60, -8);
-  ctx.lineTo(82, -10);
-  ctx.lineTo(82, 10);
-  ctx.lineTo(60, 8);
-  ctx.lineTo(0, 5);
+  ctx.moveTo(0, -4);
+  ctx.lineTo(50, -7);
+  ctx.lineTo(78, -10);
+  ctx.lineTo(78, 10);
+  ctx.lineTo(50, 7);
+  ctx.lineTo(0, 4);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  // Wood grain shadow along bottom
+  // Wood grain shadow
   ctx.fillStyle = '#8B5E34';
   ctx.beginPath();
-  ctx.moveTo(60, 3);
-  ctx.lineTo(82, 4);
-  ctx.lineTo(82, 10);
-  ctx.lineTo(60, 8);
+  ctx.moveTo(50, 2);
+  ctx.lineTo(78, 4);
+  ctx.lineTo(78, 10);
+  ctx.lineTo(50, 7);
   ctx.closePath();
   ctx.fill();
-  // Grip tape (black wrap)
+  // Grip tape
   ctx.fillStyle = '#222';
-  ctx.fillRect(0, -5, 16, 10);
-  ctx.strokeRect(0, -5, 16, 10);
+  ctx.fillRect(0, -4, 14, 8);
+  ctx.strokeRect(0, -4, 14, 8);
   // Knob
   ctx.beginPath();
   ctx.arc(-3, 0, 5, 0, Math.PI * 2);
@@ -761,11 +867,9 @@ function drawBatter(ctx, teamColor, batSwingT, teamNameShort) {
   ctx.stroke();
   ctx.restore();
 
-  // Swing streak — trail behind the bat barrel through drive + follow-through.
-  // Samples the actual bat-tip path so the trail bends the way the swing bends.
+  // ---- SWING TRAIL (motion blur) ----
   if (batSwingT != null && batSwingT > 0.30 && batSwingT < 0.95) {
     ctx.save();
-    // Fade in/out at the edges of the swing
     const fade = batSwingT < 0.40 ? (batSwingT - 0.30) / 0.10
                : batSwingT > 0.85 ? (0.95 - batSwingT) / 0.10
                : 1;
