@@ -140,6 +140,59 @@ content (more questions, more study modes, more grade levels).
 
 ---
 
+## Sprite generation tools (currently in use / on standby)
+
+These are how we'd get the actual character art for the canvas-with-sprites
+approach. Neither is a game engine — they produce frame sets we'd drop into
+`public/sprites/` and animate via `ctx.drawImage()`.
+
+### PixelLab.ai — https://www.pixellab.ai/editor
+
+**Currently in use.** AI-driven sprite art generator with built-in character
+consistency across rotations and animation frames. Purpose-built for what we
+need: an 8-frame swing of a single consistent character.
+
+- **Style:** Pixel art (16-bit, 32-bit retro game aesthetic).
+- **Output:** Frame-by-frame PNGs with transparent backgrounds, consistent
+  dimensions and pivot point per frame.
+- **Why it fits Diamond Scholar:** Solves the frame-to-frame consistency problem
+  that generic image generators (Midjourney, DALL-E, Sora) can't handle for
+  animation. Pixel art also fits the kid-friendly retro vibe of a study game
+  better than smooth-vector chibi would.
+- **Workflow:** Generate character → generate animation frames → export PNG
+  set → drop into repo → swap frame in canvas per swing-progress tick.
+- **Caveat on art style:** The original character description we drafted was
+  for smooth cel-shaded chibi (Baseball 9 look). If we use PixelLab, we
+  rewrite the description for pixel-art chibi and embrace the retro look.
+
+### Liberated Pixel Cup (LPC) + Universal LPC Spritesheet Generator
+
+**Backup option** if PixelLab doesn't deliver what we need.
+
+- **What LPC is:** An open-source art project (sponsored by Creative Commons,
+  Mozilla, FSF, OpenGameArt) that established a standardized pixel-art style
+  with a curated asset library — overhead 16-bit RPG style, 32×32 tile base,
+  front-facing orthographic perspective.
+- **The character generator:** A separate community-maintained tool (Universal
+  LPC Spritesheet Character Generator) lets you build a humanoid character by
+  layering body, hair, clothes, gear, etc., and download a finished
+  spritesheet with multiple animations baked in (walk, attack, etc.).
+- **License:** Dual CC-BY-SA 3.0 + GPLv3 — free to use, but derivative works
+  must be share-alike. **Worth checking** whether SA terms create any
+  obligation we don't want for a commercial product down the road.
+- **What's good:** Free. Huge asset library. Predictable format. No AI
+  variability — same input always gives same output.
+- **Limitations vs. PixelLab:** No baseball-specific animation. The default
+  animations are RPG-style (walk, slash, cast). A baseball swing would have
+  to be hand-edited from the existing attack frames or commissioned. Camera
+  angle is overhead/orthographic — different from the catcher-cam back-3/4
+  view we want.
+- **When it makes sense:** If PixelLab can't deliver consistent batter sprites,
+  or if we want a fully open-source art pipeline. May require a pixel artist
+  to adapt LPC base frames into baseball poses.
+
+---
+
 ## Other engines worth knowing about (not deeply researched here)
 
 - **Phaser** (https://phaser.io) — JavaScript-native 2D game framework. Closest
