@@ -149,17 +149,8 @@ function drawOutfield(ctx) {
     ctx.fill();
   });
 
-  // Scoreboard silhouette on roof (center)
-  ctx.fillStyle = '#1a252f';
-  ctx.fillRect(CW / 2 - 60, 168, 120, 22);
-  ctx.strokeStyle = INK;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(CW / 2 - 60, 168, 120, 22);
-  // Fake LEDs on scoreboard
-  ctx.fillStyle = '#e74c3c';
-  for (let i = 0; i < 8; i++) {
-    ctx.fillRect(CW / 2 - 55 + i * 14, 173, 4, 4);
-  }
+  // (The big jumbotron scoreboard is drawn separately by drawJumbotron so it
+  // can read live game state — see the render loop.)
 
   // Bleacher crowd band - curved to match the wraparound feel
   // Draw as a band that dips in the middle
@@ -230,6 +221,142 @@ function drawOutfield(ctx) {
     ctx.closePath();
     ctx.fill();
   }
+}
+
+// Big stadium jumbotron mounted above the outfield wall. Shows live game
+// state — scores, inning, balls/strikes/outs count, and base runners — so the
+// player can read the whole situation at a glance. Replaces the tiny corner
+// diamond that used to get hidden behind the clouds.
+function drawJumbotron(ctx, game, teamNameShort) {
+  // Panel geometry — wide, centered, sitting above the green outfield wall.
+  const pw = 300;          // panel width
+  const ph = 104;          // panel height
+  const px = CW / 2 - pw / 2;
+  const py = 96;
+
+  ctx.save();
+
+  // ---- Support struts (so it reads as "mounted on the wall") ----
+  ctx.fillStyle = '#2a2f38';
+  ctx.fillRect(px + 40, py + ph, 10, 30);
+  ctx.fillRect(px + pw - 50, py + ph, 10, 30);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(px + 40, py + ph, 10, 30);
+  ctx.strokeRect(px + pw - 50, py + ph, 10, 30);
+
+  // ---- Outer frame ----
+  ctx.fillStyle = '#11151c';
+  ctx.fillRect(px - 5, py - 5, pw + 10, ph + 10);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(px - 5, py - 5, pw + 10, ph + 10);
+
+  // ---- LED screen background ----
+  ctx.fillStyle = '#0a0d12';
+  ctx.fillRect(px, py, pw, ph);
+  // Faint scanline texture for the "LED screen" feel
+  ctx.fillStyle = 'rgba(255,255,255,0.025)';
+  for (let sy = py + 2; sy < py + ph; sy += 4) {
+    ctx.fillRect(px, sy, pw, 1);
+  }
+
+  // ---- Helpers ----
+  const amber = '#FFB627';
+  const green = '#3DDC55';
+  const red = '#FF5050';
+  const dim = 'rgba(255,255,255,0.18)';
+
+  // ---- TOP ROW: team names + scores ----
+  const homeLabel = (teamNameShort || 'HOME').toUpperCase().substring(0, 8);
+  const rowY = py + 22;
+
+  ctx.textBaseline = 'middle';
+  // Home (player) label + score
+  ctx.textAlign = 'left';
+  ctx.fillStyle = amber;
+  ctx.font = 'bold 15px Fredoka, sans-serif';
+  ctx.fillText(homeLabel, px + 14, rowY);
+  ctx.textAlign = 'right';
+  ctx.font = 'bold 22px Fredoka, sans-serif';
+  ctx.fillStyle = green;
+  ctx.fillText(String(game.playerScore), px + 130, rowY);
+
+  // Away (opponent) label + score
+  ctx.textAlign = 'left';
+  ctx.fillStyle = amber;
+  ctx.font = 'bold 15px Fredoka, sans-serif';
+  ctx.fillText('OPP', px + pw - 130, rowY);
+  ctx.textAlign = 'right';
+  ctx.font = 'bold 22px Fredoka, sans-serif';
+  ctx.fillStyle = green;
+  ctx.fillText(String(game.aiScore), px + pw - 14, rowY);
+
+  // Divider line under the score row
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(px + 10, py + 36);
+  ctx.lineTo(px + pw - 10, py + 36);
+  ctx.stroke();
+
+  // ---- MIDDLE: inning indicator (centered) ----
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 13px Fredoka, sans-serif';
+  const halfArrow = game.isTopHalf ? '▲' : '▼';  // ▲ top / ▼ bottom
+  ctx.fillText(`${halfArrow} INNING ${game.inning} / 3`, CW / 2, py + 50);
+
+  // ---- BOTTOM-LEFT: B / S / O count as LED dot rows ----
+  const countX = px + 16;
+  let countRowY = py + 68;
+  const drawDotRow = (label, filled, total, onColor) => {
+    ctx.textAlign = 'left';
+    ctx.fillStyle = amber;
+    ctx.font = 'bold 11px Fredoka, sans-serif';
+    ctx.fillText(label, countX, countRowY);
+    for (let i = 0; i < total; i++) {
+      ctx.beginPath();
+      ctx.arc(countX + 22 + i * 13, countRowY, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = i < filled ? onColor : dim;
+      ctx.fill();
+    }
+    countRowY += 15;
+  };
+  drawDotRow('B', game.balls, 4, green);
+  drawDotRow('S', game.strikes, 3, amber);
+  drawDotRow('O', game.outs, 3, red);
+
+  // ---- BOTTOM-RIGHT: base runners diamond ----
+  const dCx = px + pw - 52;
+  const dCy = py + 78;
+  const ds = 16;  // diamond half-size
+  // base positions: [1st, 2nd, 3rd]
+  const basePts = [
+    [dCx + ds, dCy],       // 1st (right)
+    [dCx, dCy - ds],       // 2nd (top)
+    [dCx - ds, dCy],       // 3rd (left)
+  ];
+  // home plate marker (small, just a reference point)
+  ctx.fillStyle = dim;
+  ctx.beginPath();
+  ctx.arc(dCx, dCy + ds, 3, 0, Math.PI * 2);
+  ctx.fill();
+  // base squares — rotated 45° so they read as diamonds
+  for (let i = 0; i < 3; i++) {
+    const [bx, by] = basePts[i];
+    ctx.save();
+    ctx.translate(bx, by);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = game.bases[i] ? green : dim;
+    ctx.fillRect(-5, -5, 10, 10);
+    ctx.strokeStyle = game.bases[i] ? '#fff' : 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(-5, -5, 10, 10);
+    ctx.restore();
+  }
+
+  ctx.restore();
 }
 
 function drawInfield(ctx) {
@@ -978,6 +1105,8 @@ export default function GameScreen({ profile, onGameEnd }) {
       drawSky(ctx);
       // 2. Stadium / outfield (far background)
       drawOutfield(ctx);
+      // 2b. Jumbotron scoreboard mounted on the outfield wall (live game state)
+      drawJumbotron(ctx, game, profile.teamName);
       // 3. Pitcher on the mound (mid-distance)
       drawPitcher(ctx, profile.teamColor?.primary);
       // 4. Infield (dirt, foul lines, batter's box, home plate - foreground ground)
@@ -1021,9 +1150,7 @@ export default function GameScreen({ profile, onGameEnd }) {
       drawBatter(ctx, profile.teamColor?.primary || '#1f3a93', batT, profile.teamName);
 
       // (Catcher removed — batter on the left side is now the foreground anchor)
-
-      // 9. HUD overlay (bases inset)
-      drawBasesInset(ctx, game.bases, profile.teamColor?.primary || '#e74c3c');
+      // (Corner bases-inset removed — base runners now live on the jumbotron)
 
       rafRef.current = requestAnimationFrame(render);
     };
@@ -1033,8 +1160,14 @@ export default function GameScreen({ profile, onGameEnd }) {
       alive = false;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
+    // Jumbotron reads live game state — re-capture the render closure whenever
+    // any displayed value changes so the scoreboard stays in sync.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game.phase, game.bases, profile.teamColor]);
+  }, [
+    game.phase, game.bases, profile.teamColor,
+    game.playerScore, game.aiScore, game.inning, game.isTopHalf,
+    game.balls, game.strikes, game.outs,
+  ]);
 
   // ---- Pitch & swing ----
 
@@ -1409,25 +1542,8 @@ export default function GameScreen({ profile, onGameEnd }) {
 
   return (
     <div className="game-screen v2">
-      {/* Scoreboard */}
-      <div className="scoreboard">
-        <div className="score-row">
-          <span className="team-badge" style={{ backgroundColor: profile.teamColor?.primary || '#e74c3c' }}>
-            {profile.teamName?.substring(0, 3).toUpperCase() || 'YOU'}
-          </span>
-          <span className="score">{game.playerScore}</span>
-          <span className="inning-display">
-            {game.isTopHalf ? '\u25B2' : '\u25BC'} Inning {game.inning} / 3
-          </span>
-          <span className="score">{game.aiScore}</span>
-          <span className="team-badge opp">OPP</span>
-        </div>
-        <div className="count-row">
-          <span className="count">B: {'\u25CF'.repeat(game.balls)}{'\u25CB'.repeat(4 - game.balls)}</span>
-          <span className="count">S: {'\u25CF'.repeat(game.strikes)}{'\u25CB'.repeat(3 - game.strikes)}</span>
-          <span className="count">O: {'\u25CF'.repeat(game.outs)}{'\u25CB'.repeat(3 - game.outs)}</span>
-        </div>
-      </div>
+      {/* Scoreboard now lives ON the field \u2014 drawn as the jumbotron inside the
+          canvas (see drawJumbotron). No separate HTML scoreboard bar. */}
 
       {/* Phase banner */}
       <div className="phase-banner batting">YOU&rsquo;RE BATTING</div>
@@ -1500,35 +1616,6 @@ export default function GameScreen({ profile, onGameEnd }) {
 }
 
 // Bases diamond drawn in top-right corner of canvas
-function drawBasesInset(ctx, bases, teamColor) {
-  const cx = CW - 70;
-  const cy = 60;
-  const s = 14;
-  const points = [
-    [cx, cy + s],       // home
-    [cx + s, cy],       // 1st
-    [cx, cy - s],       // 2nd
-    [cx - s, cy],       // 3rd
-  ];
-  ctx.save();
-  // backdrop
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.beginPath();
-  ctx.moveTo(points[0][0], points[0][1]);
-  for (let i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
-  ctx.closePath();
-  ctx.fill();
-  // bases
-  const baseCoords = [points[1], points[2], points[3]];
-  for (let i = 0; i < 3; i++) {
-    ctx.fillStyle = bases[i] ? teamColor : 'rgba(255,255,255,0.5)';
-    ctx.beginPath();
-    ctx.arc(baseCoords[i][0], baseCoords[i][1], 5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
 // ---- Bonus Round (manual-advance version) ----
 function BonusRound({ onComplete }) {
   const [questions] = useState(() => {
