@@ -229,10 +229,11 @@ function drawOutfield(ctx) {
 // diamond that used to get hidden behind the clouds.
 function drawJumbotron(ctx, game, teamNameShort) {
   // Panel geometry — wide, centered, sitting above the green outfield wall.
-  const pw = 300;          // panel width
+  const pw = 340;          // panel width
   const ph = 104;          // panel height
   const px = CW / 2 - pw / 2;
   const py = 96;
+  const pad = 18;          // inner padding from panel edges
 
   ctx.save();
 
@@ -268,36 +269,48 @@ function drawJumbotron(ctx, game, teamNameShort) {
   const dim = 'rgba(255,255,255,0.18)';
 
   // ---- TOP ROW: team names + scores ----
-  const homeLabel = (teamNameShort || 'HOME').toUpperCase().substring(0, 8);
-  const rowY = py + 22;
+  // Layout: [HOME label .... score]  |  [OPP label .... score]
+  // Two equal halves split at the panel's vertical centerline. Labels are
+  // left-aligned at the half's inner edge; scores are right-aligned at the
+  // half's outer edge, with padding so nothing touches the frame.
+  const homeLabel = (teamNameShort || 'HOME').toUpperCase().substring(0, 6);
+  const rowY = py + 21;
+  const midX = px + pw / 2;
 
   ctx.textBaseline = 'middle';
-  // Home (player) label + score
+
+  // Home (player) — label on the far left, score just left of centerline
   ctx.textAlign = 'left';
   ctx.fillStyle = amber;
-  ctx.font = 'bold 15px Fredoka, sans-serif';
-  ctx.fillText(homeLabel, px + 14, rowY);
+  ctx.font = 'bold 14px Fredoka, sans-serif';
+  ctx.fillText(homeLabel, px + pad, rowY);
   ctx.textAlign = 'right';
   ctx.font = 'bold 22px Fredoka, sans-serif';
   ctx.fillStyle = green;
-  ctx.fillText(String(game.playerScore), px + 130, rowY);
+  ctx.fillText(String(game.playerScore), midX - 14, rowY);
 
-  // Away (opponent) label + score
+  // Away (opponent) — label just right of centerline, score on the far right
   ctx.textAlign = 'left';
   ctx.fillStyle = amber;
-  ctx.font = 'bold 15px Fredoka, sans-serif';
-  ctx.fillText('OPP', px + pw - 130, rowY);
+  ctx.font = 'bold 14px Fredoka, sans-serif';
+  ctx.fillText('OPP', midX + 14, rowY);
   ctx.textAlign = 'right';
   ctx.font = 'bold 22px Fredoka, sans-serif';
   ctx.fillStyle = green;
-  ctx.fillText(String(game.aiScore), px + pw - 14, rowY);
+  ctx.fillText(String(game.aiScore), px + pw - pad, rowY);
 
-  // Divider line under the score row
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  // Center divider between the two team halves
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(px + 10, py + 36);
-  ctx.lineTo(px + pw - 10, py + 36);
+  ctx.moveTo(midX, py + 6);
+  ctx.lineTo(midX, py + 34);
+  ctx.stroke();
+
+  // Horizontal divider under the score row
+  ctx.beginPath();
+  ctx.moveTo(px + 10, py + 38);
+  ctx.lineTo(px + pw - 10, py + 38);
   ctx.stroke();
 
   // ---- MIDDLE: inning indicator (centered) ----
@@ -308,8 +321,8 @@ function drawJumbotron(ctx, game, teamNameShort) {
   ctx.fillText(`${halfArrow} INNING ${game.inning} / 3`, CW / 2, py + 50);
 
   // ---- BOTTOM-LEFT: B / S / O count as LED dot rows ----
-  const countX = px + 16;
-  let countRowY = py + 68;
+  const countX = px + pad;
+  let countRowY = py + 60;
   const drawDotRow = (label, filled, total, onColor) => {
     ctx.textAlign = 'left';
     ctx.fillStyle = amber;
@@ -317,20 +330,22 @@ function drawJumbotron(ctx, game, teamNameShort) {
     ctx.fillText(label, countX, countRowY);
     for (let i = 0; i < total; i++) {
       ctx.beginPath();
-      ctx.arc(countX + 22 + i * 13, countRowY, 4.5, 0, Math.PI * 2);
+      ctx.arc(countX + 20 + i * 13, countRowY, 4.5, 0, Math.PI * 2);
       ctx.fillStyle = i < filled ? onColor : dim;
       ctx.fill();
     }
-    countRowY += 15;
+    countRowY += 14;
   };
   drawDotRow('B', game.balls, 4, green);
   drawDotRow('S', game.strikes, 3, amber);
   drawDotRow('O', game.outs, 3, red);
 
   // ---- BOTTOM-RIGHT: base runners diamond ----
-  const dCx = px + pw - 52;
-  const dCy = py + 78;
-  const ds = 16;  // diamond half-size
+  // Pulled in from the right edge with enough room for the rotated base
+  // squares (~7px past the diamond half-size) so nothing clips the frame.
+  const ds = 15;  // diamond half-size
+  const dCx = px + pw - pad - ds - 8;
+  const dCy = py + 74;
   // base positions: [1st, 2nd, 3rd]
   const basePts = [
     [dCx + ds, dCy],       // 1st (right)
