@@ -273,7 +273,15 @@ function drawJumbotron(ctx, game, teamNameShort) {
   // Two equal halves split at the panel's vertical centerline. Labels are
   // left-aligned at the half's inner edge; scores are right-aligned at the
   // half's outer edge, with padding so nothing touches the frame.
-  const homeLabel = (teamNameShort || 'HOME').toUpperCase().substring(0, 6);
+  //
+  // Team-name abbreviation: real scoreboards use the team nickname, not the
+  // city. "Blue Jays" → "JAYS", "Red Sox" → "SOX". For multi-word names take
+  // the last word; for a single word, keep it (truncated only if very long).
+  const rawName = (teamNameShort || 'HOME').trim();
+  const words = rawName.split(/\s+/);
+  const homeLabel = (words.length > 1 ? words[words.length - 1] : words[0])
+    .toUpperCase()
+    .substring(0, 8);
   const rowY = py + 21;
   const midX = px + pw / 2;
 
