@@ -1094,6 +1094,115 @@ function computeBallAt(pitch, t) {
   return { x, y, size, land };
 }
 
+// =============================================================================
+// BATTER SPRITE SYSTEM
+// =============================================================================
+// Plays an 8-frame swing animation by swapping sprite PNGs at each frame.
+// The artist drops 8 PNGs into public/sprites/batter/ (frame-1.png through
+// frame-8.png) and the system picks them up — no code change required.
+//
+// If any frame fails to load, we fall back to generated placeholders
+// (numbered rectangles) so the system stays visible and testable. If the
+// whole loader fails for some reason, the render loop falls back further to
+// the original math-based drawBatter() so the game keeps working.
+//
+// To swap in real art: drop the 8 PNGs into public/sprites/batter/ with the
+// names frame-1.png ... frame-8.png. That's it.
+// =============================================================================
+
+const SPRITE_FRAME_COUNT = 8;
+const SPRITE_SIZE = 192;          // displayed size on canvas (square)
+const SPRITE_BASE_PATH = '/sprites/batter';
+
+// Generate a placeholder frame as a data-URL PNG. Numbered rectangle on a
+// semi-transparent background — obviously a placeholder, but readable enough
+// to verify the swap logic works.
+function makePlaceholderFrame(frameNum, color) {
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas');
+  c.width = SPRITE_SIZE;
+  c.height = SPRITE_SIZE;
+  const x = c.getContext('2d');
+  // Frame backdrop — semi-transparent so we can see the field through it
+  x.fillStyle = 'rgba(0, 0, 0, 0.25)';
+  x.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+  // Border
+  x.strokeStyle = color;
+  x.lineWidth = 4;
+  x.strokeRect(2, 2, SPRITE_SIZE - 4, SPRITE_SIZE - 4);
+  // Big frame number
+  x.fillStyle = color;
+  x.font = 'bold 96px sans-serif';
+  x.textAlign = 'center';
+  x.textBaseline = 'middle';
+  x.fillText(String(frameNum), SPRITE_SIZE / 2, SPRITE_SIZE / 2 - 8);
+  // Small label below
+  x.font = 'bold 18px sans-serif';
+  x.fillText('PLACEHOLDER', SPRITE_SIZE / 2, SPRITE_SIZE / 2 + 60);
+  // Tick marks at corners so the pivot anchor is visible
+  x.fillStyle = '#FF5050';
+  x.fillRect(SPRITE_SIZE / 2 - 2, SPRITE_SIZE - 12, 4, 8);  // feet anchor
+  return c.toDataURL('image/png');
+}
+
+// Preload all 8 sprite frames. Returns an object whose `frames` is an array
+// of HTMLImageElement (real or placeholder). `usingPlaceholders` indicates
+// whether any frame fell back to a placeholder.
+function loadBatterSprites() {
+  const result = {
+    frames: new Array(SPRITE_FRAME_COUNT).fill(null),
+    usingPlaceholders: false,
+    ready: false,
+  };
+  const promises = [];
+  for (let i = 0; i < SPRITE_FRAME_COUNT; i++) {
+    promises.push(new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => { result.frames[i] = img; resolve(); };
+      img.onerror = () => {
+        // Fall back to a generated placeholder for this frame
+        const placeholder = new Image();
+        placeholder.src = makePlaceholderFrame(i + 1, '#FFB627');
+        placeholder.onload = () => {
+          result.frames[i] = placeholder;
+          result.usingPlaceholders = true;
+          resolve();
+        };
+      };
+      img.src = `${SPRITE_BASE_PATH}/frame-${i + 1}.png`;
+    }));
+  }
+  return Promise.all(promises).then(() => {
+    result.ready = true;
+    return result;
+  });
+}
+
+// Pick which frame to display for a given swing progress t∈[0,1] (or null
+// for idle). Idle shows frame 1 (stance). During the swing, frames advance
+// linearly: t=0 → frame 1, t=1 → frame 8.
+function pickSwingFrameIdx(t) {
+  if (t == null || t <= 0) return 0;
+  if (t >= 1) return SPRITE_FRAME_COUNT - 1;
+  return Math.min(SPRITE_FRAME_COUNT - 1, Math.floor(t * SPRITE_FRAME_COUNT));
+}
+
+// Draw the batter using sprite frames. Anchored at the batter's feet so the
+// character doesn't drift through the swing.
+function drawBatterSprite(ctx, frames, batSwingT) {
+  const idx = pickSwingFrameIdx(batSwingT);
+  const frame = frames[idx];
+  if (!frame) return false;
+  // Anchor: sprite's bottom-center sits at the batter's feet position.
+  // BATTER.y is the batter's hip line in the canvas-math version; for sprites
+  // we want the feet planted ~62px below that (matches the old cleat Y).
+  const feetY = BATTER.y + 62;
+  const dx = BATTER.x - SPRITE_SIZE / 2;
+  const dy = feetY - SPRITE_SIZE + 16;  // 16px of "below feet" padding in the sprite
+  ctx.drawImage(frame, dx, dy, SPRITE_SIZE, SPRITE_SIZE);
+  return true;
+}
+
 // ---- Component ----
 
 export default function GameScreen({ profile, onGameEnd }) {
@@ -1108,6 +1217,23 @@ export default function GameScreen({ profile, onGameEnd }) {
   const pitchRef = useRef(null); // { pitch, startTime, duration, resolved, landing }
   const batRef = useRef(null); // { startTime, duration }
   const rafRef = useRef(null);
+  const batterSpritesRef = useRef(null);  // populated by loadBatterSprites()
+
+  // Diagnostic: ?sprites=placeholders forces the placeholder rectangles to
+  // render even when real art isn't dropped in yet. Used to verify the swap
+  // pipeline end-to-end before sprite delivery.
+  const showPlaceholders = typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).get('sprites') === 'placeholders';
+
+  // Preload the 8 swing-frame sprites once at mount. Mutates a ref so the
+  // render loop can read it without re-triggering its own effect.
+  useEffect(() => {
+    let cancelled = false;
+    loadBatterSprites().then((loaded) => {
+      if (!cancelled) batterSpritesRef.current = loaded;
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const currentBatter = game.lineup[game.currentBatterIndex % game.lineup.length] || { name: '—', batting: 3 };
   const teamAvg = getTeamAverage(profile.roster);
@@ -1160,6 +1286,7 @@ export default function GameScreen({ profile, onGameEnd }) {
       }
 
       // 7. Batter (big foreground character)
+      // Compute swing progress (null = idle, 0..1 = mid-swing).
       let batT = null;
       if (batRef.current) {
         const bt = (Date.now() - batRef.current.startTime) / batRef.current.duration;
@@ -1170,7 +1297,21 @@ export default function GameScreen({ profile, onGameEnd }) {
           batT = bt;
         }
       }
-      drawBatter(ctx, profile.teamColor?.primary || '#1f3a93', batT, profile.teamName);
+      // Sprite-based renderer when REAL art is loaded. Falls back to the
+      // canvas-math drawBatter() if:
+      //   - sprites haven't loaded yet (first paint), OR
+      //   - sprites couldn't be fetched (placeholder fallback engaged), unless
+      //     the user passed ?sprites=placeholders to preview the placeholders.
+      // This means dropping real PNGs into public/sprites/batter/ is the only
+      // step needed to switch from the canvas batter to the sprite batter.
+      const sprites = batterSpritesRef.current;
+      let drewWithSprites = false;
+      if (sprites && sprites.ready && (!sprites.usingPlaceholders || showPlaceholders)) {
+        drewWithSprites = drawBatterSprite(ctx, sprites.frames, batT);
+      }
+      if (!drewWithSprites) {
+        drawBatter(ctx, profile.teamColor?.primary || '#1f3a93', batT, profile.teamName);
+      }
 
       // (Catcher removed — batter on the left side is now the foreground anchor)
       // (Corner bases-inset removed — base runners now live on the jumbotron)
