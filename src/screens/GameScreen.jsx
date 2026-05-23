@@ -1097,84 +1097,96 @@ function computeBallAt(pitch, t) {
 // =============================================================================
 // BATTER SPRITE SYSTEM
 // =============================================================================
-// Plays an 8-frame swing animation by swapping sprite PNGs at each frame.
-// The artist drops 8 PNGs into public/sprites/batter/ (frame-1.png through
-// frame-8.png) and the system picks them up — no code change required.
+// Plays an 8-frame swing animation from a single sprite sheet. The artist
+// delivers one PNG containing all 8 frames in a horizontal strip; we slice
+// the right frame each render.
 //
-// If any frame fails to load, we fall back to generated placeholders
-// (numbered rectangles) so the system stays visible and testable. If the
-// whole loader fails for some reason, the render loop falls back further to
-// the original math-based drawBatter() so the game keeps working.
+// Sprite sheet contract:
+//   public/sprites/batter/swing-sheet.png
+//   2048 × 256 px (8 frames × 256 px wide, 256 px tall)
+//   Transparent background, character anchored at the same feet position
+//   in every frame.
 //
-// To swap in real art: drop the 8 PNGs into public/sprites/batter/ with the
-// names frame-1.png ... frame-8.png. That's it.
+// If the sheet fails to load, we fall back to a generated placeholder sheet
+// (numbered rectangles) so the system stays testable. If the whole loader
+// fails, the render loop falls back further to the math-based drawBatter().
+//
+// To swap in updated art: drop the new swing-sheet.png in place. That's it.
 // =============================================================================
 
 const SPRITE_FRAME_COUNT = 8;
-const SPRITE_SIZE = 192;          // displayed size on canvas (square)
-const SPRITE_BASE_PATH = '/sprites/batter';
+const SPRITE_SOURCE_FRAME = 256;  // each frame is 256×256 in the source sheet
+const SPRITE_DISPLAY_SIZE = 192;  // displayed size on canvas (square)
+const SPRITE_SHEET_PATH = '/sprites/batter/swing-sheet.png';
 
-// Generate a placeholder frame as a data-URL PNG. Numbered rectangle on a
-// semi-transparent background — obviously a placeholder, but readable enough
-// to verify the swap logic works.
-function makePlaceholderFrame(frameNum, color) {
+// Generate a placeholder sprite sheet as a data-URL PNG. Eight numbered
+// rectangles in a horizontal strip — obviously placeholders, but match the
+// real sheet's layout so the slicing logic is exercised end-to-end.
+function makePlaceholderSheet() {
   if (typeof document === 'undefined') return null;
   const c = document.createElement('canvas');
-  c.width = SPRITE_SIZE;
-  c.height = SPRITE_SIZE;
+  c.width = SPRITE_SOURCE_FRAME * SPRITE_FRAME_COUNT;
+  c.height = SPRITE_SOURCE_FRAME;
   const x = c.getContext('2d');
-  // Frame backdrop — semi-transparent so we can see the field through it
-  x.fillStyle = 'rgba(0, 0, 0, 0.25)';
-  x.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
-  // Border
-  x.strokeStyle = color;
-  x.lineWidth = 4;
-  x.strokeRect(2, 2, SPRITE_SIZE - 4, SPRITE_SIZE - 4);
-  // Big frame number
-  x.fillStyle = color;
-  x.font = 'bold 96px sans-serif';
-  x.textAlign = 'center';
-  x.textBaseline = 'middle';
-  x.fillText(String(frameNum), SPRITE_SIZE / 2, SPRITE_SIZE / 2 - 8);
-  // Small label below
-  x.font = 'bold 18px sans-serif';
-  x.fillText('PLACEHOLDER', SPRITE_SIZE / 2, SPRITE_SIZE / 2 + 60);
-  // Tick marks at corners so the pivot anchor is visible
-  x.fillStyle = '#FF5050';
-  x.fillRect(SPRITE_SIZE / 2 - 2, SPRITE_SIZE - 12, 4, 8);  // feet anchor
+  for (let i = 0; i < SPRITE_FRAME_COUNT; i++) {
+    const fx = i * SPRITE_SOURCE_FRAME;
+    // Frame backdrop
+    x.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    x.fillRect(fx, 0, SPRITE_SOURCE_FRAME, SPRITE_SOURCE_FRAME);
+    // Border
+    x.strokeStyle = '#FFB627';
+    x.lineWidth = 4;
+    x.strokeRect(fx + 2, 2, SPRITE_SOURCE_FRAME - 4, SPRITE_SOURCE_FRAME - 4);
+    // Big frame number
+    x.fillStyle = '#FFB627';
+    x.font = 'bold 128px sans-serif';
+    x.textAlign = 'center';
+    x.textBaseline = 'middle';
+    x.fillText(String(i + 1), fx + SPRITE_SOURCE_FRAME / 2, SPRITE_SOURCE_FRAME / 2 - 12);
+    x.font = 'bold 22px sans-serif';
+    x.fillText('PLACEHOLDER', fx + SPRITE_SOURCE_FRAME / 2, SPRITE_SOURCE_FRAME / 2 + 76);
+    // Feet-anchor tick at bottom-center
+    x.fillStyle = '#FF5050';
+    x.fillRect(fx + SPRITE_SOURCE_FRAME / 2 - 2, SPRITE_SOURCE_FRAME - 12, 4, 8);
+  }
   return c.toDataURL('image/png');
 }
 
-// Preload all 8 sprite frames. Returns an object whose `frames` is an array
-// of HTMLImageElement (real or placeholder). `usingPlaceholders` indicates
-// whether any frame fell back to a placeholder.
+// Preload the sprite sheet. Returns an object holding the loaded image, its
+// natural dimensions, and whether we fell back to placeholders.
 function loadBatterSprites() {
   const result = {
-    frames: new Array(SPRITE_FRAME_COUNT).fill(null),
+    sheet: null,                  // HTMLImageElement
+    frameW: SPRITE_SOURCE_FRAME,  // source-rect width per frame (derived after load)
+    frameH: SPRITE_SOURCE_FRAME,  // source-rect height per frame
     usingPlaceholders: false,
     ready: false,
   };
-  const promises = [];
-  for (let i = 0; i < SPRITE_FRAME_COUNT; i++) {
-    promises.push(new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => { result.frames[i] = img; resolve(); };
-      img.onerror = () => {
-        // Fall back to a generated placeholder for this frame
-        const placeholder = new Image();
-        placeholder.src = makePlaceholderFrame(i + 1, '#FFB627');
-        placeholder.onload = () => {
-          result.frames[i] = placeholder;
-          result.usingPlaceholders = true;
-          resolve();
-        };
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      result.sheet = img;
+      // Derive per-frame width from the actual sheet dimensions so future
+      // re-sizes by the artist Just Work as long as it's still 8 frames wide.
+      result.frameW = img.naturalWidth / SPRITE_FRAME_COUNT;
+      result.frameH = img.naturalHeight;
+      result.ready = true;
+      resolve(result);
+    };
+    img.onerror = () => {
+      // Real sheet missing — generate the placeholder strip.
+      const placeholder = new Image();
+      placeholder.src = makePlaceholderSheet();
+      placeholder.onload = () => {
+        result.sheet = placeholder;
+        result.frameW = placeholder.naturalWidth / SPRITE_FRAME_COUNT;
+        result.frameH = placeholder.naturalHeight;
+        result.usingPlaceholders = true;
+        result.ready = true;
+        resolve(result);
       };
-      img.src = `${SPRITE_BASE_PATH}/frame-${i + 1}.png`;
-    }));
-  }
-  return Promise.all(promises).then(() => {
-    result.ready = true;
-    return result;
+    };
+    img.src = SPRITE_SHEET_PATH;
   });
 }
 
@@ -1187,19 +1199,21 @@ function pickSwingFrameIdx(t) {
   return Math.min(SPRITE_FRAME_COUNT - 1, Math.floor(t * SPRITE_FRAME_COUNT));
 }
 
-// Draw the batter using sprite frames. Anchored at the batter's feet so the
-// character doesn't drift through the swing.
-function drawBatterSprite(ctx, frames, batSwingT) {
+// Draw the batter by slicing one frame out of the sprite sheet. Anchored at
+// the batter's feet so the character doesn't drift through the swing.
+function drawBatterSprite(ctx, sprites, batSwingT) {
+  if (!sprites || !sprites.sheet) return false;
   const idx = pickSwingFrameIdx(batSwingT);
-  const frame = frames[idx];
-  if (!frame) return false;
+  const sx = idx * sprites.frameW;
+  const sy = 0;
+  const sw = sprites.frameW;
+  const sh = sprites.frameH;
   // Anchor: sprite's bottom-center sits at the batter's feet position.
-  // BATTER.y is the batter's hip line in the canvas-math version; for sprites
-  // we want the feet planted ~62px below that (matches the old cleat Y).
+  // 16px of "below feet" padding accounts for the sprite's transparent margin.
   const feetY = BATTER.y + 62;
-  const dx = BATTER.x - SPRITE_SIZE / 2;
-  const dy = feetY - SPRITE_SIZE + 16;  // 16px of "below feet" padding in the sprite
-  ctx.drawImage(frame, dx, dy, SPRITE_SIZE, SPRITE_SIZE);
+  const dx = BATTER.x - SPRITE_DISPLAY_SIZE / 2;
+  const dy = feetY - SPRITE_DISPLAY_SIZE + 16;
+  ctx.drawImage(sprites.sheet, sx, sy, sw, sh, dx, dy, SPRITE_DISPLAY_SIZE, SPRITE_DISPLAY_SIZE);
   return true;
 }
 
@@ -1307,7 +1321,7 @@ export default function GameScreen({ profile, onGameEnd }) {
       const sprites = batterSpritesRef.current;
       let drewWithSprites = false;
       if (sprites && sprites.ready && (!sprites.usingPlaceholders || showPlaceholders)) {
-        drewWithSprites = drawBatterSprite(ctx, sprites.frames, batT);
+        drewWithSprites = drawBatterSprite(ctx, sprites, batT);
       }
       if (!drewWithSprites) {
         drawBatter(ctx, profile.teamColor?.primary || '#1f3a93', batT, profile.teamName);

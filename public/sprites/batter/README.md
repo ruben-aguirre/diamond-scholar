@@ -1,40 +1,49 @@
 # Batter Swing Sprites
 
-Drop the artist's PNGs into this folder with these exact filenames:
+The artist delivers a **single sprite sheet** containing all 8 swing frames in
+a horizontal strip. Drop it in this folder with this exact filename:
 
 ```
-frame-1.png   Stance
-frame-2.png   Load
-frame-3.png   Stride
-frame-4.png   Initiation
-frame-5.png   Contact
-frame-6.png   Extension
-frame-7.png   Wrap
-frame-8.png   Finish
+swing-sheet.png
 ```
 
-## Requirements
+## Sheet format
 
-- **Square aspect ratio** (recommended 192×192 or 256×256 px)
+- **Layout:** 8 frames in a single horizontal row (left → right)
+- **Recommended size:** 2048 × 256 px (so each frame is 256 × 256)
+- **Other sizes work too** — the loader derives per-frame width from the
+  sheet's natural dimensions, so 1024 × 128 (128 px frames) or 1536 × 192
+  (192 px frames) also work, as long as it stays 8 frames wide.
 - **Transparent background**
-- **Same pixel pivot in every frame** — the batter's feet should land at the same coordinate across all 8 frames, so the character doesn't drift when the animation cycles
+- **Same pixel pivot in every frame** — the batter's feet should land at the
+  same coordinate across all 8 frames so the character doesn't drift when
+  the animation cycles.
 - **PNG-32 with alpha channel**
+
+## Frame order
+
+```
+[1] Stance    [2] Load    [3] Stride   [4] Initiation
+[5] Contact   [6] Extension   [7] Wrap   [8] Finish
+```
 
 ## How it works
 
-The game preloads all 8 frames when `GameScreen` mounts. During a swing, the
-animation plays through frames 1→8 over ~260ms. Between pitches, frame 1
-(stance) is shown as the idle pose.
+The game preloads `swing-sheet.png` when `GameScreen` mounts. During a swing,
+the animation plays frames 1→8 over ~260ms by slicing the sheet at the right
+x-offset each render via `ctx.drawImage(sheet, sx, sy, sw, sh, dx, dy, dw, dh)`.
+Between pitches, frame 1 (stance) is shown as the idle pose.
 
-If any frame fails to load (file missing, network error), the game falls back
-to the canvas-drawn batter (the math-based `drawBatter()` in
-`src/screens/GameScreen.jsx`) so the game stays playable.
+If the sheet fails to load, the game falls back to a generated placeholder
+strip (numbered rectangles), and then further to the canvas-math
+`drawBatter()` in `src/screens/GameScreen.jsx` — the game stays playable
+either way.
 
-## Replacing placeholder frames
+## Replacing the sheet
 
-You don't need to do anything — just drop the 8 PNGs in here and reload. The
-sprite loader picks them up automatically. No code changes required.
+Just drop the new `swing-sheet.png` in here and reload. No code changes
+required. The loader picks it up automatically.
 
-If the artist's natural sprite size is different from 192×192, you can adjust
-the on-canvas rendered size in `drawBatterSprite()` (search for `SPRITE_SIZE`
-in `src/screens/GameScreen.jsx`).
+If the artist's natural frame size is different from 256 × 256, you can
+adjust the on-canvas rendered size by changing `SPRITE_DISPLAY_SIZE` in
+`src/screens/GameScreen.jsx` (currently 192).
