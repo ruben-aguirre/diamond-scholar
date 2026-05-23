@@ -23,7 +23,7 @@ const CH = 500;
 // Depth axis: far (small, high on screen) -> near (big, low on screen)
 const MOUND = { x: 400, y: 270 };        // pitcher's mound, centered in middle distance
 const PLATE = { x: 400, y: 475 };        // home plate, bottom center foreground
-const BATTER = { x: 280, y: 400 };       // right-handed batter, LEFT batter's box (3rd-base side), back-3/4 view
+const BATTER = { x: 240, y: 485 };       // right-handed batter, LEFT batter's box; (x,y) is the feet anchor (inside the chalk box)
 const ZONE = { cx: 400, cy: 390, w: 70, h: 90 }; // strike zone centered on home plate
 
 const SWING_TYPES = [
@@ -1116,7 +1116,7 @@ function computeBallAt(pitch, t) {
 
 const SPRITE_FRAME_COUNT = 8;
 const SPRITE_SOURCE_FRAME = 256;  // each frame is 256×256 in the source sheet
-const SPRITE_DISPLAY_SIZE = 192;  // displayed size on canvas (square)
+const SPRITE_DISPLAY_SIZE = 384;  // displayed size on canvas (square) — 2× the previous 192 so the chibi batter dominates the foreground like in Baseball 9
 const SPRITE_SHEET_PATH = '/sprites/batter/swing-sheet.png';
 
 // Generate a placeholder sprite sheet as a data-URL PNG. Eight numbered
@@ -1208,11 +1208,12 @@ function drawBatterSprite(ctx, sprites, batSwingT) {
   const sy = 0;
   const sw = sprites.frameW;
   const sh = sprites.frameH;
-  // Anchor: sprite's bottom-center sits at the batter's feet position.
-  // 16px of "below feet" padding accounts for the sprite's transparent margin.
-  const feetY = BATTER.y + 62;
+  // Anchor: sprite's bottom-center sits at BATTER (feet position).
+  // The sprite's transparent margin below the feet is ~4% of frame height —
+  // pull the dy up by that amount so the visible feet actually land at BATTER.y.
+  const transparentFooter = SPRITE_DISPLAY_SIZE * 0.04;
   const dx = BATTER.x - SPRITE_DISPLAY_SIZE / 2;
-  const dy = feetY - SPRITE_DISPLAY_SIZE + 16;
+  const dy = BATTER.y - SPRITE_DISPLAY_SIZE + transparentFooter;
   ctx.drawImage(sprites.sheet, sx, sy, sw, sh, dx, dy, SPRITE_DISPLAY_SIZE, SPRITE_DISPLAY_SIZE);
   return true;
 }
@@ -1367,7 +1368,7 @@ export default function GameScreen({ profile, onGameEnd }) {
     const rawOffset = t - 0.92;
     const timing = Math.min(1, Math.abs(rawOffset) / 0.65);
 
-    batRef.current = { startTime: Date.now(), duration: 260 };
+    batRef.current = { startTime: Date.now(), duration: 520 };  // 2× slower so the 8 frames read clearly
     p.resolved = true;
     pitchRef.current = null;
 
