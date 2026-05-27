@@ -23,7 +23,7 @@ const CH = 500;
 // Depth axis: far (small, high on screen) -> near (big, low on screen)
 const MOUND = { x: 400, y: 270 };        // pitcher's mound, centered in middle distance
 const PLATE = { x: 400, y: 475 };        // home plate, bottom center foreground
-const BATTER = { x: 240, y: 485 };       // right-handed batter, LEFT batter's box; (x,y) is the feet anchor (inside the chalk box)
+const BATTER = { x: 220, y: 482 };       // right-handed batter, LEFT batter's box; (x,y) is the feet anchor (inside the chalk box: x∈[140,340], y∈[430,490])
 const ZONE = { cx: 400, cy: 390, w: 70, h: 90 }; // strike zone centered on home plate
 
 const SWING_TYPES = [
@@ -1208,12 +1208,17 @@ function drawBatterSprite(ctx, sprites, batSwingT) {
   const sy = 0;
   const sw = sprites.frameW;
   const sh = sprites.frameH;
-  // Anchor: sprite's bottom-center sits at BATTER (feet position).
-  // The sprite's transparent margin below the feet is ~4% of frame height —
-  // pull the dy up by that amount so the visible feet actually land at BATTER.y.
-  const transparentFooter = SPRITE_DISPLAY_SIZE * 0.04;
-  const dx = BATTER.x - SPRITE_DISPLAY_SIZE / 2;
-  const dy = BATTER.y - SPRITE_DISPLAY_SIZE + transparentFooter;
+  // Anchor: the batter's visible feet should land at (BATTER.x, BATTER.y).
+  // The sprite has transparent margins around the visible character:
+  //   ~14% below the feet (so feet are at y ≈ 0.86 × frameH within the sprite)
+  //   character is offset slightly LEFT of frame center (~42% from the left)
+  // We compute dx/dy so the FEET of the visible character — not the corner of
+  // the transparent frame — land exactly at BATTER. If the artist re-exports
+  // with different margins, only these two constants need to change.
+  const FEET_Y_RATIO = 0.86;   // visible-feet vertical position within the sprite (0=top, 1=bottom)
+  const FEET_X_RATIO = 0.42;   // visible-feet horizontal position (0=left, 1=right)
+  const dx = BATTER.x - SPRITE_DISPLAY_SIZE * FEET_X_RATIO;
+  const dy = BATTER.y - SPRITE_DISPLAY_SIZE * FEET_Y_RATIO;
   ctx.drawImage(sprites.sheet, sx, sy, sw, sh, dx, dy, SPRITE_DISPLAY_SIZE, SPRITE_DISPLAY_SIZE);
   return true;
 }
