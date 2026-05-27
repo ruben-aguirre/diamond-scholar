@@ -23,7 +23,7 @@ const CH = 500;
 // Depth axis: far (small, high on screen) -> near (big, low on screen)
 const MOUND = { x: 400, y: 270 };        // pitcher's mound, centered in middle distance
 const PLATE = { x: 400, y: 475 };        // home plate, bottom center foreground
-const BATTER = { x: 220, y: 482 };       // right-handed batter, LEFT batter's box; (x,y) is the feet anchor (inside the chalk box: x∈[140,340], y∈[430,490])
+const BATTER = { x: 240, y: 470 };       // right-handed batter, LEFT batter's box; (x,y) is the feet anchor centered in the chalk box (x∈[140,340], y∈[430,490])
 const ZONE = { cx: 400, cy: 390, w: 70, h: 90 }; // strike zone centered on home plate
 
 const SWING_TYPES = [
@@ -1215,8 +1215,8 @@ function drawBatterSprite(ctx, sprites, batSwingT) {
   // We compute dx/dy so the FEET of the visible character — not the corner of
   // the transparent frame — land exactly at BATTER. If the artist re-exports
   // with different margins, only these two constants need to change.
-  const FEET_Y_RATIO = 0.86;   // visible-feet vertical position within the sprite (0=top, 1=bottom)
-  const FEET_X_RATIO = 0.42;   // visible-feet horizontal position (0=left, 1=right)
+  const FEET_Y_RATIO = 0.68;   // visible-feet vertical position within the sprite (0=top, 1=bottom)
+  const FEET_X_RATIO = 0.38;   // visible-feet horizontal position (0=left, 1=right)
   const dx = BATTER.x - SPRITE_DISPLAY_SIZE * FEET_X_RATIO;
   const dy = BATTER.y - SPRITE_DISPLAY_SIZE * FEET_Y_RATIO;
   ctx.drawImage(sprites.sheet, sx, sy, sw, sh, dx, dy, SPRITE_DISPLAY_SIZE, SPRITE_DISPLAY_SIZE);
