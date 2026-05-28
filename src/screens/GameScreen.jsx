@@ -484,26 +484,27 @@ function drawPitcher(ctx, teamColor) {
   const pantsDark = darken(pants, 0.2);
   const skin = '#F2C8A0';
 
-  // Legs (planted stance, both facing camera)
+  // Legs (planted stance, both facing camera) — longer legs so the pitcher
+  // looks like a real person and not a torso-on-cleats.
   // Right leg (from viewer's perspective)
   outlinedPath(ctx, (c) => {
     c.moveTo(x + 1, y + 4);
     c.lineTo(x + 9, y + 4);
-    c.lineTo(x + 11, y + 22);
-    c.lineTo(x + 3, y + 22);
+    c.lineTo(x + 11, y + 34);
+    c.lineTo(x + 3, y + 34);
     c.closePath();
   }, pants);
-  outlinedRect(ctx, x + 1, y + 20, 12, 4, INK);
+  outlinedRect(ctx, x + 1, y + 32, 12, 4, INK);
 
   // Left leg
   outlinedPath(ctx, (c) => {
     c.moveTo(x - 9, y + 4);
     c.lineTo(x - 1, y + 4);
-    c.lineTo(x - 3, y + 22);
-    c.lineTo(x - 11, y + 22);
+    c.lineTo(x - 3, y + 34);
+    c.lineTo(x - 11, y + 34);
     c.closePath();
   }, pants);
-  outlinedRect(ctx, x - 13, y + 20, 12, 4, INK);
+  outlinedRect(ctx, x - 13, y + 32, 12, 4, INK);
 
   // Belt
   outlinedRect(ctx, x - 11, y + 2, 22, 3, INK);
@@ -592,24 +593,25 @@ function drawFielderBody(ctx, x, y) {
   const skin = '#F2C8A0';
   void pantsDark;  // (kept for visual parity with drawPitcher; not used here)
 
-  // Legs (planted ready-stance, slightly wider than the pitcher's stance)
+  // Legs (planted ready-stance, slightly wider than the pitcher's stance) —
+  // longer legs so fielders look like real people, not torsos on cleats.
   outlinedPath(ctx, (c) => {
     c.moveTo(x + 2, y + 4);
     c.lineTo(x + 10, y + 4);
-    c.lineTo(x + 12, y + 22);
-    c.lineTo(x + 4, y + 22);
+    c.lineTo(x + 12, y + 34);
+    c.lineTo(x + 4, y + 34);
     c.closePath();
   }, pants);
-  outlinedRect(ctx, x + 2, y + 20, 12, 4, INK);
+  outlinedRect(ctx, x + 2, y + 32, 12, 4, INK);
 
   outlinedPath(ctx, (c) => {
     c.moveTo(x - 10, y + 4);
     c.lineTo(x - 2, y + 4);
-    c.lineTo(x - 4, y + 22);
-    c.lineTo(x - 12, y + 22);
+    c.lineTo(x - 4, y + 34);
+    c.lineTo(x - 12, y + 34);
     c.closePath();
   }, pants);
-  outlinedRect(ctx, x - 14, y + 20, 12, 4, INK);
+  outlinedRect(ctx, x - 14, y + 32, 12, 4, INK);
 
   // Belt
   outlinedRect(ctx, x - 11, y + 2, 22, 3, INK);
