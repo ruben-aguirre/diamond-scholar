@@ -1094,6 +1094,110 @@ function computeBallAt(pitch, t) {
   return { x, y, size, land };
 }
 
+// Build a hit-ball trajectory based on the swing result type. The ball flies
+// from the contact point (near the strike zone) outward toward the field, on
+// an arc that varies by hit type — grounders are flat, fly balls peak high,
+// home runs sail over the wall, fouls go back over the batter.
+//
+// Returns: { kind, origin, target, peakY, duration }
+//   origin: starting (x, y) at contact
+//   target: ending (x, y) where the ball "lands" (or goes off-screen for HR)
+//   peakY: minimum y the ball reaches at midflight (lower = higher arc)
+function buildHitTrajectory(resultType) {
+  // Contact point: just in front of and above home plate (where the strike
+  // zone is — that's where the bat met the ball).
+  const origin = { x: ZONE.cx, y: ZONE.cy + 5 };
+
+  // Add a random horizontal spread so consecutive hits go to different places
+  // — keeps the visual interesting.
+  const spread = (Math.random() - 0.5) * 200;  // ±100px horizontal variation
+
+  switch (resultType) {
+    case 'homerun':
+      return {
+        kind: 'homerun',
+        origin,
+        target: { x: ZONE.cx + spread * 1.5, y: 100 },  // sails toward bleachers
+        peakY: 70,                                      // very high arc
+        duration: 1400,
+      };
+    case 'triple':
+      return {
+        kind: 'triple',
+        origin,
+        target: { x: ZONE.cx + spread * 1.4, y: 235 },  // deep outfield, near wall
+        peakY: 160,
+        duration: 1100,
+      };
+    case 'double':
+      return {
+        kind: 'double',
+        origin,
+        target: { x: ZONE.cx + spread * 1.2, y: 275 },  // outfield gap
+        peakY: 200,
+        duration: 950,
+      };
+    case 'single':
+      return {
+        kind: 'single',
+        origin,
+        target: { x: ZONE.cx + spread, y: 305 },        // shallow outfield / infield
+        peakY: 280,                                     // line drive — lower arc
+        duration: 800,
+      };
+    case 'flyout':
+      return {
+        kind: 'flyout',
+        origin,
+        target: { x: ZONE.cx + spread * 0.8, y: 290 },  // caught in outfield
+        peakY: 150,                                     // high pop-up
+        duration: 1100,
+      };
+    case 'groundout':
+      return {
+        kind: 'groundout',
+        origin,
+        target: { x: ZONE.cx + spread * 0.6, y: 360 },  // skips through infield
+        peakY: 355,                                     // basically no arc — ground ball
+        duration: 750,
+      };
+    case 'foul':
+      return {
+        kind: 'foul',
+        // Foul goes back over the batter / behind home plate — off-screen
+        // toward the camera (down + sideways).
+        origin,
+        target: { x: Math.random() < 0.5 ? -50 : CW + 50, y: CH + 50 },
+        peakY: 300,
+        duration: 700,
+      };
+    default:
+      return {
+        kind: 'single',
+        origin,
+        target: { x: ZONE.cx + spread, y: 305 },
+        peakY: 280,
+        duration: 800,
+      };
+  }
+}
+
+// Position of the hit ball at progress t∈[0,1]. Parabolic arc from origin to
+// target, peaking at peakY at t=0.5.
+function computeHitBallAt(traj, t) {
+  const { origin, target, peakY } = traj;
+  const x = origin.x + (target.x - origin.x) * t;
+  // Quadratic Bezier-ish vertical motion: y(t) = (1-t)²·y0 + 2t(1-t)·yPeak + t²·y1
+  // This gives a smooth arc that reaches peakY at t=0.5.
+  const u = 1 - t;
+  const y = u * u * origin.y + 2 * u * t * peakY + t * t * target.y;
+  // Ball grows as it flies toward the camera (foreground), shrinks as it goes
+  // deeper (background). y > 350 = foreground; y < 250 = deep.
+  const depthFactor = Math.max(0, Math.min(1, (y - 230) / 220));
+  const size = 4 + depthFactor * 8;
+  return { x, y, size };
+}
+
 // =============================================================================
 // BATTER SPRITE SYSTEM
 // =============================================================================
@@ -1236,6 +1340,7 @@ export default function GameScreen({ profile, onGameEnd }) {
   const canvasRef = useRef(null);
   const pitchRef = useRef(null); // { pitch, startTime, duration, resolved, landing }
   const batRef = useRef(null); // { startTime, duration }
+  const hitBallRef = useRef(null); // { startTime, duration, kind, origin, target, peakY }
   const rafRef = useRef(null);
   const batterSpritesRef = useRef(null);  // populated by loadBatterSprites()
 
@@ -1305,6 +1410,19 @@ export default function GameScreen({ profile, onGameEnd }) {
         }
       }
 
+      // 6b. Hit ball — launched from the contact point on a parabolic arc when
+      // the batter makes contact. Clears itself after the trajectory completes.
+      if (hitBallRef.current) {
+        const h = hitBallRef.current;
+        const elapsed = Date.now() - h.startTime;
+        if (elapsed >= 0) {
+          const t = Math.min(1, elapsed / h.duration);
+          const ball = computeHitBallAt(h.traj, t);
+          drawBall(ctx, ball.x, ball.y, ball.size);
+          if (t >= 1) hitBallRef.current = null;
+        }
+      }
+
       // 7. Batter (big foreground character)
       // Compute swing progress (null = idle, 0..1 = mid-swing).
       let batT = null;
@@ -1359,6 +1477,7 @@ export default function GameScreen({ profile, onGameEnd }) {
     const pitch = generatePitch(teamAvg);
     const duration = pitchDurationMs(teamAvg);
     pitchRef.current = { pitch, startTime: Date.now(), duration, resolved: false };
+    hitBallRef.current = null;  // clear any leftover hit-ball animation from the previous pitch
     setGame((g) => ({ ...g, phase: GAME_PHASES.PITCH_INCOMING, pitchLocation: pitch }));
   }
 
@@ -1378,6 +1497,18 @@ export default function GameScreen({ profile, onGameEnd }) {
     pitchRef.current = null;
 
     const result = calculateSwingResult(timing, p.pitch, currentBatter, swingType);
+    // If contact was made (any non-miss result), launch the ball on a hit
+    // trajectory so the player sees the ball get hit, not just disappear.
+    // The trajectory starts ~150ms after the swing begins so it lines up
+    // with the bat reaching the contact point.
+    if (result.type !== 'miss') {
+      const traj = buildHitTrajectory(result.type);
+      hitBallRef.current = {
+        startTime: Date.now() + 150,
+        duration: traj.duration,
+        traj,
+      };
+    }
     // Timing feedback on every swing — always show direction
     const isHit = result.bases > 0;
     if (rawOffset < -0.15) result.timingHint = 'Way too early!';
