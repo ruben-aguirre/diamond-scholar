@@ -23,7 +23,7 @@ const CH = 500;
 // Depth axis: far (small, high on screen) -> near (big, low on screen)
 const MOUND = { x: 400, y: 270 };        // pitcher's mound, centered in middle distance
 const PLATE = { x: 400, y: 475 };        // home plate, bottom center foreground
-const BATTER = { x: 240, y: 470 };       // right-handed batter, LEFT batter's box; (x,y) is the feet anchor centered in the chalk box (x∈[140,340], y∈[430,490])
+const BATTER = { x: 270, y: 478 };       // right-handed batter, LEFT batter's box; nudged right so wide stance fits fully inside chalk lines (x∈[140,340], y∈[430,490])
 const ZONE = { cx: 400, cy: 390, w: 70, h: 90 }; // strike zone centered on home plate
 
 const SWING_TYPES = [
