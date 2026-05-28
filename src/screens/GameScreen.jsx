@@ -476,8 +476,9 @@ function drawPitcher(ctx, teamColor) {
   // Catcher-cam view: pitcher is SMALL (far away on the mound), facing the camera
   // head-on. We see his front, not his profile. Mid-windup pose: glove up,
   // throwing arm back.
+  // Lifted 14px above MOUND.y so his feet land ON the dirt mound, not buried in it.
   const x = MOUND.x;
-  const y = MOUND.y;
+  const y = MOUND.y - 14;
   const jersey = '#c0392b';              // opponent jersey (red - contrasts with our team colors)
   const jerseyDark = darken(jersey, 0.35);
   const pants = '#F5F1E8';
