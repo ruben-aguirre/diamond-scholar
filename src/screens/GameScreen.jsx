@@ -568,7 +568,23 @@ function drawPitcher(ctx, teamColor) {
 // (glove down by the waist instead of mid-windup). Used for the infielders
 // (shortstop, second baseman) so the field looks populated. Same opponent
 // jersey color so all defenders read as the same team.
-function drawFielder(ctx, x, y) {
+//
+// `scale` (default 1) shrinks the fielder for perspective — fielders that
+// sit deeper in the field should be smaller than the pitcher.
+function drawFielder(ctx, x, y, scale = 1) {
+  if (scale !== 1) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    ctx.translate(-x, -y);
+  }
+  drawFielderBody(ctx, x, y);
+  if (scale !== 1) {
+    ctx.restore();
+  }
+}
+
+function drawFielderBody(ctx, x, y) {
   const jersey = '#c0392b';              // opponent jersey (red)
   const jerseyDark = darken(jersey, 0.35);
   const pants = '#F5F1E8';
@@ -1472,11 +1488,12 @@ export default function GameScreen({ profile, onGameEnd }) {
       drawJumbotron(ctx, game, profile.teamName);
       // 3. Pitcher on the mound (mid-distance)
       drawPitcher(ctx, profile.teamColor?.primary);
-      // 3b. Infielders — shortstop (left of mound) and second baseman (right of
-      // mound), standing in ready position behind 2nd base. Same scale as the
-      // pitcher because they're at roughly the same distance from the camera.
-      drawFielder(ctx, 305, 285);  // shortstop (between 2B and 3B)
-      drawFielder(ctx, 495, 285);  // second baseman (between 1B and 2B)
+      // 3b. Infielders — shortstop (left) and second baseman (right), pushed
+      // deeper than the pitcher and farther apart, so they sit behind 2nd
+      // base in the back of the infield. Drawn at 0.75× scale since they're
+      // deeper into the field than the pitcher.
+      drawFielder(ctx, 230, 245, 0.75);  // shortstop (between 2B and 3B)
+      drawFielder(ctx, 570, 245, 0.75);  // second baseman (between 1B and 2B)
       // 4. Infield (dirt, foul lines, batter's box, home plate - foreground ground)
       drawInfield(ctx);
 
