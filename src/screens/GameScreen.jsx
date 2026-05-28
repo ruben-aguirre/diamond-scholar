@@ -564,6 +564,95 @@ function drawPitcher(ctx, teamColor) {
   ctx.fill();
 }
 
+// Generic fielder — same proportions as the pitcher but in a "ready" stance
+// (glove down by the waist instead of mid-windup). Used for the infielders
+// (shortstop, second baseman) so the field looks populated. Same opponent
+// jersey color so all defenders read as the same team.
+function drawFielder(ctx, x, y) {
+  const jersey = '#c0392b';              // opponent jersey (red)
+  const jerseyDark = darken(jersey, 0.35);
+  const pants = '#F5F1E8';
+  const pantsDark = darken(pants, 0.2);
+  const skin = '#F2C8A0';
+  void pantsDark;  // (kept for visual parity with drawPitcher; not used here)
+
+  // Legs (planted ready-stance, slightly wider than the pitcher's stance)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x + 2, y + 4);
+    c.lineTo(x + 10, y + 4);
+    c.lineTo(x + 12, y + 22);
+    c.lineTo(x + 4, y + 22);
+    c.closePath();
+  }, pants);
+  outlinedRect(ctx, x + 2, y + 20, 12, 4, INK);
+
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x - 10, y + 4);
+    c.lineTo(x - 2, y + 4);
+    c.lineTo(x - 4, y + 22);
+    c.lineTo(x - 12, y + 22);
+    c.closePath();
+  }, pants);
+  outlinedRect(ctx, x - 14, y + 20, 12, 4, INK);
+
+  // Belt
+  outlinedRect(ctx, x - 11, y + 2, 22, 3, INK);
+
+  // Torso (facing camera)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x - 12, y - 14);
+    c.lineTo(x + 12, y - 14);
+    c.lineTo(x + 11, y + 4);
+    c.lineTo(x - 11, y + 4);
+    c.closePath();
+  }, jersey);
+  // Side shadow
+  ctx.fillStyle = jerseyDark;
+  ctx.fillRect(x - 12, y - 14, 4, 18);
+
+  // Glove arm — DOWN at the waist (ready position)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x - 12, y - 10);
+    c.lineTo(x - 6, y - 10);
+    c.lineTo(x - 8, y + 4);
+    c.lineTo(x - 14, y + 4);
+    c.closePath();
+  }, jersey);
+  // Glove down by the side
+  outlinedCircle(ctx, x - 11, y + 6, 5, '#6b4a2b');
+  outlinedCircle(ctx, x - 11, y + 6, 2, '#4e3420');
+
+  // Throwing arm — DOWN at the side (ready, not cocked)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x + 6, y - 10);
+    c.lineTo(x + 12, y - 10);
+    c.lineTo(x + 14, y + 4);
+    c.lineTo(x + 8, y + 4);
+    c.closePath();
+  }, jersey);
+  // Throwing hand
+  outlinedCircle(ctx, x + 11, y + 6, 2.5, skin);
+
+  // Head
+  outlinedCircle(ctx, x, y - 22, 8, skin);
+
+  // Cap (crown + brim)
+  outlinedPath(ctx, (c) => {
+    c.arc(x, y - 26, 8, Math.PI, Math.PI * 2);
+    c.lineTo(x + 8, y - 23);
+    c.lineTo(x - 8, y - 23);
+    c.closePath();
+  }, jersey);
+  outlinedRect(ctx, x - 10, y - 23, 20, 3, jerseyDark);
+
+  // Eyes
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.arc(x - 3, y - 20, 1.3, 0, Math.PI * 2);
+  ctx.arc(x + 3, y - 20, 1.3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 // =============================================================================
 // CHIBI BACK-3/4 BATTER — Baseball-9 style camera (behind home plate, looking
 // at the pitcher in the distance). Right-handed batter standing in the LEFT
@@ -1383,6 +1472,11 @@ export default function GameScreen({ profile, onGameEnd }) {
       drawJumbotron(ctx, game, profile.teamName);
       // 3. Pitcher on the mound (mid-distance)
       drawPitcher(ctx, profile.teamColor?.primary);
+      // 3b. Infielders — shortstop (left of mound) and second baseman (right of
+      // mound), standing in ready position behind 2nd base. Same scale as the
+      // pitcher because they're at roughly the same distance from the camera.
+      drawFielder(ctx, 305, 285);  // shortstop (between 2B and 3B)
+      drawFielder(ctx, 495, 285);  // second baseman (between 1B and 2B)
       // 4. Infield (dirt, foul lines, batter's box, home plate - foreground ground)
       drawInfield(ctx);
 
