@@ -115,19 +115,22 @@ export function calculateSwingResult(timing, pitch, batter, swingType = 'normal'
   const quality = (1 - effectiveTiming) * (batter.batting / 10) * profile.powerMul;
   const roll = Math.random();
 
-  if (quality > 0.8 && roll < 0.35) {
+  // Extra-base hits are way easier now — kid-friendly tuning. Lowered the
+  // quality thresholds (so decent swings qualify for big hits) AND raised
+  // the roll chances (so qualifying actually pays off).
+  if (quality > 0.5 && roll < 0.55) {
     return { type: 'homerun', description: 'HOME RUN!', bases: 4 };
   }
-  if (quality > 0.65 && roll < 0.35) {
+  if (quality > 0.4 && roll < 0.55) {
     return { type: 'triple', description: 'Triple! To the wall!', bases: 3 };
   }
-  if (quality > 0.45 && roll < 0.45) {
+  if (quality > 0.25 && roll < 0.65) {
     return { type: 'double', description: 'Double! In the gap!', bases: 2 };
   }
-  if (roll < 0.6) {
+  if (roll < 0.85) {
     return { type: 'single', description: 'Base hit!', bases: 1 };
   }
-  if (roll < 0.78) {
+  if (roll < 0.93) {
     return { type: 'flyout', description: 'Fly ball... caught! Out!', isOut: true };
   }
   return { type: 'groundout', description: 'Grounder... thrown out!', isOut: true };
