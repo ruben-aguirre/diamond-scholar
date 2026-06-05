@@ -30,9 +30,17 @@ const ZONE = { cx: 400, cy: 405, w: 70, h: 70 }; // strike zone — square, lift
 // animating them to chase a hit ball (and slide back home after).
 const SHORTSTOP_HOME = { x: 230, y: 245 };
 const SECOND_BASE_HOME = { x: 570, y: 245 };
-const THIRD_BASE_HOME = { x: 160, y: 360 };  // 3rd baseman — left foul-line side, in front of shortstop
-const FIRST_BASE_HOME = { x: 640, y: 360 };  // 1st baseman — right foul-line side, in front of 2nd baseman
+const THIRD_BASE_HOME = { x: 120, y: 380 };  // 3rd baseman — further out toward left foul line
+const FIRST_BASE_HOME = { x: 680, y: 380 };  // 1st baseman — further out toward right foul line
 const FIELDER_SCALE = 0.75;
+
+// Base positions on the field, where runners stand when on base AND where
+// the white base bags are drawn. game.bases is [1st, 2nd, 3rd] — same order.
+const BASE_POSITIONS = [
+  { x: 590, y: 380 },  // 1st base — right side of infield
+  { x: 400, y: 290 },  // 2nd base — behind the mound
+  { x: 210, y: 380 },  // 3rd base — left side of infield
+];
 
 const SWING_TYPES = [
   { id: 'normal', label: 'Swing', color: '#3498db' },
@@ -450,6 +458,33 @@ function drawInfield(ctx) {
   ctx.fill();
   ctx.stroke();
   ctx.restore();
+
+  // Base bags — the white square bases at 1st/2nd/3rd. Drawn as flattened
+  // diamonds (squares rotated 45° + perspective squashed vertically) so they
+  // sit on the dirt rather than floating like a top-down icon.
+  // Sizes shrink with depth — 2nd base is farthest from camera so it's smallest.
+  drawBag(ctx, BASE_POSITIONS[0].x, BASE_POSITIONS[0].y, 14, 7);  // 1st base
+  drawBag(ctx, BASE_POSITIONS[1].x, BASE_POSITIONS[1].y, 11, 5);  // 2nd base (farther = smaller)
+  drawBag(ctx, BASE_POSITIONS[2].x, BASE_POSITIONS[2].y, 14, 7);  // 3rd base
+}
+
+// Draw a single base bag as a perspective-squashed diamond. Width is the
+// horizontal half-size, height is the vertical half-size (smaller because of
+// the catcher-cam angle — bases look like flat ovals more than squares).
+function drawBag(ctx, cx, cy, w, h) {
+  ctx.save();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - h);          // top point
+  ctx.lineTo(cx + w, cy);          // right point
+  ctx.lineTo(cx, cy + h);          // bottom point
+  ctx.lineTo(cx - w, cy);          // left point
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawStrikeZone(ctx) {
@@ -772,14 +807,6 @@ function drawRunnerBody(ctx, x, y, teamColor) {
   ctx.arc(x + 3, y - 20, 1.3, 0, Math.PI * 2);
   ctx.fill();
 }
-
-// Base positions on the field, where runners stand when on base.
-// game.bases is [1st, 2nd, 3rd] — order them the same way here.
-const BASE_POSITIONS = [
-  { x: 590, y: 380 },  // 1st base — right side of infield
-  { x: 400, y: 290 },  // 2nd base — behind the mound
-  { x: 210, y: 380 },  // 3rd base — left side of infield
-];
 
 // =============================================================================
 // CHIBI BACK-3/4 BATTER — Baseball-9 style camera (behind home plate, looking
