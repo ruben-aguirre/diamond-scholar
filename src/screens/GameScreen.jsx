@@ -1632,8 +1632,12 @@ export default function GameScreen({ profile, onGameEnd }) {
   const batRef = useRef(null); // { startTime, duration }
   const hitBallRef = useRef(null); // { startTime, duration, kind, origin, target, peakY }
   // Which fielder is chasing the ball + their motion timing. Has two phases:
-  // chase (move from home to ball-landing spot) then return (slide back home).
+  // chase (home → ball landing spot) then return (back home).
   const fielderChaseRef = useRef(null); // { who: 'ss'|'2b', target, chaseStart, chaseEnd, returnEnd }
+  // Live steal animation — runner sprints from one base to the next while
+  // the catcher's throw arcs to the target base. Resolved (safe/out) when
+  // the animation finishes. Null when no steal is in flight.
+  const stealAnimRef = useRef(null); // { startTime, duration, fromIdx, toIdx, willBeSafe, resolved }
   const rafRef = useRef(null);
   const batterSpritesRef = useRef(null);  // populated by loadBatterSprites()
 
@@ -1700,11 +1704,93 @@ export default function GameScreen({ profile, onGameEnd }) {
       drawFielder(ctx, FIRST_BASE_HOME.x, FIRST_BASE_HOME.y, FIELDER_SCALE);
 
       // 4c. Base runners — drawn AFTER the infield dirt so they're visible
-      // standing on the bases. game.bases is [1st, 2nd, 3rd].
-      for (let i = 0; i < 3; i++) {
-        if (game.bases[i]) {
-          const pos = BASE_POSITIONS[i];
-          drawRunner(ctx, pos.x, pos.y, profile.teamColor?.primary || '#1f3a93');
+      // standing on the bases. game.bases is [1st, 2nd, 3rd]. We skip
+      // drawing the stealing runner here — they're animated below.
+      {
+        const steal = stealAnimRef.current;
+        const stealingFrom = steal ? steal.fromIdx : -1;
+        for (let i = 0; i < 3; i++) {
+          if (game.bases[i] && i !== stealingFrom) {
+            const pos = BASE_POSITIONS[i];
+            drawRunner(ctx, pos.x, pos.y, profile.teamColor?.primary || '#1f3a93');
+          }
+        }
+      }
+
+      // 4d. Steal animation — runner sprints from fromIdx to toIdx while the
+      // catcher's throw arcs from home plate up to the destination base.
+      if (stealAnimRef.current) {
+        const s = stealAnimRef.current;
+        const elapsed = Date.now() - s.startTime;
+        const t = Math.min(1, elapsed / s.duration);
+        const fromPos = BASE_POSITIONS[s.fromIdx];
+        // toIdx === 3 means the runner is heading HOME — go to home plate.
+        const toPos = s.toIdx === 3
+          ? { x: PLATE.x, y: PLATE.y - 10 }
+          : BASE_POSITIONS[s.toIdx];
+
+        // Runner position — straight line from fromPos to toPos
+        const runX = fromPos.x + (toPos.x - fromPos.x) * t;
+        const runY = fromPos.y + (toPos.y - fromPos.y) * t;
+        drawRunner(ctx, runX, runY, profile.teamColor?.primary || '#1f3a93');
+
+        // Catcher's throw — small ball arcing from home plate to toPos
+        const throwOriginX = PLATE.x;
+        const throwOriginY = PLATE.y - 30;  // catcher's hand, roughly
+        const ballX = throwOriginX + (toPos.x - throwOriginX) * t;
+        // Arc up then down — peak at midpoint of the throw, ~40px above
+        const arcMidY = Math.min(throwOriginY, toPos.y) - 40;
+        const u = 1 - t;
+        const ballY = u * u * throwOriginY + 2 * u * t * arcMidY + t * t * toPos.y;
+        drawBall(ctx, ballX, ballY, 6);
+
+        // Animation finished — resolve the steal (advance runner or out)
+        if (t >= 1 && !s.resolved) {
+          s.resolved = true;
+          const leadIdx = s.fromIdx;
+          const safe = s.willBeSafe;
+          if (safe) {
+            setGame((g) => {
+              const newBases = [...g.bases];
+              newBases[leadIdx] = false;
+              let runsScored = 0;
+              if (leadIdx === 2) {
+                runsScored = 1;  // stole home
+              } else {
+                newBases[leadIdx + 1] = true;
+              }
+              return {
+                ...g,
+                bases: newBases,
+                playerScore: g.playerScore + runsScored,
+              };
+            });
+            const baseNames = ['second', 'third', 'home'];
+            setSwingResult({
+              type: 'steal-safe',
+              description: leadIdx === 2 ? 'Stole HOME! Run scored!' : `Stole ${baseNames[leadIdx]}!`,
+            });
+          } else {
+            setGame((g) => {
+              const newBases = [...g.bases];
+              newBases[leadIdx] = false;
+              return {
+                ...g,
+                bases: newBases,
+                outs: g.outs + 1,
+              };
+            });
+            setSwingResult({
+              type: 'steal-out',
+              description: 'Caught stealing — out!',
+            });
+          }
+          // Clear the steal anim a moment later so the result message has time
+          // to show without the ball lingering on screen.
+          setTimeout(() => {
+            stealAnimRef.current = null;
+            setSwingResult(null);
+          }, 1200);
         }
       }
 
@@ -1801,66 +1887,31 @@ export default function GameScreen({ profile, onGameEnd }) {
     pitchRef.current = { pitch, startTime: Date.now(), duration, resolved: false };
     hitBallRef.current = null;  // clear any leftover hit-ball animation from the previous pitch
     fielderChaseRef.current = null;  // and snap fielders back home
+    stealAnimRef.current = null;     // and clear any lingering steal anim
     setGame((g) => ({ ...g, phase: GAME_PHASES.PITCH_INCOMING, pitchLocation: pitch }));
   }
 
-  // STEAL — the runner closest to home (the "lead runner") tries to sprint to
-  // the next base during the pitch. 70% chance safe, 30% chance caught out.
-  // Only enabled when there's at least one runner on AND the pitch is in flight.
+  // STEAL — the lead runner sprints toward the next base while the catcher
+  // throws to try and gun them down. Animates over ~1000ms, then resolves to
+  // safe (advance) or out (remove + out++). 50/50 odds.
   const handleSteal = useCallback(() => {
     if (game.phase !== GAME_PHASES.PITCH_INCOMING) return;
-    // Find the lead runner — closest to home. game.bases is [1st, 2nd, 3rd].
-    // Stealing home from 3rd is risky in real baseball but we allow it here.
+    if (stealAnimRef.current) return;  // already stealing — ignore extra clicks
     let leadIdx = -1;
     for (let i = 2; i >= 0; i--) {
       if (game.bases[i]) { leadIdx = i; break; }
     }
-    if (leadIdx === -1) return;  // no one on, can't steal
+    if (leadIdx === -1) return;
 
-    const safe = Math.random() < 0.50;  // 50/50 — half the time safe, half the time caught
-    if (safe) {
-      // Advance the lead runner one base. If they were on 3rd, they score.
-      setGame((g) => {
-        const newBases = [...g.bases];
-        newBases[leadIdx] = false;  // leave the old base
-        let runsScored = 0;
-        if (leadIdx === 2) {
-          // Stole home — score a run
-          runsScored = 1;
-        } else {
-          // Move to next base
-          newBases[leadIdx + 1] = true;
-        }
-        return {
-          ...g,
-          bases: newBases,
-          playerScore: g.playerScore + runsScored,
-        };
-      });
-      const baseNames = ['second', 'third', 'home'];
-      const dest = baseNames[leadIdx];
-      setSwingResult({
-        type: 'steal-safe',
-        description: leadIdx === 2 ? `Stole HOME! Run scored!` : `Stole ${dest}!`,
-      });
-      setTimeout(() => setSwingResult(null), 1500);
-    } else {
-      // Caught stealing — out, and runner is removed
-      setGame((g) => {
-        const newBases = [...g.bases];
-        newBases[leadIdx] = false;
-        return {
-          ...g,
-          bases: newBases,
-          outs: g.outs + 1,
-        };
-      });
-      setSwingResult({
-        type: 'steal-out',
-        description: 'Caught stealing — out!',
-      });
-      setTimeout(() => setSwingResult(null), 1500);
-    }
+    const safe = Math.random() < 0.50;
+    stealAnimRef.current = {
+      startTime: Date.now(),
+      duration: 1000,    // runner sprint + catcher throw both finish at the same time
+      fromIdx: leadIdx,
+      toIdx: leadIdx + 1,  // 0→1, 1→2, 2→3 (3 means home)
+      willBeSafe: safe,
+      resolved: false,
+    };
   }, [game.phase, game.bases]);
 
   const handleSwing = useCallback(() => {
