@@ -715,6 +715,54 @@ function drawFielderBody(ctx, x, y) {
   ctx.fill();
 }
 
+// Small catcher peeking up behind home plate. Drawn only during a steal so
+// the throw has a visible origin. We see the top of his helmet, his mask
+// cage, and a raised glove (mid-throw pose).
+function drawCatcher(ctx) {
+  const cx = PLATE.x;
+  const cy = PLATE.y - 6;  // his shoulder line just behind the plate
+  const jersey = '#c0392b';
+  const jerseyDark = darken(jersey, 0.35);
+  const skin = '#F2C8A0';
+  const gear = '#2c3e50';
+
+  // Crouched torso (small wedge)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(cx - 18, cy);
+    c.lineTo(cx + 18, cy);
+    c.lineTo(cx + 14, cy + 18);
+    c.lineTo(cx - 14, cy + 18);
+    c.closePath();
+  }, jersey);
+  ctx.fillStyle = jerseyDark;
+  ctx.fillRect(cx - 18, cy, 5, 18);
+
+  // Head + mask (round dome)
+  outlinedCircle(ctx, cx, cy - 12, 13, gear);
+  // Mask cage bars
+  ctx.strokeStyle = '#1a252f';
+  ctx.lineWidth = 1.5;
+  [-6, -2, 2, 6].forEach((ox) => {
+    ctx.beginPath();
+    ctx.moveTo(cx + ox, cy - 18);
+    ctx.lineTo(cx + ox, cy - 2);
+    ctx.stroke();
+  });
+  // Skin patch between mask and shoulders
+  outlinedRect(ctx, cx - 6, cy - 3, 12, 4, skin);
+
+  // Raised throwing arm + glove on the right side (mid-throw)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(cx + 14, cy);
+    c.lineTo(cx + 20, cy);
+    c.lineTo(cx + 26, cy - 18);
+    c.lineTo(cx + 20, cy - 22);
+    c.closePath();
+  }, jersey);
+  // Glove (where the throw originates from)
+  outlinedCircle(ctx, cx + 24, cy - 24, 6, '#6b4a2b');
+}
+
 // Base runner — same body proportions as a fielder but in the player's team
 // color so you can tell whose team is on base. Used to mark which bases are
 // occupied. Drawn at a small scale to read as "in the distance."
@@ -1717,14 +1765,14 @@ export default function GameScreen({ profile, onGameEnd }) {
         }
       }
 
-      // 4d. Steal animation — runner sprints from fromIdx to toIdx while the
-      // catcher's throw arcs from home plate up to the destination base.
+      // 4d. Steal animation — runner sprints from fromIdx to toIdx. The
+      // catcher and throw are drawn AFTER the batter (below) so they're not
+      // hidden behind the huge batter sprite.
       if (stealAnimRef.current) {
         const s = stealAnimRef.current;
         const elapsed = Date.now() - s.startTime;
         const t = Math.min(1, elapsed / s.duration);
         const fromPos = BASE_POSITIONS[s.fromIdx];
-        // toIdx === 3 means the runner is heading HOME — go to home plate.
         const toPos = s.toIdx === 3
           ? { x: PLATE.x, y: PLATE.y - 10 }
           : BASE_POSITIONS[s.toIdx];
@@ -1733,16 +1781,6 @@ export default function GameScreen({ profile, onGameEnd }) {
         const runX = fromPos.x + (toPos.x - fromPos.x) * t;
         const runY = fromPos.y + (toPos.y - fromPos.y) * t;
         drawRunner(ctx, runX, runY, profile.teamColor?.primary || '#1f3a93');
-
-        // Catcher's throw — small ball arcing from home plate to toPos
-        const throwOriginX = PLATE.x;
-        const throwOriginY = PLATE.y - 30;  // catcher's hand, roughly
-        const ballX = throwOriginX + (toPos.x - throwOriginX) * t;
-        // Arc up then down — peak at midpoint of the throw, ~40px above
-        const arcMidY = Math.min(throwOriginY, toPos.y) - 40;
-        const u = 1 - t;
-        const ballY = u * u * throwOriginY + 2 * u * t * arcMidY + t * t * toPos.y;
-        drawBall(ctx, ballX, ballY, 6);
 
         // Animation finished — resolve the steal (advance runner or out)
         if (t >= 1 && !s.resolved) {
@@ -1859,8 +1897,30 @@ export default function GameScreen({ profile, onGameEnd }) {
         drawBatter(ctx, profile.teamColor?.primary || '#1f3a93', batT, profile.teamName);
       }
 
-      // (Catcher removed — batter on the left side is now the foreground anchor)
       // (Corner bases-inset removed — base runners now live on the jumbotron)
+
+      // 8. Catcher + steal throw — drawn AFTER the batter so they're visible
+      // (the huge batter sprite would otherwise cover the home-plate area
+      // where the catcher stands and where the throw originates).
+      if (stealAnimRef.current) {
+        const s = stealAnimRef.current;
+        const t = Math.min(1, (Date.now() - s.startTime) / s.duration);
+        const toPos = s.toIdx === 3
+          ? { x: PLATE.x, y: PLATE.y - 10 }
+          : BASE_POSITIONS[s.toIdx];
+
+        // Catcher stays visible the whole steal
+        drawCatcher(ctx);
+
+        // Throw ball — starts at the catcher's glove, arcs to the target base
+        const throwOriginX = PLATE.x + 24;   // catcher's glove
+        const throwOriginY = PLATE.y - 30;
+        const ballX = throwOriginX + (toPos.x - throwOriginX) * t;
+        const arcMidY = Math.min(throwOriginY, toPos.y) - 50;
+        const u = 1 - t;
+        const ballY = u * u * throwOriginY + 2 * u * t * arcMidY + t * t * toPos.y;
+        drawBall(ctx, ballX, ballY, 8);  // bigger than normal so it's easy to see
+      }
 
       rafRef.current = requestAnimationFrame(render);
     };
