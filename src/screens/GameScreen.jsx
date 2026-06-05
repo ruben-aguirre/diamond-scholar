@@ -1817,7 +1817,7 @@ export default function GameScreen({ profile, onGameEnd }) {
     }
     if (leadIdx === -1) return;  // no one on, can't steal
 
-    const safe = Math.random() < 0.70;
+    const safe = Math.random() < 0.50;  // 50/50 — half the time safe, half the time caught
     if (safe) {
       // Advance the lead runner one base. If they were on 3rd, they score.
       setGame((g) => {
