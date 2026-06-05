@@ -30,16 +30,16 @@ const ZONE = { cx: 400, cy: 405, w: 70, h: 70 }; // strike zone — square, lift
 // animating them to chase a hit ball (and slide back home after).
 const SHORTSTOP_HOME = { x: 230, y: 245 };
 const SECOND_BASE_HOME = { x: 570, y: 245 };
-const THIRD_BASE_HOME = { x: 120, y: 380 };  // 3rd baseman — further out toward left foul line
-const FIRST_BASE_HOME = { x: 680, y: 380 };  // 1st baseman — further out toward right foul line
+const THIRD_BASE_HOME = { x: 130, y: 320 };  // 3rd baseman — left foul-line side, deeper in field (was 380, too close to batter)
+const FIRST_BASE_HOME = { x: 670, y: 320 };  // 1st baseman — right foul-line side, deeper in field (was 380, too close to batter)
 const FIELDER_SCALE = 0.75;
 
 // Base positions on the field, where runners stand when on base AND where
 // the white base bags are drawn. game.bases is [1st, 2nd, 3rd] — same order.
 const BASE_POSITIONS = [
-  { x: 590, y: 380 },  // 1st base — right side of infield
-  { x: 400, y: 290 },  // 2nd base — behind the mound
-  { x: 210, y: 380 },  // 3rd base — left side of infield
+  { x: 555, y: 340 },  // 1st base — right side of infield, deeper than batter
+  { x: 400, y: 245 },  // 2nd base — BEHIND the mound (between SS and 2B fielders, not on the dirt mound)
+  { x: 245, y: 340 },  // 3rd base — left side of infield, deeper than batter
 ];
 
 const SWING_TYPES = [
