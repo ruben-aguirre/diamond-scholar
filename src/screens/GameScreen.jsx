@@ -24,7 +24,7 @@ const CH = 500;
 const MOUND = { x: 400, y: 270 };        // pitcher's mound, centered in middle distance
 const PLATE = { x: 400, y: 475 };        // home plate, bottom center foreground
 const BATTER = { x: 270, y: 478 };       // right-handed batter, LEFT batter's box; nudged right so wide stance fits fully inside chalk lines (x∈[140,340], y∈[430,490])
-const ZONE = { cx: 400, cy: 405, w: 70, h: 80 }; // strike zone — lifted higher so the bottom edge sits clearly above home plate, not touching it
+const ZONE = { cx: 400, cy: 405, w: 70, h: 70 }; // strike zone — square, lifted above home plate (not touching it)
 
 // Fielder home positions. Used both for drawing the idle fielders and for
 // animating them to chase a hit ball (and slide back home after).
