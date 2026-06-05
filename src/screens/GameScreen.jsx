@@ -30,6 +30,8 @@ const ZONE = { cx: 400, cy: 405, w: 70, h: 70 }; // strike zone — square, lift
 // animating them to chase a hit ball (and slide back home after).
 const SHORTSTOP_HOME = { x: 230, y: 245 };
 const SECOND_BASE_HOME = { x: 570, y: 245 };
+const THIRD_BASE_HOME = { x: 160, y: 360 };  // 3rd baseman — left foul-line side, in front of shortstop
+const FIRST_BASE_HOME = { x: 640, y: 360 };  // 1st baseman — right foul-line side, in front of 2nd baseman
 const FIELDER_SCALE = 0.75;
 
 const SWING_TYPES = [
@@ -1664,7 +1666,13 @@ export default function GameScreen({ profile, onGameEnd }) {
       // 4. Infield (dirt, foul lines, batter's box, home plate - foreground ground)
       drawInfield(ctx);
 
-      // 4b. Base runners — drawn AFTER the infield dirt so they're visible
+      // 4b. Corner infielders — 3rd baseman (left) and 1st baseman (right).
+      // Drawn AFTER the dirt because they stand on it (closer to the camera
+      // than the shortstop / second baseman who are out by the grass).
+      drawFielder(ctx, THIRD_BASE_HOME.x, THIRD_BASE_HOME.y, FIELDER_SCALE);
+      drawFielder(ctx, FIRST_BASE_HOME.x, FIRST_BASE_HOME.y, FIELDER_SCALE);
+
+      // 4c. Base runners — drawn AFTER the infield dirt so they're visible
       // standing on the bases. game.bases is [1st, 2nd, 3rd].
       for (let i = 0; i < 3; i++) {
         if (game.bases[i]) {
