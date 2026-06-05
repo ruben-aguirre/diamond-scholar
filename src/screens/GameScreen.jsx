@@ -1804,6 +1804,65 @@ export default function GameScreen({ profile, onGameEnd }) {
     setGame((g) => ({ ...g, phase: GAME_PHASES.PITCH_INCOMING, pitchLocation: pitch }));
   }
 
+  // STEAL — the runner closest to home (the "lead runner") tries to sprint to
+  // the next base during the pitch. 70% chance safe, 30% chance caught out.
+  // Only enabled when there's at least one runner on AND the pitch is in flight.
+  const handleSteal = useCallback(() => {
+    if (game.phase !== GAME_PHASES.PITCH_INCOMING) return;
+    // Find the lead runner — closest to home. game.bases is [1st, 2nd, 3rd].
+    // Stealing home from 3rd is risky in real baseball but we allow it here.
+    let leadIdx = -1;
+    for (let i = 2; i >= 0; i--) {
+      if (game.bases[i]) { leadIdx = i; break; }
+    }
+    if (leadIdx === -1) return;  // no one on, can't steal
+
+    const safe = Math.random() < 0.70;
+    if (safe) {
+      // Advance the lead runner one base. If they were on 3rd, they score.
+      setGame((g) => {
+        const newBases = [...g.bases];
+        newBases[leadIdx] = false;  // leave the old base
+        let runsScored = 0;
+        if (leadIdx === 2) {
+          // Stole home — score a run
+          runsScored = 1;
+        } else {
+          // Move to next base
+          newBases[leadIdx + 1] = true;
+        }
+        return {
+          ...g,
+          bases: newBases,
+          playerScore: g.playerScore + runsScored,
+        };
+      });
+      const baseNames = ['second', 'third', 'home'];
+      const dest = baseNames[leadIdx];
+      setSwingResult({
+        type: 'steal-safe',
+        description: leadIdx === 2 ? `Stole HOME! Run scored!` : `Stole ${dest}!`,
+      });
+      setTimeout(() => setSwingResult(null), 1500);
+    } else {
+      // Caught stealing — out, and runner is removed
+      setGame((g) => {
+        const newBases = [...g.bases];
+        newBases[leadIdx] = false;
+        return {
+          ...g,
+          bases: newBases,
+          outs: g.outs + 1,
+        };
+      });
+      setSwingResult({
+        type: 'steal-out',
+        description: 'Caught stealing — out!',
+      });
+      setTimeout(() => setSwingResult(null), 1500);
+    }
+  }, [game.phase, game.bases]);
+
   const handleSwing = useCallback(() => {
     if (game.phase !== GAME_PHASES.PITCH_INCOMING) return;
     const p = pitchRef.current;
@@ -2261,9 +2320,21 @@ export default function GameScreen({ profile, onGameEnd }) {
           </button>
         )}
         {pitchLive && (
-          <button className="btn btn-swing" onClick={handleSwing}>
-            SWING!
-          </button>
+          <>
+            <button className="btn btn-swing" onClick={handleSwing}>
+              SWING!
+            </button>
+            {/* Steal — only enabled when someone's on base */}
+            {(game.bases[0] || game.bases[1] || game.bases[2]) && (
+              <button
+                className="btn btn-swing"
+                style={{ backgroundColor: '#f39c12', marginLeft: 10 }}
+                onClick={handleSteal}
+              >
+                STEAL!
+              </button>
+            )}
+          </>
         )}
       </div>
 
