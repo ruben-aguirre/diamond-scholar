@@ -678,6 +678,107 @@ function drawFielderBody(ctx, x, y) {
   ctx.fill();
 }
 
+// Base runner — same body proportions as a fielder but in the player's team
+// color so you can tell whose team is on base. Used to mark which bases are
+// occupied. Drawn at a small scale to read as "in the distance."
+function drawRunner(ctx, x, y, teamColor, scale = 0.7) {
+  if (scale !== 1) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    ctx.translate(-x, -y);
+  }
+  drawRunnerBody(ctx, x, y, teamColor);
+  if (scale !== 1) {
+    ctx.restore();
+  }
+}
+
+function drawRunnerBody(ctx, x, y, teamColor) {
+  const jersey = teamColor || '#1f3a93';
+  const jerseyDark = darken(jersey, 0.35);
+  const pants = '#F5F1E8';
+  const skin = '#F2C8A0';
+  void jerseyDark;  // reserved for future shading
+
+  // Legs (standing ready)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x + 1, y + 4);
+    c.lineTo(x + 9, y + 4);
+    c.lineTo(x + 11, y + 34);
+    c.lineTo(x + 3, y + 34);
+    c.closePath();
+  }, pants);
+  outlinedRect(ctx, x + 1, y + 32, 12, 4, INK);
+
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x - 9, y + 4);
+    c.lineTo(x - 1, y + 4);
+    c.lineTo(x - 3, y + 34);
+    c.lineTo(x - 11, y + 34);
+    c.closePath();
+  }, pants);
+  outlinedRect(ctx, x - 13, y + 32, 12, 4, INK);
+
+  // Belt
+  outlinedRect(ctx, x - 11, y + 2, 22, 3, INK);
+
+  // Torso
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x - 12, y - 14);
+    c.lineTo(x + 12, y - 14);
+    c.lineTo(x + 11, y + 4);
+    c.lineTo(x - 11, y + 4);
+    c.closePath();
+  }, jersey);
+
+  // Both arms at sides (relaxed)
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x - 12, y - 12);
+    c.lineTo(x - 6, y - 12);
+    c.lineTo(x - 8, y + 4);
+    c.lineTo(x - 14, y + 4);
+    c.closePath();
+  }, jersey);
+  outlinedPath(ctx, (c) => {
+    c.moveTo(x + 6, y - 12);
+    c.lineTo(x + 12, y - 12);
+    c.lineTo(x + 14, y + 4);
+    c.lineTo(x + 8, y + 4);
+    c.closePath();
+  }, jersey);
+
+  // Hands
+  outlinedCircle(ctx, x - 11, y + 6, 2.5, skin);
+  outlinedCircle(ctx, x + 11, y + 6, 2.5, skin);
+
+  // Head
+  outlinedCircle(ctx, x, y - 22, 8, skin);
+
+  // Helmet (team color)
+  outlinedPath(ctx, (c) => {
+    c.arc(x, y - 26, 8, Math.PI, Math.PI * 2);
+    c.lineTo(x + 8, y - 23);
+    c.lineTo(x - 8, y - 23);
+    c.closePath();
+  }, jersey);
+
+  // Eyes
+  ctx.fillStyle = INK;
+  ctx.beginPath();
+  ctx.arc(x - 3, y - 20, 1.3, 0, Math.PI * 2);
+  ctx.arc(x + 3, y - 20, 1.3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Base positions on the field, where runners stand when on base.
+// game.bases is [1st, 2nd, 3rd] — order them the same way here.
+const BASE_POSITIONS = [
+  { x: 590, y: 380 },  // 1st base — right side of infield
+  { x: 400, y: 290 },  // 2nd base — behind the mound
+  { x: 210, y: 380 },  // 3rd base — left side of infield
+];
+
 // =============================================================================
 // CHIBI BACK-3/4 BATTER — Baseball-9 style camera (behind home plate, looking
 // at the pitcher in the distance). Right-handed batter standing in the LEFT
@@ -1557,6 +1658,15 @@ export default function GameScreen({ profile, onGameEnd }) {
         // Clear the chase once both phases are done
         if (fielderChaseRef.current && Date.now() >= fielderChaseRef.current.returnEnd) {
           fielderChaseRef.current = null;
+        }
+      }
+
+      // 3c. Base runners — drawn at each occupied base in the player's team
+      // color so you can see who's on. game.bases is [1st, 2nd, 3rd].
+      for (let i = 0; i < 3; i++) {
+        if (game.bases[i]) {
+          const pos = BASE_POSITIONS[i];
+          drawRunner(ctx, pos.x, pos.y, profile.teamColor?.primary || '#1f3a93');
         }
       }
       // 4. Infield (dirt, foul lines, batter's box, home plate - foreground ground)
