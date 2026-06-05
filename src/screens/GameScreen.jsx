@@ -26,6 +26,12 @@ const PLATE = { x: 400, y: 475 };        // home plate, bottom center foreground
 const BATTER = { x: 270, y: 478 };       // right-handed batter, LEFT batter's box; nudged right so wide stance fits fully inside chalk lines (x∈[140,340], y∈[430,490])
 const ZONE = { cx: 400, cy: 390, w: 70, h: 90 }; // strike zone centered on home plate
 
+// Fielder home positions. Used both for drawing the idle fielders and for
+// animating them to chase a hit ball (and slide back home after).
+const SHORTSTOP_HOME = { x: 230, y: 245 };
+const SECOND_BASE_HOME = { x: 570, y: 245 };
+const FIELDER_SCALE = 0.75;
+
 const SWING_TYPES = [
   { id: 'normal', label: 'Swing', color: '#3498db' },
   { id: 'power', label: 'Power', color: '#e67e22' },
@@ -1306,6 +1312,35 @@ function computeHitBallAt(traj, t) {
   return { x, y, size };
 }
 
+// Where a fielder ('ss' or '2b') should be drawn right now.
+//   - No chase active OR this fielder isn't chasing → at home position
+//   - Chase phase (now < chaseEnd) → moving from home toward the ball
+//   - Return phase (chaseEnd ≤ now < returnEnd) → moving from ball back home
+function computeFielderPos(who, chase, now) {
+  const home = who === 'ss' ? SHORTSTOP_HOME : SECOND_BASE_HOME;
+  if (!chase || chase.who !== who) return home;
+  if (now < chase.chaseStart) return home;
+  if (now < chase.chaseEnd) {
+    // Chasing toward the ball
+    const t = (now - chase.chaseStart) / (chase.chaseEnd - chase.chaseStart);
+    // Ease-out so they sprint hard at first then ease into the catch
+    const k = 1 - (1 - t) * (1 - t);
+    return {
+      x: home.x + (chase.target.x - home.x) * k,
+      y: home.y + (chase.target.y - home.y) * k,
+    };
+  }
+  if (now < chase.returnEnd) {
+    // Jogging back to the home position
+    const t = (now - chase.chaseEnd) / (chase.returnEnd - chase.chaseEnd);
+    return {
+      x: chase.target.x + (home.x - chase.target.x) * t,
+      y: chase.target.y + (home.y - chase.target.y) * t,
+    };
+  }
+  return home;
+}
+
 // =============================================================================
 // BATTER SPRITE SYSTEM
 // =============================================================================
@@ -1449,6 +1484,9 @@ export default function GameScreen({ profile, onGameEnd }) {
   const pitchRef = useRef(null); // { pitch, startTime, duration, resolved, landing }
   const batRef = useRef(null); // { startTime, duration }
   const hitBallRef = useRef(null); // { startTime, duration, kind, origin, target, peakY }
+  // Which fielder is chasing the ball + their motion timing. Has two phases:
+  // chase (move from home to ball-landing spot) then return (slide back home).
+  const fielderChaseRef = useRef(null); // { who: 'ss'|'2b', target, chaseStart, chaseEnd, returnEnd }
   const rafRef = useRef(null);
   const batterSpritesRef = useRef(null);  // populated by loadBatterSprites()
 
@@ -1491,12 +1529,19 @@ export default function GameScreen({ profile, onGameEnd }) {
       drawJumbotron(ctx, game, profile.teamName);
       // 3. Pitcher on the mound (mid-distance)
       drawPitcher(ctx, profile.teamColor?.primary);
-      // 3b. Infielders — shortstop (left) and second baseman (right), pushed
-      // deeper than the pitcher and farther apart, so they sit behind 2nd
-      // base in the back of the infield. Drawn at 0.75× scale since they're
-      // deeper into the field than the pitcher.
-      drawFielder(ctx, 230, 245, 0.75);  // shortstop (between 2B and 3B)
-      drawFielder(ctx, 570, 245, 0.75);  // second baseman (between 1B and 2B)
+      // 3b. Infielders — shortstop (left) and second baseman (right). They
+      // sit idle at their home positions until a hit, at which point the
+      // closer one chases the ball, then jogs back home.
+      {
+        const ssPos = computeFielderPos('ss', fielderChaseRef.current, Date.now());
+        const sbPos = computeFielderPos('2b', fielderChaseRef.current, Date.now());
+        drawFielder(ctx, ssPos.x, ssPos.y, FIELDER_SCALE);
+        drawFielder(ctx, sbPos.x, sbPos.y, FIELDER_SCALE);
+        // Clear the chase once both phases are done
+        if (fielderChaseRef.current && Date.now() >= fielderChaseRef.current.returnEnd) {
+          fielderChaseRef.current = null;
+        }
+      }
       // 4. Infield (dirt, foul lines, batter's box, home plate - foreground ground)
       drawInfield(ctx);
 
@@ -1592,6 +1637,7 @@ export default function GameScreen({ profile, onGameEnd }) {
     const duration = pitchDurationMs(teamAvg);
     pitchRef.current = { pitch, startTime: Date.now(), duration, resolved: false };
     hitBallRef.current = null;  // clear any leftover hit-ball animation from the previous pitch
+    fielderChaseRef.current = null;  // and snap fielders back home
     setGame((g) => ({ ...g, phase: GAME_PHASES.PITCH_INCOMING, pitchLocation: pitch }));
   }
 
@@ -1617,11 +1663,27 @@ export default function GameScreen({ profile, onGameEnd }) {
     // with the bat reaching the contact point.
     if (result.type !== 'miss') {
       const traj = buildHitTrajectory(result.type);
+      const ballStart = Date.now() + 150;
       hitBallRef.current = {
-        startTime: Date.now() + 150,
+        startTime: ballStart,
         duration: traj.duration,
         traj,
       };
+      // Send a fielder after the ball. Closer-to-the-target fielder chases.
+      // Skip the chase for home runs and fouls — fielders can't catch those.
+      if (result.type !== 'homerun' && result.type !== 'foul') {
+        const ssDist = Math.hypot(traj.target.x - SHORTSTOP_HOME.x, traj.target.y - SHORTSTOP_HOME.y);
+        const sbDist = Math.hypot(traj.target.x - SECOND_BASE_HOME.x, traj.target.y - SECOND_BASE_HOME.y);
+        const who = ssDist <= sbDist ? 'ss' : '2b';
+        fielderChaseRef.current = {
+          who,
+          target: { x: traj.target.x, y: traj.target.y },
+          // Fielder reaches the ball at the same time the ball lands
+          chaseStart: ballStart,
+          chaseEnd: ballStart + traj.duration,
+          returnEnd: ballStart + traj.duration + 800,  // 800ms to jog back home
+        };
+      }
     }
     // Timing feedback on every swing — always show direction
     const isHit = result.bases > 0;
