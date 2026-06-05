@@ -1217,6 +1217,23 @@ function computeBallAt(pitch, t) {
 //   origin: starting (x, y) at contact
 //   target: ending (x, y) where the ball "lands" (or goes off-screen for HR)
 //   peakY: minimum y the ball reaches at midflight (lower = higher arc)
+// Miss trajectory — when the batter swings and misses, the ball doesn't just
+// vanish; it continues from wherever the pitch was crossing the plate down
+// past the batter into the catcher's mitt (off-screen toward the camera).
+// `pitchLand` is the strike-zone landing point of the pitch.
+function buildMissTrajectory(pitchLand) {
+  return {
+    kind: 'miss',
+    // Start at the pitch landing point (where bat would've met ball)
+    origin: { x: pitchLand.x, y: pitchLand.y },
+    // Continue past the batter to bottom-center of the canvas (catcher area)
+    target: { x: PLATE.x, y: CH + 30 },
+    // Slight downward bow so it looks like a real pitch crossing the plate
+    peakY: pitchLand.y + 10,
+    duration: 350,
+  };
+}
+
 function buildHitTrajectory(resultType) {
   // Contact point: just in front of and above home plate (where the strike
   // zone is — that's where the bat met the ball).
@@ -1661,7 +1678,18 @@ export default function GameScreen({ profile, onGameEnd }) {
     // trajectory so the player sees the ball get hit, not just disappear.
     // The trajectory starts ~150ms after the swing begins so it lines up
     // with the bat reaching the contact point.
-    if (result.type !== 'miss') {
+    if (result.type === 'miss') {
+      // Swing-and-miss — the ball keeps going past the batter into the
+      // catcher's mitt instead of vanishing. Uses the same hit-ball animator
+      // since it's just a ball on a trajectory.
+      const pitchLand = computeLanding(p.pitch);
+      const missTraj = buildMissTrajectory(pitchLand);
+      hitBallRef.current = {
+        startTime: Date.now(),
+        duration: missTraj.duration,
+        traj: missTraj,
+      };
+    } else {
       const traj = buildHitTrajectory(result.type);
       const ballStart = Date.now() + 150;
       hitBallRef.current = {
