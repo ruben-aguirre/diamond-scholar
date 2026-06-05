@@ -1661,16 +1661,17 @@ export default function GameScreen({ profile, onGameEnd }) {
         }
       }
 
-      // 3c. Base runners — drawn at each occupied base in the player's team
-      // color so you can see who's on. game.bases is [1st, 2nd, 3rd].
+      // 4. Infield (dirt, foul lines, batter's box, home plate - foreground ground)
+      drawInfield(ctx);
+
+      // 4b. Base runners — drawn AFTER the infield dirt so they're visible
+      // standing on the bases. game.bases is [1st, 2nd, 3rd].
       for (let i = 0; i < 3; i++) {
         if (game.bases[i]) {
           const pos = BASE_POSITIONS[i];
           drawRunner(ctx, pos.x, pos.y, profile.teamColor?.primary || '#1f3a93');
         }
       }
-      // 4. Infield (dirt, foul lines, batter's box, home plate - foreground ground)
-      drawInfield(ctx);
 
       // 5. Strike zone overlay (floats in mid-scene - only during batting phases)
       if (
