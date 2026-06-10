@@ -1728,11 +1728,14 @@ export default function GameScreen({ profile, onGameEnd }) {
       drawJumbotron(ctx, game, profile.teamName);
       // 3. Pitcher on the mound (mid-distance)
       drawPitcher(ctx, profile.teamColor?.primary);
-      // 3b. Shortstop — the only middle infielder. Sits idle at home until
-      // a hit, then chases the ball and jogs back.
+      // 3b. Middle infielders — shortstop (left) and second baseman (right).
+      // Sit idle at home until a hit, at which point the closer one chases
+      // the ball and jogs back.
       {
         const ssPos = computeFielderPos('ss', fielderChaseRef.current, Date.now());
+        const sbPos = computeFielderPos('2b', fielderChaseRef.current, Date.now());
         drawFielder(ctx, ssPos.x, ssPos.y, FIELDER_SCALE);
+        drawFielder(ctx, sbPos.x, sbPos.y, FIELDER_SCALE);
         if (fielderChaseRef.current && Date.now() >= fielderChaseRef.current.returnEnd) {
           fielderChaseRef.current = null;
         }
@@ -1740,10 +1743,6 @@ export default function GameScreen({ profile, onGameEnd }) {
 
       // 4. Infield (dirt, foul lines, batter's box, home plate - foreground ground)
       drawInfield(ctx);
-
-      // 4b. Third baseman — only corner infielder. Drawn AFTER the dirt
-      // because he stands on it.
-      drawFielder(ctx, THIRD_BASE_HOME.x, THIRD_BASE_HOME.y, FIELDER_SCALE);
 
       // 4c. Base runners — drawn AFTER the infield dirt so they're visible
       // standing on the bases. game.bases is [1st, 2nd, 3rd]. We skip
@@ -2007,11 +2006,14 @@ export default function GameScreen({ profile, onGameEnd }) {
         duration: traj.duration,
         traj,
       };
-      // Send the shortstop after the ball (he's the only middle infielder now).
+      // Send the closer middle infielder after the ball.
       // Skip the chase for home runs and fouls — those balls are gone.
       if (result.type !== 'homerun' && result.type !== 'foul') {
+        const ssDist = Math.hypot(traj.target.x - SHORTSTOP_HOME.x, traj.target.y - SHORTSTOP_HOME.y);
+        const sbDist = Math.hypot(traj.target.x - SECOND_BASE_HOME.x, traj.target.y - SECOND_BASE_HOME.y);
+        const who = ssDist <= sbDist ? 'ss' : '2b';
         fielderChaseRef.current = {
-          who: 'ss',
+          who,
           target: { x: traj.target.x, y: traj.target.y },
           // Fielder reaches the ball at the same time the ball lands
           chaseStart: ballStart,
