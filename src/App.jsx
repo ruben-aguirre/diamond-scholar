@@ -95,7 +95,7 @@ function App() {
         />
       );
     case 'team':
-      return <TeamScreen profile={freshProfile} onBack={() => setScreen('home')} />;
+      return <TeamScreen profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'game':
       return <GameScreen profile={freshProfile} onGameEnd={handleGameEnd} />;
     default:

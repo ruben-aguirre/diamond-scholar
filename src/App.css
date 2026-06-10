@@ -457,6 +457,97 @@ body {
   font-style: italic;
 }
 
+/* Batting-order editor (TeamScreen) */
+.section-help {
+  margin: 0 0 12px;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.batting-order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.batting-order-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  padding: 12px 14px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.batting-pos {
+  font-weight: 800;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary, #3498db);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+}
+
+.batting-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.batting-stat {
+  background: #f1c40f;
+  color: #2c3e50;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.batting-empty {
+  flex: 1;
+  color: var(--text-light);
+  font-style: italic;
+}
+
+.batting-move-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.btn-move {
+  width: 32px;
+  height: 26px;
+  border: 1px solid #bdc3c7;
+  background: #ecf0f1;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, transform 0.05s;
+}
+
+.btn-move:hover:not(:disabled) {
+  background: #d6dbdc;
+}
+
+.btn-move:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.btn-move:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .stat-pills {
   display: flex;
   gap: 4px;

@@ -1,9 +1,22 @@
-const POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
+export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
+  // Look up the player for each batting-order slot.
+  const battingOrder = (profile.lineup || []).map((id) =>
+    profile.roster.find((p) => p.id === id) || null
+  );
 
-export default function TeamScreen({ profile, onBack }) {
-  const starters = POSITIONS.map((pos) => {
-    return profile.roster.find((p) => p.position === pos) || null;
-  });
+  function moveUp(i) {
+    if (i === 0) return;  // top of the order — can't go higher
+    const newLineup = [...profile.lineup];
+    [newLineup[i - 1], newLineup[i]] = [newLineup[i], newLineup[i - 1]];
+    onUpdateProfile({ lineup: newLineup });
+  }
+
+  function moveDown(i) {
+    if (i === battingOrder.length - 1) return;  // bottom of the order
+    const newLineup = [...profile.lineup];
+    [newLineup[i + 1], newLineup[i]] = [newLineup[i], newLineup[i + 1]];
+    onUpdateProfile({ lineup: newLineup });
+  }
 
   return (
     <div className="team-screen">
@@ -17,24 +30,40 @@ export default function TeamScreen({ profile, onBack }) {
       </header>
 
       <div className="team-content">
-        <h2 className="section-title">Starting Lineup</h2>
-        <div className="lineup-list">
-          {starters.map((player, i) => (
-            <div key={POSITIONS[i]} className="lineup-row">
-              <span className="lineup-pos">{POSITIONS[i]}</span>
+        <h2 className="section-title">Batting Order</h2>
+        <p className="section-help">
+          Use the arrows to move players up or down. The player at the top bats first!
+        </p>
+        <div className="batting-order-list">
+          {battingOrder.map((player, i) => (
+            <div key={(player && player.id) || `slot-${i}`} className="batting-order-row">
+              <span className="batting-pos">{i + 1}</span>
               {player ? (
                 <>
-                  <span className="lineup-name">{player.name}</span>
-                  <div className="stat-pills">
-                    <span className="stat-pill" title="Batting">B:{player.batting}</span>
-                    <span className="stat-pill" title="Pitching">P:{player.pitching}</span>
-                    <span className="stat-pill" title="Fielding">F:{player.fielding}</span>
-                    <span className="stat-pill" title="Speed">S:{player.speed}</span>
-                  </div>
+                  <span className="batting-name">{player.name}</span>
+                  <span className="batting-stat" title="Batting">BAT {player.batting}</span>
                 </>
               ) : (
-                <span className="lineup-empty">Empty</span>
+                <span className="batting-empty">Empty</span>
               )}
+              <div className="batting-move-buttons">
+                <button
+                  className="btn-move"
+                  onClick={() => moveUp(i)}
+                  disabled={i === 0}
+                  aria-label="Move up"
+                >
+                  &#9650;
+                </button>
+                <button
+                  className="btn-move"
+                  onClick={() => moveDown(i)}
+                  disabled={i === battingOrder.length - 1}
+                  aria-label="Move down"
+                >
+                  &#9660;
+                </button>
+              </div>
             </div>
           ))}
         </div>
