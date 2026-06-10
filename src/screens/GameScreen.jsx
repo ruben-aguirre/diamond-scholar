@@ -1728,15 +1728,11 @@ export default function GameScreen({ profile, onGameEnd }) {
       drawJumbotron(ctx, game, profile.teamName);
       // 3. Pitcher on the mound (mid-distance)
       drawPitcher(ctx, profile.teamColor?.primary);
-      // 3b. Infielders — shortstop (left) and second baseman (right). They
-      // sit idle at their home positions until a hit, at which point the
-      // closer one chases the ball, then jogs back home.
+      // 3b. Shortstop — the only middle infielder. Sits idle at home until
+      // a hit, then chases the ball and jogs back.
       {
         const ssPos = computeFielderPos('ss', fielderChaseRef.current, Date.now());
-        const sbPos = computeFielderPos('2b', fielderChaseRef.current, Date.now());
         drawFielder(ctx, ssPos.x, ssPos.y, FIELDER_SCALE);
-        drawFielder(ctx, sbPos.x, sbPos.y, FIELDER_SCALE);
-        // Clear the chase once both phases are done
         if (fielderChaseRef.current && Date.now() >= fielderChaseRef.current.returnEnd) {
           fielderChaseRef.current = null;
         }
@@ -1745,11 +1741,9 @@ export default function GameScreen({ profile, onGameEnd }) {
       // 4. Infield (dirt, foul lines, batter's box, home plate - foreground ground)
       drawInfield(ctx);
 
-      // 4b. Corner infielders — 3rd baseman (left) and 1st baseman (right).
-      // Drawn AFTER the dirt because they stand on it (closer to the camera
-      // than the shortstop / second baseman who are out by the grass).
+      // 4b. Third baseman — only corner infielder. Drawn AFTER the dirt
+      // because he stands on it.
       drawFielder(ctx, THIRD_BASE_HOME.x, THIRD_BASE_HOME.y, FIELDER_SCALE);
-      drawFielder(ctx, FIRST_BASE_HOME.x, FIRST_BASE_HOME.y, FIELDER_SCALE);
 
       // 4c. Base runners — drawn AFTER the infield dirt so they're visible
       // standing on the bases. game.bases is [1st, 2nd, 3rd]. We skip
@@ -2013,14 +2007,11 @@ export default function GameScreen({ profile, onGameEnd }) {
         duration: traj.duration,
         traj,
       };
-      // Send a fielder after the ball. Closer-to-the-target fielder chases.
-      // Skip the chase for home runs and fouls — fielders can't catch those.
+      // Send the shortstop after the ball (he's the only middle infielder now).
+      // Skip the chase for home runs and fouls — those balls are gone.
       if (result.type !== 'homerun' && result.type !== 'foul') {
-        const ssDist = Math.hypot(traj.target.x - SHORTSTOP_HOME.x, traj.target.y - SHORTSTOP_HOME.y);
-        const sbDist = Math.hypot(traj.target.x - SECOND_BASE_HOME.x, traj.target.y - SECOND_BASE_HOME.y);
-        const who = ssDist <= sbDist ? 'ss' : '2b';
         fielderChaseRef.current = {
-          who,
+          who: 'ss',
           target: { x: traj.target.x, y: traj.target.y },
           // Fielder reaches the ball at the same time the ball lands
           chaseStart: ballStart,
