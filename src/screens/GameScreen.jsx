@@ -463,9 +463,8 @@ function drawInfield(ctx) {
   // diamonds (squares rotated 45° + perspective squashed vertically) so they
   // sit on the dirt rather than floating like a top-down icon.
   // Sizes shrink with depth — 2nd base is farthest from camera so it's smallest.
-  drawBag(ctx, BASE_POSITIONS[0].x, BASE_POSITIONS[0].y, 14, 7);  // 1st base
-  drawBag(ctx, BASE_POSITIONS[1].x, BASE_POSITIONS[1].y, 11, 5);  // 2nd base (farther = smaller)
-  drawBag(ctx, BASE_POSITIONS[2].x, BASE_POSITIONS[2].y, 14, 7);  // 3rd base
+  // Only 2nd base bag is shown — 1st and 3rd were removed per kid feedback.
+  drawBag(ctx, BASE_POSITIONS[1].x, BASE_POSITIONS[1].y, 11, 5);  // 2nd base
 }
 
 // Draw a single base bag as a perspective-squashed diamond. Width is the
