@@ -111,7 +111,13 @@ function App() {
     case 'team':
       return <TeamScreen profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'game':
-      return <GameScreen profile={freshProfile} onGameEnd={handleGameEnd} />;
+      return (
+        <GameScreen
+          profile={freshProfile}
+          onGameEnd={handleGameEnd}
+          onExit={() => setScreen('team')}
+        />
+      );
     default:
       return <HomeScreen profile={freshProfile} onNavigate={handleNavigate} onSwitchProfile={handleSwitchProfile} />;
   }

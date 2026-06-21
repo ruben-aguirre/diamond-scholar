@@ -612,6 +612,25 @@ body {
   background: linear-gradient(180deg, #102a43 0%, #1f4068 60%, #2c5364 100%);
 }
 
+.btn-exit-game {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 5;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-exit-game:hover {
+  background: rgba(0, 0, 0, 0.55);
+}
+
 .phase-banner {
   width: 100%;
   max-width: 720px;

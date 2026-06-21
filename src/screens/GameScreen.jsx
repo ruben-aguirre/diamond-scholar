@@ -1666,7 +1666,7 @@ function drawBatterSprite(ctx, sprites, batSwingT) {
 
 // ---- Component ----
 
-export default function GameScreen({ profile, onGameEnd }) {
+export default function GameScreen({ profile, onGameEnd, onExit }) {
   const [game, setGame] = useState(() => createGameState(profile));
   const [swingType, setSwingType] = useState('normal');
   const [swingResult, setSwingResult] = useState(null);
@@ -2274,6 +2274,15 @@ export default function GameScreen({ profile, onGameEnd }) {
     }));
   }
 
+  // Leave the game early and go look at player stats. The game is thrown away
+  // (no win/loss, no at-bats counted) — same spirit as not being able to
+  // restart to dodge a loss. Confirm first so a mis-tap doesn't quit.
+  function handleExit() {
+    const ok = typeof window === 'undefined'
+      || window.confirm('Quit this game and see your team stats? This game won\'t be saved.');
+    if (ok) onExit();
+  }
+
   function handleGameOver() {
     onGameEnd({
       playerScore: game.playerScore,
@@ -2393,6 +2402,11 @@ export default function GameScreen({ profile, onGameEnd }) {
     <div className="game-screen v2">
       {/* Scoreboard now lives ON the field \u2014 drawn as the jumbotron inside the
           canvas (see drawJumbotron). No separate HTML scoreboard bar. */}
+
+      {/* Exit \u2014 leave the game and go see your team / player stats */}
+      <button className="btn btn-exit-game" onClick={handleExit}>
+        &#8592; Exit
+      </button>
 
       {/* Phase banner */}
       <div className="phase-banner batting">YOU&rsquo;RE BATTING</div>
