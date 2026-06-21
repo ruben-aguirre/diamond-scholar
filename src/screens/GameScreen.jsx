@@ -2411,11 +2411,6 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       {/* Scoreboard now lives ON the field \u2014 drawn as the jumbotron inside the
           canvas (see drawJumbotron). No separate HTML scoreboard bar. */}
 
-      {/* Exit \u2014 opens the Save / Close dialog */}
-      <button className="btn btn-exit-game" onClick={openExitDialog}>
-        &#8592; Exit
-      </button>
-
       {/* Phase banner */}
       <div className="phase-banner batting">YOU&rsquo;RE BATTING</div>
 
@@ -2483,6 +2478,10 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
             )}
           </>
         )}
+        {/* Exit — sits right under Pitch! / Swing!; opens the Save / Close dialog */}
+        <button className="btn btn-exit-game" onClick={openExitDialog}>
+          &#8592; Exit
+        </button>
       </div>
 
       {/* Coins HUD */}
