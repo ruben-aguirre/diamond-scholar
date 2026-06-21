@@ -54,8 +54,22 @@ function App() {
   }
 
   function handleGameEnd(results) {
+    // Fold this game's hits/at-bats into each player's career totals so their
+    // baseball-card batting average reflects every game they've batted in.
+    const gameStats = results.battingStats || {};
+    const updatedRoster = activeProfile.roster.map((player) => {
+      const g = gameStats[player.id];
+      if (!g) return player;
+      return {
+        ...player,
+        careerAB: (player.careerAB || 0) + g.ab,
+        careerHits: (player.careerHits || 0) + g.hits,
+      };
+    });
+
     updateProfile({
       coins: activeProfile.coins + results.coinsEarned,
+      roster: updatedRoster,
       stats: {
         ...activeProfile.stats,
         gamesPlayed: activeProfile.stats.gamesPlayed + 1,

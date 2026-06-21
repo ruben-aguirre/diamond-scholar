@@ -1688,6 +1688,23 @@ export default function GameScreen({ profile, onGameEnd }) {
   const rafRef = useRef(null);
   const batterSpritesRef = useRef(null);  // populated by loadBatterSprites()
 
+  // Per-game batting tally: { [playerId]: { ab, hits } }. Accumulated as each
+  // at-bat resolves, then handed to onGameEnd so the profile can fold it into
+  // each player's career hits/at-bats for their baseball-card average.
+  const battingStatsRef = useRef({});
+
+  // Record one at-bat outcome for the current batter. A hit counts as an
+  // at-bat AND a hit; an out is an at-bat with no hit. Walks and fouls don't
+  // call this (they aren't official at-bats).
+  function recordAtBat(batter, isHit) {
+    if (!batter || !batter.id) return;
+    const tally = battingStatsRef.current;
+    const entry = tally[batter.id] || { ab: 0, hits: 0 };
+    entry.ab += 1;
+    if (isHit) entry.hits += 1;
+    tally[batter.id] = entry;
+  }
+
   // Diagnostic: ?sprites=placeholders forces the placeholder rectangles to
   // render even when real art isn't dropped in yet. Used to verify the swap
   // pipeline end-to-end before sprite delivery.
@@ -2047,6 +2064,7 @@ export default function GameScreen({ profile, onGameEnd }) {
         }
         return { ...g, strikes: newStrikes, phase: GAME_PHASES.SWING_RESULT };
       });
+      if (wasThirdStrike) recordAtBat(currentBatter, false);  // struck out — at-bat, no hit
       setTimeout(() => {
         setSwingResult(null);
         if (wasThirdStrike) {
@@ -2070,11 +2088,13 @@ export default function GameScreen({ profile, onGameEnd }) {
       return;
     }
     if (result.isOut) {
+      recordAtBat(currentBatter, false);  // ground/fly out — at-bat, no hit
       setGame((g) => ({ ...g, outs: g.outs + 1, phase: GAME_PHASES.SWING_RESULT }));
       setTimeout(() => { setSwingResult(null); afterPlay(true); }, 1800);
       return;
     }
     // Hit
+    recordAtBat(currentBatter, true);  // single/double/triple/HR — at-bat + hit
     setGame((g) => {
       const { newBases, runs } = advanceRunners(g.bases, result.bases);
       return {
@@ -2092,6 +2112,7 @@ export default function GameScreen({ profile, onGameEnd }) {
     setGame((g) => {
       const newStrikes = g.strikes + 1;
       if (newStrikes >= 3) {
+        recordAtBat(currentBatter, false);  // called strikeout — at-bat, no hit
         setSwingResult({ type: 'miss', description: 'STRIKE THREE — YOU\'RE OUT!' });
         setTimeout(() => {
           setSwingResult(null);
@@ -2260,6 +2281,7 @@ export default function GameScreen({ profile, onGameEnd }) {
       coinsEarned: game.coinsEarned,
       studyBreakResults: game.studyBreakResults,
       won: game.playerScore > game.aiScore,
+      battingStats: battingStatsRef.current,  // { [playerId]: { ab, hits } }
     });
   }
 

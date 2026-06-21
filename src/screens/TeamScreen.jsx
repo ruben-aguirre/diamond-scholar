@@ -1,4 +1,4 @@
-import { playerAverage } from '../data/players';
+import { battingAverage } from '../data/players';
 
 export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
   // Look up the player for each batting-order slot.
@@ -43,10 +43,10 @@ export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
               {player ? (
                 <>
                   <span className="batting-name">{player.name}</span>
-                  <span className="batting-avg" title="Overall average of all four stats">
-                    AVG {playerAverage(player)}
+                  <span className="batting-avg" title="Batting average — hits divided by at-bats">
+                    {battingAverage(player)}
                   </span>
-                  <span className="batting-stat" title="Batting">BAT {player.batting}</span>
+                  <span className="batting-stat" title="Batting power (1-10)">BAT {player.batting}</span>
                 </>
               ) : (
                 <span className="batting-empty">Empty</span>
