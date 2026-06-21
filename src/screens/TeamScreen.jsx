@@ -1,3 +1,5 @@
+import { playerAverage } from '../data/players';
+
 export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
   // Look up the player for each batting-order slot.
   const battingOrder = (profile.lineup || []).map((id) =>
@@ -41,6 +43,9 @@ export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
               {player ? (
                 <>
                   <span className="batting-name">{player.name}</span>
+                  <span className="batting-avg" title="Overall average of all four stats">
+                    AVG {playerAverage(player)}
+                  </span>
                   <span className="batting-stat" title="Batting">BAT {player.batting}</span>
                 </>
               ) : (

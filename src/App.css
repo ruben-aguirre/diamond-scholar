@@ -509,6 +509,15 @@ body {
   font-weight: 700;
 }
 
+.batting-avg {
+  background: #2ecc71;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 .batting-empty {
   flex: 1;
   color: var(--text-light);

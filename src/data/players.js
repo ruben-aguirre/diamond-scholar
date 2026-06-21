@@ -53,6 +53,13 @@ export const packPrices = {
   diamond: { cost: 2000, sellPrice: 700 },
 };
 
+// A player's overall rating — the average of their four stats, rounded to
+// one decimal so kids can compare players at a glance (e.g. 4.3 vs 5.8).
+export function playerAverage(player) {
+  const avg = (player.batting + player.pitching + player.fielding + player.speed) / 4;
+  return Math.round(avg * 10) / 10;
+}
+
 export function createPlayerId() {
   return 'p' + Date.now() + Math.random().toString(36).substr(2, 5);
 }
