@@ -1689,21 +1689,23 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   const rafRef = useRef(null);
   const batterSpritesRef = useRef(null);  // populated by loadBatterSprites()
 
-  // Per-game batting tally: { [playerId]: { ab, hits } }. Accumulated as each
-  // at-bat resolves, then handed to onGameEnd so the profile can fold it into
-  // each player's career hits/at-bats for their baseball-card average.
+  // Per-game hit points by player: { [playerId]: points }. A hit adds points
+  // (single 10, double 20, triple 30, HR 60); outs add nothing, so a player's
+  // average only ever goes UP. Handed to onGameEnd / onSaveAndExit so the
+  // profile can fold it into each player's career hit points.
   const battingStatsRef = useRef({});
 
-  // Record one at-bat outcome for the current batter. A hit counts as an
-  // at-bat AND a hit; an out is an at-bat with no hit. Walks and fouls don't
-  // call this (they aren't official at-bats).
-  function recordAtBat(batter, isHit) {
+  // Points a hit is worth, by hit type.
+  const HIT_POINTS = { single: 10, double: 20, triple: 30, homerun: 60 };
+
+  // Add a hit's points to the current batter. Outs don't call this — that's
+  // how the average only climbs and never drops.
+  function recordHit(batter, hitType) {
     if (!batter || !batter.id) return;
+    const points = HIT_POINTS[hitType] || 0;
+    if (!points) return;
     const tally = battingStatsRef.current;
-    const entry = tally[batter.id] || { ab: 0, hits: 0 };
-    entry.ab += 1;
-    if (isHit) entry.hits += 1;
-    tally[batter.id] = entry;
+    tally[batter.id] = (tally[batter.id] || 0) + points;
   }
 
   // Diagnostic: ?sprites=placeholders forces the placeholder rectangles to
@@ -2065,7 +2067,6 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         }
         return { ...g, strikes: newStrikes, phase: GAME_PHASES.SWING_RESULT };
       });
-      if (wasThirdStrike) recordAtBat(currentBatter, false);  // struck out — at-bat, no hit
       setTimeout(() => {
         setSwingResult(null);
         if (wasThirdStrike) {
@@ -2089,13 +2090,13 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       return;
     }
     if (result.isOut) {
-      recordAtBat(currentBatter, false);  // ground/fly out — at-bat, no hit
+      // Out — no points; the average doesn't drop.
       setGame((g) => ({ ...g, outs: g.outs + 1, phase: GAME_PHASES.SWING_RESULT }));
       setTimeout(() => { setSwingResult(null); afterPlay(true); }, 1800);
       return;
     }
-    // Hit
-    recordAtBat(currentBatter, true);  // single/double/triple/HR — at-bat + hit
+    // Hit — add points by type (single 10, double 20, triple 30, HR 60)
+    recordHit(currentBatter, result.type);
     setGame((g) => {
       const { newBases, runs } = advanceRunners(g.bases, result.bases);
       return {
@@ -2113,7 +2114,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
     setGame((g) => {
       const newStrikes = g.strikes + 1;
       if (newStrikes >= 3) {
-        recordAtBat(currentBatter, false);  // called strikeout — at-bat, no hit
+        // Strikeout — no points; the average doesn't drop.
         setSwingResult({ type: 'miss', description: 'STRIKE THREE — YOU\'RE OUT!' });
         setTimeout(() => {
           setSwingResult(null);

@@ -53,17 +53,17 @@ function App() {
     );
   }
 
-  // Fold a game's hits/at-bats into each player's career totals so their
-  // baseball-card batting average reflects every game they've batted in.
+  // Fold a game's hit points into each player's career total. Points come from
+  // hits only (single 10, double 20, triple 30, HR 60), so a player's batting
+  // average only ever climbs across every game they've batted in.
   function applyBattingStats(roster, battingStats) {
-    const gameStats = battingStats || {};
+    const gamePoints = battingStats || {};
     return roster.map((player) => {
-      const g = gameStats[player.id];
-      if (!g) return player;
+      const earned = gamePoints[player.id] || 0;
+      if (!earned) return player;
       return {
         ...player,
-        careerAB: (player.careerAB || 0) + g.ab,
-        careerHits: (player.careerHits || 0) + g.hits,
+        hitPoints: (player.hitPoints || 0) + earned,
       };
     });
   }

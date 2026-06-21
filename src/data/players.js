@@ -60,17 +60,15 @@ export function playerAverage(player) {
   return Math.round(avg * 10) / 10;
 }
 
-// A player's batting average — real hits / at-bats, formatted like a baseball
-// card (".312", ".000" before any at-bats, "1.000" if they're perfect).
-// careerHits / careerAB accumulate across every game the player has batted in.
+// A player's batting average, shown baseball-card style (".312", ".000" to
+// start). It's built from hit points that only go up: each single adds 10,
+// double 20, triple 30, home run 60. Points are read as thousandths, so 10
+// points shows as ".010". Outs never subtract, so the number only climbs.
+// Caps at ".999" so the card formatting stays clean.
 export function battingAverage(player) {
-  const ab = player.careerAB || 0;
-  const hits = player.careerHits || 0;
-  if (ab === 0) return '.000';
-  const avg = hits / ab;
-  // Baseball convention: no leading zero, three decimals. 1.000 keeps its 1.
-  const str = avg.toFixed(3);
-  return avg < 1 ? str.slice(1) : str; // "0.312" -> ".312", "1.000" stays
+  const points = player.hitPoints || 0;
+  const capped = Math.min(points, 999);
+  return '.' + String(capped).padStart(3, '0'); // 10 -> ".010", 312 -> ".312"
 }
 
 export function createPlayerId() {
