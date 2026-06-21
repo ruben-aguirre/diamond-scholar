@@ -631,6 +631,66 @@ body {
   background: rgba(0, 0, 0, 0.55);
 }
 
+.exit-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.exit-dialog {
+  background: #fff;
+  color: #2c3e50;
+  border-radius: 16px;
+  padding: 24px 22px;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+
+.exit-dialog-title {
+  margin: 0 0 10px;
+  font-size: 1.4rem;
+}
+
+.exit-dialog-text {
+  margin: 0 0 20px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #4a5b6b;
+}
+
+.exit-dialog-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-exit-save,
+.btn-exit-close {
+  flex: 1;
+  padding: 14px 0;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-exit-save {
+  background: #2ecc71;
+  color: #fff;
+}
+
+.btn-exit-close {
+  background: #ecf0f1;
+  color: #2c3e50;
+}
+
 .phase-banner {
   width: 100%;
   max-width: 720px;

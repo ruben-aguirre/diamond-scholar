@@ -53,11 +53,11 @@ function App() {
     );
   }
 
-  function handleGameEnd(results) {
-    // Fold this game's hits/at-bats into each player's career totals so their
-    // baseball-card batting average reflects every game they've batted in.
-    const gameStats = results.battingStats || {};
-    const updatedRoster = activeProfile.roster.map((player) => {
+  // Fold a game's hits/at-bats into each player's career totals so their
+  // baseball-card batting average reflects every game they've batted in.
+  function applyBattingStats(roster, battingStats) {
+    const gameStats = battingStats || {};
+    return roster.map((player) => {
       const g = gameStats[player.id];
       if (!g) return player;
       return {
@@ -66,6 +66,17 @@ function App() {
         careerHits: (player.careerHits || 0) + g.hits,
       };
     });
+  }
+
+  // Save-and-exit: keep the batting stats earned so far, but don't count this
+  // as a finished game (no win/loss, no games-played bump). Then show My Team.
+  function handleSaveAndExit(battingStats) {
+    updateProfile({ roster: applyBattingStats(activeProfile.roster, battingStats) });
+    setScreen('team');
+  }
+
+  function handleGameEnd(results) {
+    const updatedRoster = applyBattingStats(activeProfile.roster, results.battingStats);
 
     updateProfile({
       coins: activeProfile.coins + results.coinsEarned,
@@ -115,7 +126,7 @@ function App() {
         <GameScreen
           profile={freshProfile}
           onGameEnd={handleGameEnd}
-          onExit={() => setScreen('team')}
+          onSaveAndExit={handleSaveAndExit}
         />
       );
     default:

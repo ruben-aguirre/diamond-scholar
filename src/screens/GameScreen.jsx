@@ -1666,13 +1666,14 @@ function drawBatterSprite(ctx, sprites, batSwingT) {
 
 // ---- Component ----
 
-export default function GameScreen({ profile, onGameEnd, onExit }) {
+export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   const [game, setGame] = useState(() => createGameState(profile));
   const [swingType, setSwingType] = useState('normal');
   const [swingResult, setSwingResult] = useState(null);
   const [didYouKnow, setDidYouKnow] = useState(null);
   const [studyQuestions, setStudyQuestions] = useState(null);
   const [aiHalf, setAiHalf] = useState(null); // { steps, idx }
+  const [showExitDialog, setShowExitDialog] = useState(false); // Exit → Save/Close
 
   const canvasRef = useRef(null);
   const pitchRef = useRef(null); // { pitch, startTime, duration, resolved, landing }
@@ -2274,13 +2275,20 @@ export default function GameScreen({ profile, onGameEnd, onExit }) {
     }));
   }
 
-  // Leave the game early and go look at player stats. The game is thrown away
-  // (no win/loss, no at-bats counted) — same spirit as not being able to
-  // restart to dodge a loss. Confirm first so a mis-tap doesn't quit.
-  function handleExit() {
-    const ok = typeof window === 'undefined'
-      || window.confirm('Quit this game and see your team stats? This game won\'t be saved.');
-    if (ok) onExit();
+  // Exit button opens a little dialog with two choices:
+  //   Save  → keep the hits/at-bats earned so far, then go to My Team stats
+  //   Close → never mind, dismiss and keep playing this at-bat
+  function openExitDialog() {
+    setShowExitDialog(true);
+  }
+
+  function handleExitSave() {
+    setShowExitDialog(false);
+    onSaveAndExit(battingStatsRef.current);
+  }
+
+  function handleExitClose() {
+    setShowExitDialog(false);
   }
 
   function handleGameOver() {
@@ -2403,8 +2411,8 @@ export default function GameScreen({ profile, onGameEnd, onExit }) {
       {/* Scoreboard now lives ON the field \u2014 drawn as the jumbotron inside the
           canvas (see drawJumbotron). No separate HTML scoreboard bar. */}
 
-      {/* Exit \u2014 leave the game and go see your team / player stats */}
-      <button className="btn btn-exit-game" onClick={handleExit}>
+      {/* Exit \u2014 opens the Save / Close dialog */}
+      <button className="btn btn-exit-game" onClick={openExitDialog}>
         &#8592; Exit
       </button>
 
@@ -2485,6 +2493,28 @@ export default function GameScreen({ profile, onGameEnd, onExit }) {
       {/* Did You Know overlay */}
       {didYouKnow && (
         <DidYouKnowCard fact={didYouKnow} onClose={closeDidYouKnow} />
+      )}
+
+      {/* Exit dialog — Save (keep stats, go to My Team) or Close (keep playing) */}
+      {showExitDialog && (
+        <div className="exit-dialog-backdrop" onClick={handleExitClose}>
+          <div className="exit-dialog" onClick={(e) => e.stopPropagation()}>
+            <h2 className="exit-dialog-title">Leave the game?</h2>
+            <p className="exit-dialog-text">
+              <strong>Save</strong> keeps your hits and takes you to your team stats.
+              <br />
+              <strong>Close</strong> goes back to your game.
+            </p>
+            <div className="exit-dialog-buttons">
+              <button className="btn btn-exit-save" onClick={handleExitSave}>
+                Save
+              </button>
+              <button className="btn btn-exit-close" onClick={handleExitClose}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
