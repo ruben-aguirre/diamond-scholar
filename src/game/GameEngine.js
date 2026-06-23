@@ -31,6 +31,9 @@ export function createGameState(profile) {
     pitchLocation: null,
     pitchType: null,
     lastPlayDescription: '',
+    // Fireball powerups: earned when your defense strikes a batter out, spent
+    // on defense to force a guaranteed strikeout. Seeded from the saved profile.
+    fireballs: profile.fireballs || 0,
   };
 }
 

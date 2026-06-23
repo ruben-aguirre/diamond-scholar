@@ -2198,11 +2198,14 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       if (!h) return h;
       const step = h.steps[h.idx];
       const runsAdded = step.runs || 0;
+      // Strikeout by your defense → bank a Fireball powerup.
+      const earnedFireball = step.kind === 'K' && !step.fireballThrown;
       setGame((g) => ({
         ...g,
         aiScore: g.aiScore + runsAdded,
         bases: step.bases,
         outs: step.outs,
+        fireballs: g.fireballs + (earnedFireball ? 1 : 0),
       }));
       const nextIdx = h.idx + 1;
       if (nextIdx >= h.steps.length) {
@@ -2213,6 +2216,33 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         return h; // stay on last visible step until transition
       }
       return { ...h, idx: nextIdx };
+    });
+  }
+
+  // Spend a Fireball: rewrite the CURRENT opponent at-bat into a guaranteed
+  // strikeout (extra-fast fireball pitch). Clears the bases of any advance this
+  // step would have caused, bumps the out, and marks the step so it doesn't
+  // re-grant a fireball when advanced.
+  function throwFireball() {
+    setGame((g) => (g.fireballs > 0 ? { ...g, fireballs: g.fireballs - 1 } : g));
+    setAiHalf((h) => {
+      if (!h) return h;
+      const steps = h.steps.slice();
+      const cur = steps[h.idx];
+      // Recompute outs: this play is now an out. Keep bases as they were BEFORE
+      // this step by using the previous step's bases (or empty at the start).
+      const prevBases = h.idx > 0 ? steps[h.idx - 1].bases : [false, false, false];
+      const newOuts = Math.min(3, (h.idx > 0 ? steps[h.idx - 1].outs : 0) + 1);
+      steps[h.idx] = {
+        ...cur,
+        description: '🔥 FIREBALL — Strikeout! The batter never had a chance.',
+        kind: 'K',
+        runs: 0,
+        outs: newOuts,
+        bases: [...prevBases],
+        fireballThrown: true,  // don't grant a fireball for this forced K
+      };
+      return { ...h, steps };
     });
   }
 
@@ -2298,7 +2328,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
 
   function handleExitSave() {
     setShowExitDialog(false);
-    onSaveAndExit(battingStatsRef.current);
+    onSaveAndExit(battingStatsRef.current, game.fireballs);
   }
 
   function handleExitClose() {
@@ -2313,6 +2343,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       studyBreakResults: game.studyBreakResults,
       won: game.playerScore > game.aiScore,
       battingStats: battingStatsRef.current,  // { [playerId]: { ab, hits } }
+      fireballs: game.fireballs,
     });
   }
 
@@ -2406,7 +2437,15 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         </div>
         <div className="ai-play-card">
           <p className="ai-play-description">{step?.description}</p>
-          <p className="ai-play-hint">(Fielding is auto-simulated for now &mdash; real fielding controls coming in the next pass.)</p>
+          {/* Fireball powerup \u2014 earned from strikeouts, spent to force one */}
+          <div className="fireball-bar">
+            <span className="fireball-count">{'\u{1F525}'.repeat(game.fireballs)} {game.fireballs} Fireball{game.fireballs === 1 ? '' : 's'}</span>
+            {game.fireballs > 0 && step?.kind !== 'K' && (
+              <button className="btn btn-fireball" onClick={throwFireball}>
+                {'\u{1F525}'} Throw Fireball &mdash; Strikeout!
+              </button>
+            )}
+          </div>
           <button className="btn btn-primary btn-big" onClick={advanceAiStep}>
             {isLast ? 'End Half Inning' : 'Next Play'}
           </button>

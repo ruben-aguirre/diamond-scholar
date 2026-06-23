@@ -1369,6 +1369,32 @@ body {
   margin-bottom: 16px;
 }
 
+.fireball-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.fireball-count {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e67e22;
+}
+
+.btn-fireball {
+  background: linear-gradient(90deg, #e74c3c, #f39c12);
+  color: #fff;
+  font-weight: 800;
+  font-size: 1.05rem;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(231, 76, 60, 0.4);
+}
+
 .ai-play-hint {
   font-size: 0.85rem;
   color: var(--text-light);

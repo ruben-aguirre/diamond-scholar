@@ -75,10 +75,13 @@ function App() {
     });
   }
 
-  // Save-and-exit: keep the batting stats earned so far, but don't count this
-  // as a finished game (no win/loss, no games-played bump). Then show My Team.
-  function handleSaveAndExit(battingStats) {
-    updateProfile({ roster: applyBattingStats(activeProfile.roster, battingStats) });
+  // Save-and-exit: keep the batting stats and any Fireballs earned so far, but
+  // don't count this as a finished game (no win/loss, no games-played bump).
+  function handleSaveAndExit(battingStats, fireballs) {
+    updateProfile({
+      roster: applyBattingStats(activeProfile.roster, battingStats),
+      fireballs: fireballs != null ? fireballs : (activeProfile.fireballs || 0),
+    });
     setScreen('team');
   }
 
@@ -88,6 +91,7 @@ function App() {
     updateProfile({
       coins: activeProfile.coins + results.coinsEarned,
       roster: updatedRoster,
+      fireballs: results.fireballs != null ? results.fireballs : (activeProfile.fireballs || 0),
       stats: {
         ...activeProfile.stats,
         gamesPlayed: activeProfile.stats.gamesPlayed + 1,
