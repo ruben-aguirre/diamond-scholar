@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# Local Claude Code dev helpers (preview launch config)
+.claude

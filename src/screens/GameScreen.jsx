@@ -38,7 +38,7 @@ const FIELDER_SCALE = 0.75;
 // the white base bags are drawn. game.bases is [1st, 2nd, 3rd] — same order.
 const BASE_POSITIONS = [
   { x: 555, y: 340 },  // 1st base — right side of infield, deeper than batter
-  { x: 400, y: 205 },  // 2nd base — up above the pitcher's cap so the bag sits behind him, not on his face
+  { x: 400, y: 300 },  // 2nd base — front edge of the mound dirt, just below the pitcher's feet so the whole diamond is visible (he stands behind it)
   { x: 245, y: 340 },  // 3rd base — left side of infield, deeper than batter
 ];
 
@@ -466,8 +466,11 @@ function drawInfield(ctx) {
 
 // 2nd base bag, drawn on its own so it can be painted BEFORE the pitcher (the
 // pitcher then layers on top, since the base is behind him in the scene).
+// Made wide and flat so it reads as a base lying on the ground behind the
+// pitcher — his legs stand in front of the middle, the bag spreads out to
+// both sides.
 function drawSecondBase(ctx) {
-  drawBag(ctx, BASE_POSITIONS[1].x, BASE_POSITIONS[1].y, 18, 6);
+  drawBag(ctx, BASE_POSITIONS[1].x, BASE_POSITIONS[1].y, 26, 7);
 }
 
 // Draw a single base bag as a perspective-squashed diamond. Width is the
