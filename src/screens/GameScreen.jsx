@@ -38,7 +38,7 @@ const FIELDER_SCALE = 0.75;
 // the white base bags are drawn. game.bases is [1st, 2nd, 3rd] — same order.
 const BASE_POSITIONS = [
   { x: 555, y: 340 },  // 1st base — right side of infield, deeper than batter
-  { x: 400, y: 300 },  // 2nd base — sits on the back arc of the infield, just behind the mound dirt
+  { x: 400, y: 240 },  // 2nd base — pushed up behind the pitcher's mound (smaller y = farther from camera = behind the mound)
   { x: 245, y: 340 },  // 3rd base — left side of infield, deeper than batter
 ];
 
@@ -464,7 +464,7 @@ function drawInfield(ctx) {
   // sit on the dirt rather than floating like a top-down icon.
   // Sizes shrink with depth — 2nd base is farthest from camera so it's smallest.
   // Only 2nd base bag is shown — 1st and 3rd were removed per kid feedback.
-  drawBag(ctx, BASE_POSITIONS[1].x, BASE_POSITIONS[1].y, 11, 5);  // 2nd base
+  drawBag(ctx, BASE_POSITIONS[1].x, BASE_POSITIONS[1].y, 18, 6);  // 2nd base — wider bag
 }
 
 // Draw a single base bag as a perspective-squashed diamond. Width is the
