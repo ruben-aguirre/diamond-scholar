@@ -462,7 +462,7 @@ function drawInfield(ctx) {
   // Base bags — only 2nd base is shown (1st/3rd removed per kid feedback).
   // Drawn here in the infield pass (after the pitcher) and widened so it reads
   // as a clear, bigger base up behind the mound.
-  drawBag(ctx, BASE_POSITIONS[1].x, BASE_POSITIONS[1].y, 18, 6);  // 2nd base — wider bag
+  drawBag(ctx, BASE_POSITIONS[1].x, BASE_POSITIONS[1].y, 30, 7);  // 2nd base — extra wide so the sides stick out past the pitcher
 }
 
 // Draw a single base bag as a perspective-squashed diamond. Width is the
