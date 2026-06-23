@@ -1342,6 +1342,47 @@ function drawBall(ctx, x, y, size = 7) {
   ctx.stroke();
 }
 
+// A flaming red fireball: a glowing red ball with a trailing flame behind it.
+// `dir` points back toward where it came from (the flame streams out the back).
+// `flick` (0..1) animates the flame flicker. Drawn for the Fireball powerup.
+function drawFireball(ctx, x, y, size, dirX, dirY, flick) {
+  ctx.save();
+  // Flame trail — a few stacked translucent ellipses streaming behind the ball
+  const len = size * (3 + flick * 1.5);
+  for (let i = 5; i >= 1; i--) {
+    const f = i / 5;
+    const tx = x - dirX * len * f;
+    const ty = y - dirY * len * f;
+    ctx.globalAlpha = 0.5 * (1 - f) + 0.15;
+    ctx.fillStyle = i > 3 ? '#FFD23F' : (i > 1 ? '#FF7A1A' : '#E0301E');
+    ctx.beginPath();
+    ctx.arc(tx, ty, size * (1.1 - f * 0.6) * (0.9 + flick * 0.3), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Outer glow
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = '#FF6A00';
+  ctx.beginPath();
+  ctx.arc(x, y, size * 1.5, 0, Math.PI * 2);
+  ctx.fill();
+  // The red-hot ball core
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#E0301E';
+  ctx.strokeStyle = '#7a0d00';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(x, y, size, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // Bright hot spot
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = '#FFE08A';
+  ctx.beginPath();
+  ctx.arc(x - size * 0.3, y - size * 0.3, size * 0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawLandingMarker(ctx, targetX, targetY, strength) {
   // Glowing ring at predicted landing spot; strength grows as pitch nears plate
   ctx.save();
@@ -1687,6 +1728,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   const [studyQuestions, setStudyQuestions] = useState(null);
   const [aiHalf, setAiHalf] = useState(null); // { steps, idx }
   const [showExitDialog, setShowExitDialog] = useState(false); // Exit → Save/Close
+  const [fireballAnim, setFireballAnim] = useState(false); // flaming-pitch animation playing
 
   const canvasRef = useRef(null);
   const pitchRef = useRef(null); // { pitch, startTime, duration, resolved, landing }
@@ -1701,6 +1743,8 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   const stealAnimRef = useRef(null); // { startTime, duration, fromIdx, toIdx, willBeSafe, resolved }
   const rafRef = useRef(null);
   const batterSpritesRef = useRef(null);  // populated by loadBatterSprites()
+  const fireballCanvasRef = useRef(null);  // small canvas for the Fireball pitch animation
+  const fireballRafRef = useRef(null);
 
   // Per-game hit points by player: { [playerId]: points }. A hit adds points
   // (single 10, double 20, triple 30, HR 60); outs add nothing, so a player's
@@ -1964,6 +2008,51 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
     game.balls, game.strikes, game.outs,
   ]);
 
+  // Fireball pitch animation — a red flaming baseball zips across the small
+  // defensive canvas at 2x fastball speed when a Fireball is thrown.
+  useEffect(() => {
+    if (!fireballAnim) return;
+    const canvas = fireballCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    // Travels from the pitcher (far, top center, small) to the batter (near,
+    // bottom, big) — same depth feel as the main field, just self-contained.
+    const start = { x: W * 0.5, y: H * 0.18 };
+    const end = { x: W * 0.5, y: H * 0.92 };
+    // 2x fastball speed: the normal fast fastball is ~1100ms here; the fireball
+    // covers the same path in ~550ms, so it reads as twice as fast.
+    const duration = 550;
+    const startTime = Date.now();
+
+    function frame() {
+      const elapsed = Date.now() - startTime;
+      const t = Math.min(1, elapsed / duration);
+      ctx.clearRect(0, 0, W, H);
+      // Faint mound + plate so there's a sense of place
+      ctx.fillStyle = 'rgba(255,255,255,0.10)';
+      ctx.beginPath(); ctx.ellipse(W * 0.5, H * 0.2, 26, 7, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(W * 0.5, H * 0.92, 34, 9, 0, 0, Math.PI * 2); ctx.fill();
+
+      const x = start.x + (end.x - start.x) * t;
+      const y = start.y + (end.y - start.y) * t;
+      const size = 4 + t * 16;  // grows fast as it nears the camera
+      // Direction of travel (flame streams out the back, i.e. opposite dir)
+      const dx = end.x - start.x, dy = end.y - start.y;
+      const mag = Math.hypot(dx, dy) || 1;
+      const flick = (elapsed % 120) / 120;  // 0..1 flicker
+      drawFireball(ctx, x, y, size, dx / mag, dy / mag, flick);
+
+      if (t < 1 && fireballAnim) {
+        fireballRafRef.current = requestAnimationFrame(frame);
+      }
+    }
+    fireballRafRef.current = requestAnimationFrame(frame);
+    return () => {
+      if (fireballRafRef.current) cancelAnimationFrame(fireballRafRef.current);
+    };
+  }, [fireballAnim]);
+
   // ---- Pitch & swing ----
 
   function throwPitch() {
@@ -2219,11 +2308,22 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
     });
   }
 
-  // Spend a Fireball: rewrite the CURRENT opponent at-bat into a guaranteed
-  // strikeout (extra-fast fireball pitch). Clears the bases of any advance this
-  // step would have caused, bumps the out, and marks the step so it doesn't
-  // re-grant a fireball when advanced.
+  // Spend a Fireball: play the flaming-pitch animation, then rewrite the
+  // CURRENT opponent at-bat into a guaranteed strikeout.
   function throwFireball() {
+    if (fireballAnim) return;           // already throwing
+    if (game.fireballs <= 0) return;
+    setFireballAnim(true);
+    // The animation canvas runs its own loop (see the AI_BATTING render). The
+    // flaming ball flies in at 2x fastball speed — a short ~700ms zip — then we
+    // apply the strikeout and clear the animation.
+    setTimeout(() => {
+      setFireballAnim(false);
+      applyFireballStrikeout();
+    }, 750);
+  }
+
+  function applyFireballStrikeout() {
     setGame((g) => (g.fireballs > 0 ? { ...g, fireballs: g.fireballs - 1 } : g));
     setAiHalf((h) => {
       if (!h) return h;
@@ -2436,19 +2536,28 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
           </div>
         </div>
         <div className="ai-play-card">
-          <p className="ai-play-description">{step?.description}</p>
-          {/* Fireball powerup \u2014 earned from strikeouts, spent to force one */}
-          <div className="fireball-bar">
-            <span className="fireball-count">{'\u{1F525}'.repeat(game.fireballs)} {game.fireballs} Fireball{game.fireballs === 1 ? '' : 's'}</span>
-            {game.fireballs > 0 && step?.kind !== 'K' && (
-              <button className="btn btn-fireball" onClick={throwFireball}>
-                {'\u{1F525}'} Throw Fireball &mdash; Strikeout!
+          {fireballAnim ? (
+            <div className="fireball-stage">
+              <canvas ref={fireballCanvasRef} width={300} height={300} className="fireball-canvas" />
+              <p className="fireball-stage-label">{'\u{1F525}'} FIREBALL!</p>
+            </div>
+          ) : (
+            <>
+              <p className="ai-play-description">{step?.description}</p>
+              {/* Fireball powerup \u2014 earned from strikeouts, spent to force one */}
+              <div className="fireball-bar">
+                <span className="fireball-count">{'\u{1F525}'.repeat(game.fireballs)} {game.fireballs} Fireball{game.fireballs === 1 ? '' : 's'}</span>
+                {game.fireballs > 0 && step?.kind !== 'K' && (
+                  <button className="btn btn-fireball" onClick={throwFireball}>
+                    {'\u{1F525}'} Throw Fireball &mdash; Strikeout!
+                  </button>
+                )}
+              </div>
+              <button className="btn btn-primary btn-big" onClick={advanceAiStep}>
+                {isLast ? 'End Half Inning' : 'Next Play'}
               </button>
-            )}
-          </div>
-          <button className="btn btn-primary btn-big" onClick={advanceAiStep}>
-            {isLast ? 'End Half Inning' : 'Next Play'}
-          </button>
+            </>
+          )}
         </div>
       </div>
     );
