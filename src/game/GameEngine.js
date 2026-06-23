@@ -41,7 +41,7 @@ export function createGameState(profile) {
 //   plate, in zone-half units. Sliders break sideways, curveballs drop and
 //   sweep, fastballs stay straight, changeups barely move.
 export const PITCH_TYPES = {
-  Fastball:  { speedMul: 0.80, breakX: 0.0,  breakY: 0.0 },
+  Fastball:  { speedMul: 0.68, breakX: 0.0,  breakY: 0.0 },
   Slider:    { speedMul: 0.95, breakX: 0.9,  breakY: 0.2 },
   Curveball: { speedMul: 1.15, breakX: 0.5,  breakY: 0.9 },
   Changeup:  { speedMul: 1.35, breakX: 0.0,  breakY: 0.2 },

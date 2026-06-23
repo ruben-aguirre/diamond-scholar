@@ -2440,13 +2440,9 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         )}
       </div>
 
-      {/* Batter info — shows the incoming pitch name while a pitch is live */}
+      {/* Batter info — pitch type is hidden; the kid reads it from the movement */}
       <div className="batter-info">
-        {pitchLive && game.pitchLocation ? (
-          <span className="pitch-name">Pitch: <strong>{game.pitchLocation.type}!</strong></span>
-        ) : (
-          <span className="batter-name">Now batting: <strong>{currentBatter.name}</strong></span>
-        )}
+        <span className="batter-name">Now batting: <strong>{currentBatter.name}</strong></span>
         <span className="batter-stat">BAT {currentBatter.batting}</span>
       </div>
 
