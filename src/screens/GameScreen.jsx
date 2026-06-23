@@ -1374,10 +1374,18 @@ function computeBallAt(pitch, t) {
   const land = computeLanding(pitch);
   const sx = MOUND.x + 17;   // pitcher's throwing hand (cocked back)
   const sy = MOUND.y - 23;
-  const x = sx + (land.x - sx) * t;
-  // Slight arc so the pitch has some air
+
+  // Pitch break: sliders/curveballs drift as they near the plate. Scaled by
+  // t*t so the break is gentle early and sharpest right before the plate
+  // (a realistic "late break"). breakX/breakY are in zone-half units.
+  const breakProgress = t * t;
+  const breakPxX = (pitch.breakX || 0) * (ZONE.w / 2) * breakProgress;
+  const breakPxY = (pitch.breakY || 0) * (ZONE.h / 2) * breakProgress;
+
+  const x = sx + (land.x - sx) * t + breakPxX;
+  // Slight arc so the pitch has some air, plus any downward break
   const arc = Math.sin(t * Math.PI) * -20;
-  const y = sy + (land.y - sy) * t + arc;
+  const y = sy + (land.y - sy) * t + arc + breakPxY;
   // Ball size grows from 2px (far) to 14px (near) - strong perspective cue
   const size = 2.5 + t * 11;
   return { x, y, size, land };
@@ -1953,7 +1961,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
 
   function throwPitch() {
     const pitch = generatePitch(teamAvg);
-    const duration = pitchDurationMs(teamAvg);
+    const duration = pitchDurationMs(teamAvg, pitch.speedMul);
     pitchRef.current = { pitch, startTime: Date.now(), duration, resolved: false };
     hitBallRef.current = null;  // clear any leftover hit-ball animation from the previous pitch
     fielderChaseRef.current = null;  // and snap fielders back home
@@ -2432,9 +2440,13 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         )}
       </div>
 
-      {/* Batter info */}
+      {/* Batter info — shows the incoming pitch name while a pitch is live */}
       <div className="batter-info">
-        <span className="batter-name">Now batting: <strong>{currentBatter.name}</strong></span>
+        {pitchLive && game.pitchLocation ? (
+          <span className="pitch-name">Pitch: <strong>{game.pitchLocation.type}!</strong></span>
+        ) : (
+          <span className="batter-name">Now batting: <strong>{currentBatter.name}</strong></span>
+        )}
         <span className="batter-stat">BAT {currentBatter.batting}</span>
       </div>
 

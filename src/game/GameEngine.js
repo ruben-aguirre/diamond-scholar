@@ -34,9 +34,23 @@ export function createGameState(profile) {
   };
 }
 
+// Each pitch type behaves differently so they feel distinct to hit:
+// - speedMul: scales the pitch duration. <1 = faster (fastball), >1 = slower
+//   (changeup floats in). The renderer multiplies the base duration by this.
+// - breakX / breakY: how far the ball drifts sideways / drops as it nears the
+//   plate, in zone-half units. Sliders break sideways, curveballs drop and
+//   sweep, fastballs stay straight, changeups barely move.
+export const PITCH_TYPES = {
+  Fastball:  { speedMul: 0.80, breakX: 0.0,  breakY: 0.0 },
+  Slider:    { speedMul: 0.95, breakX: 0.9,  breakY: 0.2 },
+  Curveball: { speedMul: 1.15, breakX: 0.5,  breakY: 0.9 },
+  Changeup:  { speedMul: 1.35, breakX: 0.0,  breakY: 0.2 },
+};
+
 export function generatePitch(aiDifficulty) {
-  const types = ['Fastball', 'Curveball', 'Changeup', 'Slider'];
+  const types = Object.keys(PITCH_TYPES);
   const type = types[Math.floor(Math.random() * types.length)];
+  const profile = PITCH_TYPES[type];
 
   // Location in strike zone coords: -1..1 means edges of zone, >1 means outside
   const baseX = (Math.random() - 0.5) * 2;
@@ -45,6 +59,10 @@ export function generatePitch(aiDifficulty) {
   // Ball probability tempered so early games feel fair (more strikes = more chances to swing)
   const isBall = Math.random() < 0.18 + aiDifficulty * 0.02;
 
+  // Break direction is randomized left/right so the same pitch type doesn't
+  // always sweep the same way.
+  const breakDir = Math.random() < 0.5 ? -1 : 1;
+
   return {
     type,
     x: isBall ? baseX * 1.6 : baseX * 0.75,
@@ -52,14 +70,21 @@ export function generatePitch(aiDifficulty) {
     // speed is a scalar 0..1 used to pick pitch duration in ms
     speed: Math.min(1, 0.25 + aiDifficulty * 0.07),
     isStrike: !isBall,
+    // Per-type behavior, carried on the pitch so the renderer can use it.
+    speedMul: profile.speedMul,
+    breakX: profile.breakX * breakDir,
+    breakY: profile.breakY,
   };
 }
 
-// Map team strength to pitch duration in ms (lower = faster = harder)
-export function pitchDurationMs(teamAvg) {
+// Map team strength to pitch duration in ms (lower = faster = harder).
+// speedMul (from the pitch type) scales it: fastballs come quicker, changeups
+// float in slower.
+export function pitchDurationMs(teamAvg, speedMul = 1) {
   // Starts slow (~2400ms) at avg 3, ramps to ~1200ms at avg 9 — gentler curve
   const clamped = Math.max(2, Math.min(10, teamAvg));
-  return Math.round(2400 - (clamped - 3) * 200);
+  const base = 2400 - (clamped - 3) * 200;
+  return Math.round(base * speedMul);
 }
 
 // Swing type modifiers
