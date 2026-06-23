@@ -53,6 +53,10 @@ function App() {
     );
   }
 
+  // Points a player gets the very first time they ever record a hit, so their
+  // first hit jumps them straight to a .200+ average instead of a tiny .010.
+  const FIRST_HIT_BONUS = 200;
+
   // Fold a game's hit points into each player's career total. Points come from
   // hits only (single 10, double 20, triple 30, HR 60), so a player's batting
   // average only ever climbs across every game they've batted in.
@@ -61,9 +65,12 @@ function App() {
     return roster.map((player) => {
       const earned = gamePoints[player.id] || 0;
       if (!earned) return player;
+      const hadHitBefore = (player.hitPoints || 0) > 0;
+      // One-time +200 the first time this player ever gets a hit.
+      const bonus = hadHitBefore ? 0 : FIRST_HIT_BONUS;
       return {
         ...player,
-        hitPoints: (player.hitPoints || 0) + earned,
+        hitPoints: (player.hitPoints || 0) + earned + bonus,
       };
     });
   }
