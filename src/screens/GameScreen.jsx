@@ -1375,19 +1375,26 @@ function computeBallAt(pitch, t) {
   const sx = MOUND.x + 17;   // pitcher's throwing hand (cocked back)
   const sy = MOUND.y - 23;
 
+  // Changeup deception: the ball LOOKS fast out of the hand, then slows down
+  // before the plate. We ease the visual progress (fast early, slow late) with
+  // 1-(1-t)^2 for the changeup only. The actual pitch duration is unchanged —
+  // this only shapes how the ball moves along its path, so the fast-then-slow
+  // look fools the timing. Other pitches travel at a steady pace (linear t).
+  const tv = pitch.type === 'Changeup' ? 1 - (1 - t) * (1 - t) : t;
+
   // Pitch break: sliders/curveballs drift as they near the plate. Scaled by
-  // t*t so the break is gentle early and sharpest right before the plate
+  // tv*tv so the break is gentle early and sharpest right before the plate
   // (a realistic "late break"). breakX/breakY are in zone-half units.
-  const breakProgress = t * t;
+  const breakProgress = tv * tv;
   const breakPxX = (pitch.breakX || 0) * (ZONE.w / 2) * breakProgress;
   const breakPxY = (pitch.breakY || 0) * (ZONE.h / 2) * breakProgress;
 
-  const x = sx + (land.x - sx) * t + breakPxX;
+  const x = sx + (land.x - sx) * tv + breakPxX;
   // Slight arc so the pitch has some air, plus any downward break
-  const arc = Math.sin(t * Math.PI) * -20;
-  const y = sy + (land.y - sy) * t + arc + breakPxY;
+  const arc = Math.sin(tv * Math.PI) * -20;
+  const y = sy + (land.y - sy) * tv + arc + breakPxY;
   // Ball size grows from 2px (far) to 14px (near) - strong perspective cue
-  const size = 2.5 + t * 11;
+  const size = 2.5 + tv * 11;
   return { x, y, size, land };
 }
 
