@@ -38,7 +38,7 @@ const FIELDER_SCALE = 0.75;
 // the white base bags are drawn. game.bases is [1st, 2nd, 3rd] — same order.
 const BASE_POSITIONS = [
   { x: 555, y: 340 },  // 1st base — right side of infield, deeper than batter
-  { x: 400, y: 240 },  // 2nd base — up behind the pitcher's mound, wider bag (the look from the first pass)
+  { x: 400, y: 330 },  // 2nd base — on the infield dirt in FRONT of the pitcher (lower than the mound/fence so it's not on his face), same depth band as 1st/3rd
   { x: 245, y: 340 },  // 3rd base — left side of infield, deeper than batter
 ];
 
@@ -462,7 +462,7 @@ function drawInfield(ctx) {
   // Base bags — only 2nd base is shown (1st/3rd removed per kid feedback).
   // Drawn here in the infield pass (after the pitcher) and widened so it reads
   // as a clear, bigger base up behind the mound.
-  drawBag(ctx, BASE_POSITIONS[1].x, BASE_POSITIONS[1].y, 30, 7);  // 2nd base — extra wide so the sides stick out past the pitcher
+  drawBag(ctx, BASE_POSITIONS[1].x, BASE_POSITIONS[1].y, 20, 7);  // 2nd base — on the dirt in front of the pitcher
 }
 
 // Draw a single base bag as a perspective-squashed diamond. Width is the
