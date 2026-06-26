@@ -38,7 +38,7 @@ const FIELDER_SCALE = 0.75;
 // the white base bags are drawn. game.bases is [1st, 2nd, 3rd] — same order.
 const BASE_POSITIONS = [
   { x: 555, y: 340 },  // 1st base — right side of infield, deeper than batter
-  { x: 400, y: 330 },  // 2nd base — on the infield dirt in FRONT of the pitcher (lower than the mound/fence so it's not on his face), same depth band as 1st/3rd
+  { x: 400, y: 295 },  // 2nd base — on the back of the infield dirt, just behind the mound (2B sits behind the pitcher, but low enough to be on the dirt, not up at his face / the fence)
   { x: 245, y: 340 },  // 3rd base — left side of infield, deeper than batter
 ];
 
