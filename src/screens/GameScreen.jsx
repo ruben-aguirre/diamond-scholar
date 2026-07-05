@@ -1614,6 +1614,12 @@ const SPRITE_SOURCE_FRAME = 256;  // each frame is 256×256 in the source sheet
 const SPRITE_DISPLAY_SIZE = 384;  // displayed size on canvas (square) — 2× the previous 192 so the chibi batter dominates the foreground like in Baseball 9
 const SPRITE_SHEET_PATH = '/sprites/batter/swing-sheet.png';
 
+// Painted stadium/field background (replaces the code-drawn sky + outfield +
+// jumbotron). The code-drawn infield/plate/batter's-box/strike-zone still draw
+// on top so gameplay geometry stays aligned. If this image fails to load we
+// fall back to the original all-code background.
+const FIELD_IMAGE_PATH = '/field/stadium.png';
+
 // Generate a placeholder sprite sheet as a data-URL PNG. Eight numbered
 // rectangles in a horizontal strip — obviously placeholders, but match the
 // real sheet's layout so the slicing logic is exercised end-to-end.
@@ -1743,6 +1749,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   const stealAnimRef = useRef(null); // { startTime, duration, fromIdx, toIdx, willBeSafe, resolved }
   const rafRef = useRef(null);
   const batterSpritesRef = useRef(null);  // populated by loadBatterSprites()
+  const fieldImageRef = useRef(null);     // painted stadium background; null until loaded
   const fireballCanvasRef = useRef(null);  // small canvas for the Fireball pitch animation
   const fireballRafRef = useRef(null);
 
@@ -1778,6 +1785,11 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
     loadBatterSprites().then((loaded) => {
       if (!cancelled) batterSpritesRef.current = loaded;
     });
+    // Preload the painted stadium background. Stays null on error so the render
+    // loop falls back to the original code-drawn sky/outfield/jumbotron.
+    const field = new Image();
+    field.onload = () => { if (!cancelled) fieldImageRef.current = field; };
+    field.src = FIELD_IMAGE_PATH;
     return () => { cancelled = true; };
   }, []);
 
@@ -1796,12 +1808,17 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       ctx.clearRect(0, 0, CW, CH);
 
       // Catcher-cam depth layering: far -> near
-      // 1. Sky (furthest)
-      drawSky(ctx);
-      // 2. Stadium / outfield (far background)
-      drawOutfield(ctx);
-      // 2b. Jumbotron scoreboard mounted on the outfield wall (live game state)
-      drawJumbotron(ctx, game, profile.teamName);
+      // 1-2b. Background. If the painted stadium image is loaded, use it in
+      // place of the code-drawn sky + outfield + jumbotron (the infield below
+      // still draws in code so gameplay positions stay aligned). Otherwise fall
+      // back to the original all-code background.
+      if (fieldImageRef.current) {
+        ctx.drawImage(fieldImageRef.current, 0, 0, CW, CH);
+      } else {
+        drawSky(ctx);
+        drawOutfield(ctx);
+        drawJumbotron(ctx, game, profile.teamName);
+      }
       // 3. Pitcher on the mound (mid-distance)
       drawPitcher(ctx, profile.teamColor?.primary);
       // 3b. Middle infielders — shortstop (left) and second baseman (right).
