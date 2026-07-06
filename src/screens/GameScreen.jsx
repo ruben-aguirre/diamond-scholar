@@ -1819,23 +1819,25 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         drawOutfield(ctx);
         drawJumbotron(ctx, game, profile.teamName);
       }
-      // 3. Pitcher on the mound (mid-distance)
-      drawPitcher(ctx, profile.teamColor?.primary);
-      // 3b. Middle infielders — shortstop (left) and second baseman (right).
-      // Sit idle at home until a hit, at which point the closer one chases
-      // the ball and jogs back.
-      {
+      // 3-4. Code-drawn field furniture (pitcher, middle infielders, infield
+      // dirt/foul-lines/batter's-box/home-plate). The painted stadium image
+      // already contains ALL of this, so we only draw it as a fallback when the
+      // image hasn't loaded — otherwise it just clutters the background.
+      if (!fieldImageRef.current) {
+        // Pitcher on the mound (mid-distance)
+        drawPitcher(ctx, profile.teamColor?.primary);
+        // Middle infielders — shortstop (left) and second baseman (right).
         const ssPos = computeFielderPos('ss', fielderChaseRef.current, Date.now());
         const sbPos = computeFielderPos('2b', fielderChaseRef.current, Date.now());
         drawFielder(ctx, ssPos.x, ssPos.y, FIELDER_SCALE);
         drawFielder(ctx, sbPos.x, sbPos.y, FIELDER_SCALE);
-        if (fielderChaseRef.current && Date.now() >= fielderChaseRef.current.returnEnd) {
-          fielderChaseRef.current = null;
-        }
+        // Infield (dirt, foul lines, batter's box, home plate)
+        drawInfield(ctx);
       }
-
-      // 4. Infield (dirt, foul lines, batter's box, home plate - foreground ground)
-      drawInfield(ctx);
+      // Clear a finished fielder-chase regardless (harmless when fielders aren't drawn).
+      if (fielderChaseRef.current && Date.now() >= fielderChaseRef.current.returnEnd) {
+        fielderChaseRef.current = null;
+      }
 
       // 4c. Base runners — drawn AFTER the infield dirt so they're visible
       // standing on the bases. game.bases is [1st, 2nd, 3rd]. We skip
