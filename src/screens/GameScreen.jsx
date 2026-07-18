@@ -23,7 +23,7 @@ const CH = 500;
 // Depth axis: far (small, high on screen) -> near (big, low on screen)
 const MOUND = { x: 400, y: 270 };        // pitcher's mound, centered in middle distance
 const PLATE = { x: 400, y: 475 };        // home plate, bottom center foreground
-const BATTER = { x: 270, y: 478 };       // right-handed batter, LEFT batter's box; nudged right so wide stance fits fully inside chalk lines (x∈[140,340], y∈[430,490])
+const BATTER = { x: 250, y: 460 };       // right-handed batter, LEFT batter's box; feet centered inside the chalk box (x∈[160,340], y∈[430,490])
 const ZONE = { cx: 400, cy: 405, w: 70, h: 70 }; // strike zone — square, lifted above home plate (not touching it)
 
 // Fielder home positions. Used both for drawing the idle fielders and for
@@ -37,7 +37,7 @@ const FIELDER_SCALE = 0.75;
 // Base positions on the field, where runners stand when on base AND where
 // the white base bags are drawn. game.bases is [1st, 2nd, 3rd] — same order.
 const BASE_POSITIONS = [
-  { x: 555, y: 340 },  // 1st base — right side of infield, deeper than batter
+  { x: 665, y: 285 },  // 1st base — runner stands a little LEFT of the base so the first baseman has room; up the base path, clear of home plate
   { x: 400, y: 295 },  // 2nd base — on the back of the infield dirt, just behind the mound (2B sits behind the pitcher, but low enough to be on the dirt, not up at his face / the fence)
   { x: 245, y: 340 },  // 3rd base — left side of infield, deeper than batter
 ];
