@@ -76,10 +76,12 @@ function App() {
     });
   }
 
-  // Save-and-exit: keep the batting stats and any Fireballs earned so far, but
-  // don't count this as a finished game (no win/loss, no games-played bump).
-  function handleSaveAndExit(battingStats, fireballs) {
+  // Save-and-exit: keep the batting stats, any Fireballs, AND the coins earned
+  // from study breaks so far, but don't count this as a finished game (no
+  // win/loss, no games-played bump).
+  function handleSaveAndExit(battingStats, fireballs, coinsEarned) {
     updateProfile({
+      coins: activeProfile.coins + (coinsEarned || 0),
       roster: applyBattingStats(activeProfile.roster, battingStats),
       fireballs: fireballs != null ? fireballs : (activeProfile.fireballs || 0),
     });

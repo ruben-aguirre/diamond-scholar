@@ -21,12 +21,10 @@ export default function StudyBreak({ questions, breakNumber, onComplete }) {
 
   function handleNext() {
     if (isLast) {
-      // Read the freshest results via the state updater so the LAST answer is
-      // always included (setResults from handleAnswer may not have flushed yet).
-      setResults((finalResults) => {
-        onComplete(finalResults);
-        return finalResults;
-      });
+      // The last answer is already in `results` — you must answer (which calls
+      // setResults) before the "See Results" button appears, and that state has
+      // flushed by the time this click fires.
+      onComplete(results);
       return;
     }
     setSelected(null);

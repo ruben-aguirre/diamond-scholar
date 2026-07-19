@@ -1903,11 +1903,12 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
             setGame((g) => {
               const newBases = [...g.bases];
               newBases[leadIdx] = false;
-              return {
-                ...g,
-                bases: newBases,
-                outs: g.outs + 1,
-              };
+              const outs = g.outs + 1;
+              // A caught-stealing can be the 3rd out — end the half if so.
+              if (outs >= 3) {
+                return { ...g, bases: newBases, outs, phase: GAME_PHASES.HALF_INNING_OVER };
+              }
+              return { ...g, bases: newBases, outs };
             });
             setSwingResult({
               type: 'steal-out',
@@ -2187,7 +2188,9 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       setGame((g) => {
         const newStrikes = g.strikes + 1;
         if (newStrikes >= 3) {
-          return { ...g, strikes: 0, balls: 0, outs: g.outs + 1, phase: GAME_PHASES.SWING_RESULT };
+          // Don't count the out here — afterPlay(true) counts it so the out
+          // total and the half-over check happen in one atomic update.
+          return { ...g, strikes: 0, balls: 0, phase: GAME_PHASES.SWING_RESULT };
         }
         return { ...g, strikes: newStrikes, phase: GAME_PHASES.SWING_RESULT };
       });
@@ -2214,8 +2217,8 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       return;
     }
     if (result.isOut) {
-      // Out — no points; the average doesn't drop.
-      setGame((g) => ({ ...g, outs: g.outs + 1, phase: GAME_PHASES.SWING_RESULT }));
+      // Out — no points; the average doesn't drop. afterPlay(true) counts the out.
+      setGame((g) => ({ ...g, phase: GAME_PHASES.SWING_RESULT }));
       setTimeout(() => { setSwingResult(null); afterPlay(true); }, 1800);
       return;
     }
@@ -2231,20 +2234,20 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         lastPlayDescription: result.description + (runs > 0 ? ` ${runs} run${runs > 1 ? 's' : ''} scored!` : ''),
       };
     });
-    setTimeout(() => { setSwingResult(null); afterPlay(false); }, 2200);
+    setTimeout(() => { setSwingResult(null); afterPlay(); }, 2200);
   }, [game.phase, currentBatter, swingType]);
 
   function resolveStrike() {
     setGame((g) => {
       const newStrikes = g.strikes + 1;
       if (newStrikes >= 3) {
-        // Strikeout — no points; the average doesn't drop.
+        // Strikeout — no points; afterPlay(true) counts the out.
         setSwingResult({ type: 'miss', description: 'STRIKE THREE — YOU\'RE OUT!' });
         setTimeout(() => {
           setSwingResult(null);
           afterPlay(true);
         }, 1400);
-        return { ...g, strikes: 0, balls: 0, outs: g.outs + 1, phase: GAME_PHASES.SWING_RESULT };
+        return { ...g, strikes: 0, balls: 0, phase: GAME_PHASES.SWING_RESULT };
       }
       setSwingResult({ type: 'strike', description: 'Strike!' });
       setTimeout(() => setSwingResult(null), 900);
@@ -2258,7 +2261,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       if (newBalls >= 4) {
         const { newBases, runs } = advanceRunners(g.bases, 1);
         setSwingResult({ type: 'walk', description: 'Ball four — take your base!' });
-        setTimeout(() => { setSwingResult(null); afterPlay(false); }, 1500);
+        setTimeout(() => { setSwingResult(null); afterPlay(); }, 1500);
         return {
           ...g,
           balls: 0,
@@ -2274,15 +2277,21 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
     });
   }
 
-  function afterPlay(wasOut) {
+  function afterPlay(wasOut = false) {
     setGame((prev) => {
-      if (prev.outs >= 3) {
-        return { ...prev, phase: GAME_PHASES.HALF_INNING_OVER };
+      // Count this play's out HERE, in the same update that decides whether the
+      // half is over. Doing both in one atomic update avoids a race where the
+      // out was set in a separate setGame and hadn't landed yet — that race was
+      // why it took ~5 outs to switch sides instead of 3.
+      const outs = prev.outs + (wasOut ? 1 : 0);
+      if (outs >= 3) {
+        return { ...prev, outs, phase: GAME_PHASES.HALF_INNING_OVER };
       }
       // Show Did You Know between batters
       setDidYouKnow(getRandomFact());
       return {
         ...prev,
+        outs,
         currentBatterIndex: prev.currentBatterIndex + 1,
         strikes: 0,
         balls: 0,
@@ -2450,7 +2459,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
 
   function handleExitSave() {
     setShowExitDialog(false);
-    onSaveAndExit(battingStatsRef.current, game.fireballs);
+    onSaveAndExit(battingStatsRef.current, game.fireballs, game.coinsEarned);
   }
 
   function handleExitClose() {
