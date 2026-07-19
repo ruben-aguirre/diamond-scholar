@@ -5,7 +5,7 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile }) {
     { id: 'batting-practice', label: 'Batting Practice', icon: '&#127951;', enabled: false, description: 'Coming soon' },
     { id: 'fielding-practice', label: 'Fielding Practice', icon: '&#129351;', enabled: false, description: 'Coming soon' },
     { id: 'running-practice', label: 'Running Practice', icon: '&#127939;', enabled: false, description: 'Coming soon' },
-    { id: 'shop', label: 'Card Shop', icon: '&#127183;', enabled: false, description: 'Coming soon' },
+    { id: 'shop', label: 'Card Shop', icon: '&#127183;', enabled: true, description: 'Buy player packs' },
   ];
 
   return (

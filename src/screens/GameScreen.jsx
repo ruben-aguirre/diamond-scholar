@@ -24,7 +24,7 @@ const CH = 500;
 const MOUND = { x: 400, y: 270 };        // pitcher's mound, centered in middle distance
 const PLATE = { x: 400, y: 475 };        // home plate, bottom center foreground
 const BATTER = { x: 250, y: 460 };       // right-handed batter, LEFT batter's box; feet centered inside the chalk box (x∈[160,340], y∈[430,490])
-const ZONE = { cx: 400, cy: 405, w: 70, h: 70 }; // strike zone — square, lifted above home plate (not touching it)
+const ZONE = { cx: 400, cy: 405, w: 70, h: 48 }; // strike zone — shorter box, lifted above home plate
 
 // Fielder home positions. Used both for drawing the idle fielders and for
 // animating them to chase a hit ball (and slide back home after).
@@ -491,23 +491,26 @@ function drawStrikeZone(ctx) {
   const x = ZONE.cx - ZONE.w / 2;
   const y = ZONE.cy - ZONE.h / 2;
   ctx.save();
-  // Soft fill so it feels like a target zone, not a drawn-on wall
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+  // Brighter fill so the target reads strong against the field
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
   ctx.fillRect(x, y, ZONE.w, ZONE.h);
-  // Dashed bold outline
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
-  ctx.lineWidth = 3;
-  ctx.setLineDash([8, 6]);
+  // Dark backing line first, then bold white on top = high contrast from any angle
+  ctx.setLineDash([9, 5]);
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+  ctx.lineWidth = 6;
   ctx.strokeRect(x, y, ZONE.w, ZONE.h);
-  // Center crosshair
+  ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
+  ctx.lineWidth = 3.5;
+  ctx.strokeRect(x, y, ZONE.w, ZONE.h);
+  // Bigger, bolder center crosshair
   ctx.setLineDash([]);
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.moveTo(ZONE.cx - 6, ZONE.cy);
-  ctx.lineTo(ZONE.cx + 6, ZONE.cy);
-  ctx.moveTo(ZONE.cx, ZONE.cy - 6);
-  ctx.lineTo(ZONE.cx, ZONE.cy + 6);
+  ctx.moveTo(ZONE.cx - 11, ZONE.cy);
+  ctx.lineTo(ZONE.cx + 11, ZONE.cy);
+  ctx.moveTo(ZONE.cx, ZONE.cy - 11);
+  ctx.lineTo(ZONE.cx, ZONE.cy + 11);
   ctx.stroke();
   ctx.restore();
 }
@@ -1618,7 +1621,7 @@ const SPRITE_SHEET_PATH = '/sprites/batter/swing-sheet.png';
 // jumbotron). The code-drawn infield/plate/batter's-box/strike-zone still draw
 // on top so gameplay geometry stays aligned. If this image fails to load we
 // fall back to the original all-code background.
-const FIELD_IMAGE_PATH = '/field/stadium.png';
+const FIELD_IMAGE_PATH = '/field/stadium.png?v=2';
 
 // Generate a placeholder sprite sheet as a data-URL PNG. Eight numbered
 // rectangles in a horizontal strip — obviously placeholders, but match the
@@ -1920,7 +1923,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         }
       }
 
-      // 5. Strike zone overlay (floats in mid-scene - only during batting phases)
+      // 5. Batter's box / strike-zone target — floats over home plate during batting.
       if (
         game.phase === GAME_PHASES.BATTING ||
         game.phase === GAME_PHASES.PITCH_INCOMING ||

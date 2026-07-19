@@ -48,9 +48,9 @@ export const playerPool = {
 
 export const packPrices = {
   bronze: { cost: 100, sellPrice: 30 },
-  silver: { cost: 300, sellPrice: 100 },
-  gold: { cost: 750, sellPrice: 250 },
-  diamond: { cost: 2000, sellPrice: 700 },
+  silver: { cost: 250, sellPrice: 80 },
+  gold: { cost: 500, sellPrice: 175 },
+  diamond: { cost: 1500, sellPrice: 500 },
 };
 
 // A player's overall rating — the average of their four stats, rounded to
@@ -75,9 +75,15 @@ export function createPlayerId() {
   return 'p' + Date.now() + Math.random().toString(36).substr(2, 5);
 }
 
-export function createPlayerFromPool(tier) {
+export function createPlayerFromPool(tier, ownedNames = []) {
   const pool = playerPool[tier];
-  const template = pool[Math.floor(Math.random() * pool.length)];
+  // Prefer players the team doesn't already have, so packs feel fresh.
+  const owned = new Set(ownedNames);
+  const fresh = pool.filter((p) => !owned.has(p.name));
+  // If every player in this tier is already owned, fall back to the full pool
+  // so a purchase never fails — you just might get a duplicate.
+  const choices = fresh.length > 0 ? fresh : pool;
+  const template = choices[Math.floor(Math.random() * choices.length)];
   return {
     id: createPlayerId(),
     ...template,

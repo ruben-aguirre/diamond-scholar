@@ -21,7 +21,12 @@ export default function StudyBreak({ questions, breakNumber, onComplete }) {
 
   function handleNext() {
     if (isLast) {
-      onComplete(results);
+      // Read the freshest results via the state updater so the LAST answer is
+      // always included (setResults from handleAnswer may not have flushed yet).
+      setResults((finalResults) => {
+        onComplete(finalResults);
+        return finalResults;
+      });
       return;
     }
     setSelected(null);
