@@ -1,6 +1,16 @@
 import { useState } from 'react';
 import { battingAverage } from '../data/players';
 
+// Upgrading a player costs this many coins and raises ONE skill of the kid's
+// choice by 1 (batting, pitching, fielding, or running/speed). Skills cap at 10.
+const UPGRADE_COST = 1000;
+const UPGRADE_SKILLS = [
+  { key: 'batting', label: 'Batting', icon: '\u{1F3CF}' },   // cricket bat+ball reads as "bat"
+  { key: 'speed', label: 'Running', icon: '\u{1F3C3}' },
+  { key: 'fielding', label: 'Fielding', icon: '\u{1F9E4}' }, // glove
+  { key: 'pitching', label: 'Pitching', icon: '⚾' },
+];
+
 // The 9 fielding positions, placed on a mini diamond. left/top are percentages
 // of the field box so it scales on any screen. Order is a normal scorecard.
 const FIELD_SPOTS = [
@@ -19,6 +29,23 @@ export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
   const [view, setView] = useState('batting'); // 'batting' | 'fielders'
   // On the field view, the first player you tap (to swap with a second tap).
   const [swapFrom, setSwapFrom] = useState(null);
+  // Player currently in the upgrade dialog (null = dialog closed).
+  const [upgradingId, setUpgradingId] = useState(null);
+
+  const upgradingPlayer = profile.roster.find((p) => p.id === upgradingId) || null;
+  const canAfford = profile.coins >= UPGRADE_COST;
+
+  // Spend the coins and raise the chosen skill by 1. Closes the dialog so the
+  // kid sees the new number on the row right away.
+  function upgradeSkill(skillKey) {
+    if (!upgradingPlayer || !canAfford) return;
+    if (upgradingPlayer[skillKey] >= 10) return;
+    const newRoster = profile.roster.map((p) =>
+      p.id === upgradingPlayer.id ? { ...p, [skillKey]: p[skillKey] + 1 } : p
+    );
+    onUpdateProfile({ roster: newRoster, coins: profile.coins - UPGRADE_COST });
+    setUpgradingId(null);
+  }
 
   // Look up the player for each batting-order slot.
   const battingOrder = (profile.lineup || []).map((id) =>
@@ -134,6 +161,12 @@ export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
                     {battingAverage(player)}
                   </span>
                   <span className="batting-stat" title="Batting power (1-10)">BAT {player.batting}</span>
+                  <button
+                    className="btn-upgrade"
+                    onClick={() => setUpgradingId(player.id)}
+                  >
+                    Upgrade
+                  </button>
                 </>
               ) : (
                 <span className="batting-empty">Empty</span>
@@ -186,6 +219,45 @@ export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
           </div>
         </div>
       </div>
+
+      {upgradingPlayer && (
+        <div className="exit-dialog-backdrop" onClick={() => setUpgradingId(null)}>
+          <div className="exit-dialog upgrade-dialog" onClick={(e) => e.stopPropagation()}>
+            <h2 className="exit-dialog-title">Upgrade {upgradingPlayer.name}</h2>
+            <p className="exit-dialog-text">
+              Pick ONE skill to make better. Costs <strong>&#x1FA99; {UPGRADE_COST}</strong> coins.
+            </p>
+            {!canAfford && (
+              <p className="upgrade-no-coins">
+                You need {UPGRADE_COST - profile.coins} more coins. Win games to earn them!
+              </p>
+            )}
+            <div className="upgrade-skill-list">
+              {UPGRADE_SKILLS.map((skill) => {
+                const current = upgradingPlayer[skill.key];
+                const maxed = current >= 10;
+                return (
+                  <button
+                    key={skill.key}
+                    className="upgrade-skill-btn"
+                    disabled={!canAfford || maxed}
+                    onClick={() => upgradeSkill(skill.key)}
+                  >
+                    <span className="upgrade-skill-icon">{skill.icon}</span>
+                    <span className="upgrade-skill-label">{skill.label}</span>
+                    <span className="upgrade-skill-change">
+                      {maxed ? 'MAX' : `${current} → ${current + 1}`}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <button className="btn-exit-close upgrade-cancel" onClick={() => setUpgradingId(null)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
