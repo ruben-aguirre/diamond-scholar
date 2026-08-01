@@ -112,8 +112,21 @@ function App() {
     setScreen('home');
   }
 
+  // Keep the batting lineup in sync with the roster: every player on the team
+  // bats. New players (drafted, bought, customized) join at the bottom of the
+  // order, and sold/replaced players drop out. This runs at read time, so it
+  // also heals older profiles where a bought player never made the lineup.
+  function healLineup(p) {
+    if (!p) return p;
+    const rosterIds = p.roster.map((pl) => pl.id);
+    const lineup = (p.lineup || []).filter((id) => rosterIds.includes(id));
+    const missing = rosterIds.filter((id) => !lineup.includes(id));
+    if (missing.length === 0 && lineup.length === (p.lineup || []).length) return p;
+    return { ...p, lineup: [...lineup, ...missing] };
+  }
+
   // Re-read active profile after updates
-  const freshProfile = profiles.find((p) => p.id === activeProfileId) || activeProfile;
+  const freshProfile = healLineup(profiles.find((p) => p.id === activeProfileId) || activeProfile);
 
   switch (currentScreen) {
     case 'setup':
