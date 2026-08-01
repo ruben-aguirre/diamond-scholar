@@ -398,6 +398,83 @@ function drawJumbotron(ctx, game, teamNameShort) {
   ctx.restore();
 }
 
+// Live scoreboard drawn ONTO the painted stadium image's dark jumbotron
+// screen (the image replaced the old code-drawn jumbotron, which took the
+// game info with it). Screen bounds were measured from stadium.png pixels
+// (dark block x 650-980, y 510-762 in the 2752x1536 source) and scaled to
+// the 800x500 canvas. Compact layout: score row, then outs + bases.
+function drawImageScoreboard(ctx, game, teamNameShort) {
+  const sx = 189, sy = 166, sw = 96, sh = 82;   // screen rect on canvas
+  const amber = '#FFB627';
+  const green = '#3DDC55';
+  const red = '#FF5050';
+  const dim = 'rgba(255,255,255,0.22)';
+
+  ctx.save();
+
+  // Re-darken the screen slightly so text pops even if the image's screen
+  // has lighter pixels or JPEG noise.
+  ctx.fillStyle = 'rgba(5, 8, 14, 0.75)';
+  ctx.fillRect(sx, sy, sw, sh);
+
+  const cx = sx + sw / 2;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+
+  // ---- Team labels (tiny, amber) ----
+  const rawName = (teamNameShort || 'HOME').trim();
+  const words = rawName.split(/\s+/);
+  const homeLabel = (words.length > 1 ? words[words.length - 1] : words[0])
+    .toUpperCase()
+    .substring(0, 5);
+  ctx.fillStyle = amber;
+  ctx.font = 'bold 9px Fredoka, sans-serif';
+  ctx.fillText(homeLabel, sx + sw * 0.28, sy + 12);
+  ctx.fillText('OPP', sx + sw * 0.72, sy + 12);
+
+  // ---- Score (big, green) ----
+  ctx.fillStyle = green;
+  ctx.font = 'bold 20px Fredoka, sans-serif';
+  ctx.fillText(`${game.playerScore} - ${game.aiScore}`, cx, sy + 30);
+
+  // ---- Outs (bottom-left): label + 3 LED dots ----
+  const outsY = sy + sh - 18;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = amber;
+  ctx.font = 'bold 10px Fredoka, sans-serif';
+  ctx.fillText('OUT', sx + 7, outsY);
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.arc(sx + 34 + i * 12, outsY, 4, 0, Math.PI * 2);
+    ctx.fillStyle = i < game.outs ? red : dim;
+    ctx.fill();
+  }
+
+  // ---- Bases (bottom-right): mini diamond, lit green when occupied ----
+  const ds = 8;                       // diamond half-size
+  const dCx = sx + sw - 17;
+  const dCy = sy + sh - 22;
+  const basePts = [
+    [dCx + ds, dCy],       // 1st (right)
+    [dCx, dCy - ds],       // 2nd (top)
+    [dCx - ds, dCy],       // 3rd (left)
+  ];
+  for (let i = 0; i < 3; i++) {
+    const [bx, by] = basePts[i];
+    ctx.save();
+    ctx.translate(bx, by);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = game.bases[i] ? green : dim;
+    ctx.fillRect(-4, -4, 8, 8);
+    ctx.strokeStyle = game.bases[i] ? '#fff' : 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-4, -4, 8, 8);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
 function drawInfield(ctx) {
   // Infield dirt - big foreground wedge that fans out toward the camera (lower = wider)
   ctx.fillStyle = '#D2A06B';
@@ -1817,6 +1894,8 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       // back to the original all-code background.
       if (fieldImageRef.current) {
         ctx.drawImage(fieldImageRef.current, 0, 0, CW, CH);
+        // Live game info on the image's dark jumbotron screen
+        drawImageScoreboard(ctx, game, profile.teamName);
       } else {
         drawSky(ctx);
         drawOutfield(ctx);
