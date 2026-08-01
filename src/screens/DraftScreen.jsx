@@ -8,6 +8,15 @@ import {
 
 const MAX_TEAM = 12; // same cap as the Card Shop
 
+const CUSTOM_COST = 150;  // create-your-own-player price
+
+// Secret name: type this (any capitals/spaces) and the custom player comes
+// out maxed at 10 in batting, pitching, fielding, AND running. Shhh.
+const SECRET_NAME = 'bebeoof';
+function isSecretName(name) {
+  return name.toLowerCase().replace(/\s+/g, '') === SECRET_NAME;
+}
+
 // Draft Day — the minor leagues. Unlike the Card Shop's mystery packs, here
 // the kid SEES every prospect's stats and picks the one he wants. Each pick
 // costs DRAFT_COST scholar coins. A prospect can only be drafted once (he
@@ -16,6 +25,9 @@ export default function DraftScreen({ profile, onUpdateProfile, onBack }) {
   const [error, setError] = useState('');
   // The prospect just drafted, for the "welcome to the team" confirmation.
   const [drafted, setDrafted] = useState(null);
+  // Customize-player dialog open? And the name being typed.
+  const [customizing, setCustomizing] = useState(false);
+  const [customName, setCustomName] = useState('');
 
   const ownedNames = new Set(profile.roster.map((p) => p.name));
   const prospects = minorLeaguePool.filter((p) => !ownedNames.has(p.name));
@@ -44,6 +56,43 @@ export default function DraftScreen({ profile, onUpdateProfile, onBack }) {
     setDrafted(newPlayer);
   }
 
+  // Create the custom player from the typed name. Normal names get solid
+  // all-around stats (5s). The secret name gets everything maxed at 10.
+  function createCustomPlayer() {
+    const name = customName.trim();
+    if (!name) return;
+    if (teamFull) {
+      setError('Your team is full! Sell a player in My Team to make room.');
+      setCustomizing(false);
+      return;
+    }
+    if (profile.coins < CUSTOM_COST) {
+      setError(`Not enough coins. Customizing costs ${CUSTOM_COST}.`);
+      setCustomizing(false);
+      return;
+    }
+    setError('');
+    const maxed = isSecretName(name);
+    const stat = maxed ? 10 : 5;
+    const newPlayer = {
+      id: createPlayerId(),
+      name,
+      batting: stat,
+      pitching: stat,
+      fielding: stat,
+      speed: stat,
+      tier: 'custom',
+      position: null,
+    };
+    onUpdateProfile({
+      roster: [...profile.roster, newPlayer],
+      coins: profile.coins - CUSTOM_COST,
+    });
+    setCustomizing(false);
+    setCustomName('');
+    setDrafted(newPlayer);
+  }
+
   return (
     <div className="shop-screen">
       <header className="screen-header" style={{ backgroundColor: profile.teamColor.primary }}>
@@ -66,13 +115,21 @@ export default function DraftScreen({ profile, onUpdateProfile, onBack }) {
 
         {error && <p className="shop-error">{error}</p>}
 
-        {prospects.length === 0 ? (
-          <p className="section-help">
-            You drafted everyone! The minor leagues are empty for now.
-          </p>
-        ) : (
-          <div className="draft-grid">
-            {prospects.map((p) => {
+        <div className="draft-grid">
+          {/* Create-your-own-player card, always first on the board */}
+          <div className="draft-card draft-card-custom">
+            <span className="draft-name">Customize Player</span>
+            <span className="draft-overall">Make your OWN player!</span>
+            <span className="draft-custom-icon">&#127912;</span>
+            <button
+              className="btn btn-buy"
+              onClick={() => { setError(''); setCustomizing(true); }}
+              disabled={profile.coins < CUSTOM_COST || teamFull}
+            >
+              Create <span className="coin-icon">&#x1FA99;</span> {CUSTOM_COST}
+            </button>
+          </div>
+          {prospects.map((p) => {
               const canAfford = profile.coins >= DRAFT_COST;
               return (
                 <div key={p.name} className="draft-card">
@@ -94,9 +151,46 @@ export default function DraftScreen({ profile, onUpdateProfile, onBack }) {
                 </div>
               );
             })}
-          </div>
+        </div>
+        {prospects.length === 0 && (
+          <p className="section-help">
+            You drafted everyone! The minor leagues are empty for now.
+          </p>
         )}
       </div>
+
+      {customizing && (
+        <div className="exit-dialog-backdrop" onClick={() => setCustomizing(false)}>
+          <div className="exit-dialog" onClick={(e) => e.stopPropagation()}>
+            <h2 className="exit-dialog-title">Customize Player</h2>
+            <p className="exit-dialog-text">
+              Give your player a name! Costs <strong>&#x1FA99; {CUSTOM_COST}</strong> coins.
+            </p>
+            <input
+              className="custom-name-input"
+              type="text"
+              maxLength={20}
+              placeholder="Player name"
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') createCustomPlayer(); }}
+              autoFocus
+            />
+            <div className="exit-dialog-buttons">
+              <button
+                className="btn-exit-save"
+                disabled={!customName.trim()}
+                onClick={createCustomPlayer}
+              >
+                Create
+              </button>
+              <button className="btn-exit-close" onClick={() => { setCustomizing(false); setCustomName(''); }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {drafted && (
         <div className="exit-dialog-backdrop" onClick={() => setDrafted(null)}>
