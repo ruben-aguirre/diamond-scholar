@@ -3,7 +3,7 @@ import { battingAverage } from '../data/players';
 
 // Upgrading a player costs this many coins and raises ONE skill of the kid's
 // choice by 1 (batting, pitching, fielding, or running/speed). Skills cap at 10.
-const UPGRADE_COST = 1000;
+const UPGRADE_COST = 500;
 const UPGRADE_SKILLS = [
   { key: 'batting', label: 'Batting', icon: '\u{1F3CF}' },   // cricket bat+ball reads as "bat"
   { key: 'speed', label: 'Running', icon: '\u{1F3C3}' },
