@@ -4,18 +4,13 @@ import {
   DRAFT_COST,
   createPlayerId,
   playerAverage,
+  isSecretName,
 } from '../data/players';
 
 const MAX_TEAM = 12; // same cap as the Card Shop
 
 const CUSTOM_COST = 150;  // create-your-own-player price
-
-// Secret name: type this (any capitals/spaces) and the custom player comes
-// out maxed at 10 in batting, pitching, fielding, AND running. Shhh.
-const SECRET_NAME = 'bebeoof';
-function isSecretName(name) {
-  return name.toLowerCase().replace(/\s+/g, '') === SECRET_NAME;
-}
+// (Secret maxed-player name check lives in data/players.js — isSecretName.)
 
 // Draft Day — the minor leagues. Unlike the Card Shop's mystery packs, here
 // the kid SEES every prospect's stats and picks the one he wants. Each pick

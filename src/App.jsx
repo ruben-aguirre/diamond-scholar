@@ -7,6 +7,7 @@ import TeamScreen from './screens/TeamScreen';
 import ShopScreen from './screens/ShopScreen';
 import DraftScreen from './screens/DraftScreen';
 import GameScreen from './screens/GameScreen';
+import { isSecretName } from './data/players';
 import './App.css';
 
 function App() {
@@ -118,7 +119,19 @@ function App() {
   // also heals older profiles where a bought player never made the lineup.
   function healLineup(p) {
     if (!p) return p;
-    const rosterIds = p.roster.map((pl) => pl.id);
+    // Secret-name heal: any custom player named "Bebe oof" (however typed)
+    // should be maxed at 10 across the board. Fixes players created before
+    // the name check was made forgiving.
+    let roster = p.roster;
+    if (roster.some((pl) => isSecretName(pl.name) && pl.batting < 10)) {
+      roster = roster.map((pl) =>
+        isSecretName(pl.name)
+          ? { ...pl, batting: 10, pitching: 10, fielding: 10, speed: 10 }
+          : pl
+      );
+      p = { ...p, roster };
+    }
+    const rosterIds = roster.map((pl) => pl.id);
     const lineup = (p.lineup || []).filter((id) => rosterIds.includes(id));
     const missing = rosterIds.filter((id) => !lineup.includes(id));
     if (missing.length === 0 && lineup.length === (p.lineup || []).length) return p;
