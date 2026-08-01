@@ -46,6 +46,22 @@ export const playerPool = {
   ],
 };
 
+// Draft Day: minor-league prospects. Unlike card packs (random), the kid SEES
+// these players and picks the one he wants. Modest stats — the fun is finding
+// a diamond in the rough for cheap.
+export const minorLeaguePool = [
+  { name: 'Bobby Bases', batting: 4, pitching: 3, fielding: 4, speed: 5 },
+  { name: 'Sammy Slider', batting: 3, pitching: 6, fielding: 3, speed: 4 },
+  { name: 'Tommy Gloves', batting: 3, pitching: 2, fielding: 6, speed: 4 },
+  { name: 'Ricky Rocket', batting: 4, pitching: 2, fielding: 3, speed: 6 },
+  { name: 'Dusty Diamond', batting: 5, pitching: 3, fielding: 4, speed: 3 },
+  { name: 'Petey Popfly', batting: 4, pitching: 3, fielding: 5, speed: 3 },
+  { name: 'Wally Windup', batting: 3, pitching: 5, fielding: 4, speed: 3 },
+  { name: 'Chico Chavez', batting: 5, pitching: 2, fielding: 4, speed: 4 },
+];
+
+export const DRAFT_COST = 100;  // scholar coins per minor-league draft pick
+
 export const packPrices = {
   bronze: { cost: 100, sellPrice: 30 },
   silver: { cost: 250, sellPrice: 80 },

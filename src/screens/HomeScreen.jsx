@@ -6,6 +6,7 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile }) {
     { id: 'fielding-practice', label: 'Fielding Practice', icon: '&#129351;', enabled: false, description: 'Coming soon' },
     { id: 'running-practice', label: 'Running Practice', icon: '&#127939;', enabled: false, description: 'Coming soon' },
     { id: 'shop', label: 'Card Shop', icon: '&#127183;', enabled: true, description: 'Buy player packs' },
+    { id: 'draft', label: 'Draft Day', icon: '&#128203;', enabled: true, description: 'Pick players from the minor leagues' },
   ];
 
   return (

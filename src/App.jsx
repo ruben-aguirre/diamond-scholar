@@ -5,6 +5,7 @@ import ProfileSelect from './screens/ProfileSelect';
 import HomeScreen from './screens/HomeScreen';
 import TeamScreen from './screens/TeamScreen';
 import ShopScreen from './screens/ShopScreen';
+import DraftScreen from './screens/DraftScreen';
 import GameScreen from './screens/GameScreen';
 import './App.css';
 
@@ -137,6 +138,8 @@ function App() {
       return <TeamScreen profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'shop':
       return <ShopScreen profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
+    case 'draft':
+      return <DraftScreen profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'game':
       return (
         <GameScreen
