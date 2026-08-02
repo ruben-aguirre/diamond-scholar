@@ -121,17 +121,21 @@ function App() {
   // also heals older profiles where a bought player never made the lineup.
   function healLineup(p) {
     if (!p) return p;
-    // Secret-name heal: any custom player named "Bebe oof" (however typed)
-    // should be maxed at 10 across the board. Fixes players created before
-    // the name check was made forgiving.
+    // Secret-name heal: the FIRST "Babe Oof" (however typed) gets maxed at 10
+    // across the board — fixes the player created before the name check was
+    // forgiving — and marks the secret as used so it only ever works once.
+    // Later Babe Oofs are left exactly as weak as they were made.
     let roster = p.roster;
-    if (roster.some((pl) => isSecretName(pl.name) && pl.batting < 10)) {
-      roster = roster.map((pl) =>
-        isSecretName(pl.name)
-          ? { ...pl, batting: 10, pitching: 10, fielding: 10, speed: 10 }
-          : pl
-      );
-      p = { ...p, roster };
+    if (!p.secretUsed) {
+      const idx = roster.findIndex((pl) => isSecretName(pl.name));
+      if (idx >= 0) {
+        if (roster[idx].batting < 10) {
+          roster = roster.map((pl, i) =>
+            i === idx ? { ...pl, batting: 10, pitching: 10, fielding: 10, speed: 10 } : pl
+          );
+        }
+        p = { ...p, roster, secretUsed: true };
+      }
     }
     // Position heal: all 9 field positions should be covered whenever there
     // are enough players. New players arrive with no position (and pack swaps

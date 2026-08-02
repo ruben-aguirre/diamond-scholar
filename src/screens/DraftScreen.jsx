@@ -67,8 +67,11 @@ export default function DraftScreen({ profile, onUpdateProfile, onBack }) {
       return;
     }
     setError('');
-    const maxed = isSecretName(name);
-    const stat = maxed ? 10 : 5;
+    // The secret name only works ONCE per team. First "Babe Oof" is maxed at
+    // 10s; try it again and you get a bench-warmer (3s). Regular names get 5s.
+    const secret = isSecretName(name);
+    const firstSecret = secret && !profile.secretUsed;
+    const stat = firstSecret ? 10 : secret ? 3 : 5;
     const newPlayer = {
       id: createPlayerId(),
       name,
@@ -82,6 +85,7 @@ export default function DraftScreen({ profile, onUpdateProfile, onBack }) {
     onUpdateProfile({
       roster: [...profile.roster, newPlayer],
       coins: profile.coins - CUSTOM_COST,
+      ...(firstSecret ? { secretUsed: true } : {}),
     });
     setCustomizing(false);
     setCustomName('');
