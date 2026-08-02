@@ -4,6 +4,7 @@ import { battingAverage, playerAverage } from '../data/players';
 // Upgrading a player costs this many coins and raises ONE skill of the kid's
 // choice by 1 (batting, pitching, fielding, or running/speed). Skills cap at 10.
 const UPGRADE_COST = 500;
+const UPGRADE_TOKEN_COST = 2;  // tokens (earned from 5-in-a-row science streaks)
 
 // Selling a player pays 50 coins for a good player, 30 for the rest.
 // "Good" = overall rating (average of the four skills) of 4.5 or better.
@@ -41,8 +42,20 @@ export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
   // Player currently in the sell dialog (null = dialog closed).
   const [sellingId, setSellingId] = useState(null);
 
+  // Pay for upgrades with coins OR tokens (2 tokens = 1 free upgrade).
+  const [payWith, setPayWith] = useState('coins');
+
   const upgradingPlayer = profile.roster.find((p) => p.id === upgradingId) || null;
-  const canAfford = profile.coins >= UPGRADE_COST;
+  const tokens = profile.tokens || 0;
+  const canAffordCoins = profile.coins >= UPGRADE_COST;
+  const canAffordTokens = tokens >= UPGRADE_TOKEN_COST;
+  const canAfford = payWith === 'tokens' ? canAffordTokens : canAffordCoins;
+
+  // Open the upgrade dialog, defaulting to whichever currency he can afford.
+  function openUpgrade(playerId) {
+    setPayWith(canAffordCoins || !canAffordTokens ? 'coins' : 'tokens');
+    setUpgradingId(playerId);
+  }
   const sellingPlayer = profile.roster.find((p) => p.id === sellingId) || null;
   const canSell = profile.roster.length > MIN_ROSTER;
 
@@ -70,7 +83,10 @@ export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
     const newRoster = profile.roster.map((p) =>
       p.id === upgradingPlayer.id ? { ...p, [skillKey]: p[skillKey] + 1 } : p
     );
-    onUpdateProfile({ roster: newRoster, coins: profile.coins - UPGRADE_COST });
+    const payment = payWith === 'tokens'
+      ? { tokens: tokens - UPGRADE_TOKEN_COST }
+      : { coins: profile.coins - UPGRADE_COST };
+    onUpdateProfile({ roster: newRoster, ...payment });
     setUpgradingId(null);
   }
 
@@ -136,6 +152,8 @@ export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
         <div className="coin-display">
           <span className="coin-icon">&#x1FA99;</span>
           <span className="coin-amount">{profile.coins}</span>
+          <span className="coin-icon" style={{ marginLeft: 10 }}>🎟️</span>
+          <span className="coin-amount">{profile.tokens || 0}</span>
         </div>
       </header>
 
@@ -212,7 +230,7 @@ export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
                   <span className="batting-stat" title="Batting power (1-10)">BAT {player.batting}</span>
                   <button
                     className="btn-upgrade"
-                    onClick={() => setUpgradingId(player.id)}
+                    onClick={() => openUpgrade(player.id)}
                   >
                     Upgrade
                   </button>
@@ -280,11 +298,27 @@ export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
           <div className="exit-dialog upgrade-dialog" onClick={(e) => e.stopPropagation()}>
             <h2 className="exit-dialog-title">Upgrade {upgradingPlayer.name}</h2>
             <p className="exit-dialog-text">
-              Pick ONE skill to make better. Costs <strong>&#x1FA99; {UPGRADE_COST}</strong> coins.
+              Pick ONE skill to make better. Pay with coins or tokens:
             </p>
+            <div className="pay-toggle">
+              <button
+                className={`pay-option ${payWith === 'coins' ? 'active' : ''}`}
+                onClick={() => setPayWith('coins')}
+              >
+                &#x1FA99; {UPGRADE_COST} coins
+              </button>
+              <button
+                className={`pay-option ${payWith === 'tokens' ? 'active' : ''}`}
+                onClick={() => setPayWith('tokens')}
+              >
+                🎟️ {UPGRADE_TOKEN_COST} tokens (you have {tokens})
+              </button>
+            </div>
             {!canAfford && (
               <p className="upgrade-no-coins">
-                You need {UPGRADE_COST - profile.coins} more coins. Win games to earn them!
+                {payWith === 'tokens'
+                  ? `You need ${UPGRADE_TOKEN_COST - tokens} more token${UPGRADE_TOKEN_COST - tokens === 1 ? '' : 's'}. Get 5 science answers right in a row to earn one!`
+                  : `You need ${UPGRADE_COST - profile.coins} more coins. Win games to earn them!`}
               </p>
             )}
             <div className="upgrade-skill-list">

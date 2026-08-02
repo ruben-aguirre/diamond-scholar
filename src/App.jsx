@@ -81,9 +81,10 @@ function App() {
   // Save-and-exit: keep the batting stats, any Fireballs, AND the coins earned
   // from study breaks so far, but don't count this as a finished game (no
   // win/loss, no games-played bump).
-  function handleSaveAndExit(battingStats, fireballs, coinsEarned) {
+  function handleSaveAndExit(battingStats, fireballs, coinsEarned, tokensEarned) {
     updateProfile({
       coins: activeProfile.coins + (coinsEarned || 0),
+      tokens: (activeProfile.tokens || 0) + (tokensEarned || 0),
       roster: applyBattingStats(activeProfile.roster, battingStats),
       fireballs: fireballs != null ? fireballs : (activeProfile.fireballs || 0),
     });
@@ -95,6 +96,7 @@ function App() {
 
     updateProfile({
       coins: activeProfile.coins + results.coinsEarned,
+      tokens: (activeProfile.tokens || 0) + (results.tokensEarned || 0),
       roster: updatedRoster,
       fireballs: results.fireballs != null ? results.fireballs : (activeProfile.fireballs || 0),
       stats: {

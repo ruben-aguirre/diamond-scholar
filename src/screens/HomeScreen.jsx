@@ -20,6 +20,8 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile }) {
           <div className="coin-display">
             <span className="coin-icon">&#x1FA99;</span>
             <span className="coin-amount">{profile.coins}</span>
+            <span className="coin-icon" style={{ marginLeft: 10 }}>🎟️</span>
+            <span className="coin-amount">{profile.tokens || 0}</span>
           </div>
         </div>
       </header>

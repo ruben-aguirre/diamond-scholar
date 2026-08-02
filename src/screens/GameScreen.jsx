@@ -2603,9 +2603,30 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
     const correctCount = results.filter((r) => r.correct).length;
     const coinsFromBreak = correctCount * 10;
 
+    // Token streak: 5 correct answers IN A ROW earns a token. The streak
+    // carries across study breaks in this game; a wrong answer resets it.
+    let streak = game.tokenStreak || 0;
+    let tokensWon = 0;
+    for (const r of results) {
+      if (r.correct) {
+        streak += 1;
+        if (streak >= 5) { tokensWon += 1; streak = 0; }
+      } else {
+        streak = 0;
+      }
+    }
+    if (tokensWon > 0) {
+      setSwingResult({
+        type: 'token',
+        description: `🎟️ TOKEN EARNED — 5 in a row! ${tokensWon > 1 ? `(x${tokensWon}!)` : ''}`,
+      });
+      setTimeout(() => setSwingResult(null), 2500);
+    }
+
     setGame((prev) => {
       const newResults = [...prev.studyBreakResults, { correct: correctCount, total: 5 }];
       const newCoins = prev.coinsEarned + coinsFromBreak;
+      const tokenPatch = { tokenStreak: streak, tokensEarned: (prev.tokensEarned || 0) + tokensWon };
       const isLastBreak = prev.studyBreakNumber >= 3;
       const mercy = checkMercyRule(prev.playerScore, prev.aiScore);
 
@@ -2613,6 +2634,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         setStudyQuestions(null);
         return {
           ...prev,
+          ...tokenPatch,
           coinsEarned: newCoins,
           studyBreakResults: newResults,
           phase: GAME_PHASES.BONUS_ROUND,
@@ -2622,6 +2644,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         setStudyQuestions(null);
         return {
           ...prev,
+          ...tokenPatch,
           coinsEarned: newCoins,
           studyBreakResults: newResults,
           phase: GAME_PHASES.GAME_OVER,
@@ -2630,6 +2653,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       setStudyQuestions(null);
       return {
         ...prev,
+        ...tokenPatch,
         inning: prev.inning + 1,
         isTopHalf: true,
         outs: 0,
@@ -2660,7 +2684,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
 
   function handleExitSave() {
     setShowExitDialog(false);
-    onSaveAndExit(battingStatsRef.current, game.fireballs, game.coinsEarned);
+    onSaveAndExit(battingStatsRef.current, game.fireballs, game.coinsEarned, game.tokensEarned);
   }
 
   function handleExitClose() {
@@ -2676,6 +2700,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       won: game.playerScore > game.aiScore,
       battingStats: battingStatsRef.current,  // { [playerId]: { ab, hits } }
       fireballs: game.fireballs,
+      tokensEarned: game.tokensEarned,
     });
   }
 
@@ -2876,6 +2901,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       {/* Coins HUD */}
       <div className="game-coins">
         <span className="coin-icon">&#x1FA99;</span> {game.coinsEarned}
+        {game.tokensEarned > 0 && <span className="token-hud"> 🎟️ {game.tokensEarned}</span>}
       </div>
 
       {/* Did You Know overlay */}

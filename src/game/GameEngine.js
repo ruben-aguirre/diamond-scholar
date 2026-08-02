@@ -37,6 +37,11 @@ export function createGameState(profile) {
     // The CPU pitcher's fireballs — earned the same way, by striking YOU out.
     // Starts at zero every game; no strikeouts, no fireballs.
     cpuFireballs: 0,
+    // Tokens: earned by answering 5 science questions correctly IN A ROW
+    // (streak carries across study breaks within a game). 2 tokens = one free
+    // player upgrade in My Team.
+    tokenStreak: 0,
+    tokensEarned: 0,
   };
 }
 
