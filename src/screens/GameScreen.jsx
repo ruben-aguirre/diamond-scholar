@@ -1829,7 +1829,6 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   const [defPitchLive, setDefPitchLive] = useState(false); // your pitch is in the air
   const pitchTargetRef = useRef({ x: 0, y: 0 });         // where the kid placed the ball (zone coords)
   const [showExitDialog, setShowExitDialog] = useState(false); // Exit → Save/Close
-  const [fireballAnim, setFireballAnim] = useState(false); // flaming-pitch animation playing
 
   const canvasRef = useRef(null);
   const pitchRef = useRef(null); // { pitch, startTime, duration, resolved, landing }
@@ -1845,8 +1844,6 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   const rafRef = useRef(null);
   const batterSpritesRef = useRef(null);  // populated by loadBatterSprites()
   const fieldImageRef = useRef(null);     // painted stadium background; null until loaded
-  const fireballCanvasRef = useRef(null);  // small canvas for the Fireball pitch animation
-  const fireballRafRef = useRef(null);
 
   // Per-game hit points by player: { [playerId]: points }. A hit adds points
   // (single 10, double 20, triple 30, HR 60); outs add nothing, so a player's
@@ -2053,7 +2050,14 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         const t = Math.min(1, (Date.now() - p.startTime) / p.duration);
         const ball = computeBallAt(p.pitch, t);
         drawLandingMarker(ctx, ball.land.x, ball.land.y, t);
-        drawBall(ctx, ball.x, ball.y, ball.size);
+        if (p.pitch.fireball) {
+          // Flaming pitch — drawn right on the field, no overlay.
+          const fdx = ball.land.x - MOUND.x, fdy = ball.land.y - MOUND.y;
+          const fmag = Math.hypot(fdx, fdy) || 1;
+          drawFireball(ctx, ball.x, ball.y, ball.size + 4, fdx / fmag, fdy / fmag, (Date.now() % 120) / 120);
+        } else {
+          drawBall(ctx, ball.x, ball.y, ball.size);
+        }
         if (t >= 1 && !p.resolved) {
           p.resolved = true;
           pitchRef.current = null;
@@ -2154,55 +2158,28 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
     game.balls, game.strikes, game.outs, game.fireballs,
   ]);
 
-  // Fireball pitch animation — a red flaming baseball zips across the small
-  // defensive canvas at 2x fastball speed when a Fireball is thrown.
-  useEffect(() => {
-    if (!fireballAnim) return;
-    const canvas = fireballCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const W = canvas.width, H = canvas.height;
-    // Travels from the pitcher (far, top center, small) to the batter (near,
-    // bottom, big) — same depth feel as the main field, just self-contained.
-    const start = { x: W * 0.5, y: H * 0.18 };
-    const end = { x: W * 0.5, y: H * 0.92 };
-    // 2x fastball speed: the normal fast fastball is ~1100ms here; the fireball
-    // covers the same path in ~550ms, so it reads as twice as fast.
-    const duration = 550;
-    const startTime = Date.now();
-
-    function frame() {
-      const elapsed = Date.now() - startTime;
-      const t = Math.min(1, elapsed / duration);
-      ctx.clearRect(0, 0, W, H);
-      // Faint mound + plate so there's a sense of place
-      ctx.fillStyle = 'rgba(255,255,255,0.10)';
-      ctx.beginPath(); ctx.ellipse(W * 0.5, H * 0.2, 26, 7, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(W * 0.5, H * 0.92, 34, 9, 0, 0, Math.PI * 2); ctx.fill();
-
-      const x = start.x + (end.x - start.x) * t;
-      const y = start.y + (end.y - start.y) * t;
-      const size = 4 + t * 16;  // grows fast as it nears the camera
-      // Direction of travel (flame streams out the back, i.e. opposite dir)
-      const dx = end.x - start.x, dy = end.y - start.y;
-      const mag = Math.hypot(dx, dy) || 1;
-      const flick = (elapsed % 120) / 120;  // 0..1 flicker
-      drawFireball(ctx, x, y, size, dx / mag, dy / mag, flick);
-
-      if (t < 1 && fireballAnim) {
-        fireballRafRef.current = requestAnimationFrame(frame);
-      }
-    }
-    fireballRafRef.current = requestAnimationFrame(frame);
-    return () => {
-      if (fireballRafRef.current) cancelAnimationFrame(fireballRafRef.current);
-    };
-  }, [fireballAnim]);
-
   // ---- Pitch & swing ----
 
   function throwPitch() {
-    const pitch = generatePitch(teamAvg);
+    // The CPU pitcher throws Fireballs too — a flaming 2x-speed strike.
+    // More likely when he's ahead with two strikes and going for the K.
+    const fireballChance = game.strikes >= 2 ? 0.28 : 0.06;
+    let pitch;
+    if (Math.random() < fireballChance) {
+      pitch = {
+        type: 'Fireball',
+        x: (Math.random() - 0.5) * 1.0,
+        y: (Math.random() - 0.5) * 1.0,
+        isStrike: true,          // always in the zone — you have to deal with it
+        speed: 1,
+        speedMul: 0.34,          // twice as fast as a fastball
+        breakX: 0,
+        breakY: 0,
+        fireball: true,
+      };
+    } else {
+      pitch = generatePitch(teamAvg);
+    }
     const duration = pitchDurationMs(teamAvg, pitch.speedMul);
     pitchRef.current = { pitch, startTime: Date.now(), duration, resolved: false };
     hitBallRef.current = null;  // clear any leftover hit-ball animation from the previous pitch
@@ -2457,7 +2434,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   // Throw the chosen pitch at the chosen spot. The outcome is decided now;
   // the ball animates in, then resolveDefensePitch applies it.
   function throwDefensePitch() {
-    if (pitchRef.current || fireballAnim) return;
+    if (pitchRef.current) return;
     if (game.outs >= 3) return;
     const prof = PLAYER_PITCH_TYPES[pitchSel];
     const target = pitchTargetRef.current;
@@ -2532,8 +2509,13 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       }
       if (strikes >= 3) {
         outs += 1;
-        fireballs += 1;  // strikeout by your defense banks a Fireball
-        desc = 'STRIKE THREE! He\'s out — you earned a Fireball! 🔥';
+        if (result.noBank) {
+          // K finished with a spent fireball — no free fireball back.
+          desc = 'STRIKE THREE — blown away by the fireball! 🔥';
+        } else {
+          fireballs += 1;  // strikeout by your defense banks a Fireball
+          desc = 'STRIKE THREE! He\'s out — you earned a Fireball! 🔥';
+        }
         balls = 0; strikes = 0; nextBatter = true;
       }
     } else if (result.kind === 'groundout' || result.kind === 'flyout') {
@@ -2557,28 +2539,36 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
     if (halfOver) setTimeout(() => finishAiHalf(), 1500);
   }
 
-  // Spend a Fireball: flaming pitch, guaranteed strikeout on this batter.
+  // Spend a Fireball: a flaming 2x-speed pitch the batter can't touch.
+  // Worth ONE guaranteed strike (not an automatic strikeout) — save them up
+  // or use them to finish a batter off at two strikes.
   function throwFireball() {
-    if (fireballAnim || pitchRef.current) return;
+    if (pitchRef.current) return;
     if (game.fireballs <= 0 || game.outs >= 3) return;
-    setFireballAnim(true);
-    setTimeout(() => {
-      setFireballAnim(false);
-      applyFireballStrikeout();
-    }, 750);
-  }
-
-  function applyFireballStrikeout() {
-    // Same stale-state trap as resolveDefensePitch: decide "half over?" from
-    // the current outs BEFORE handing the update to React.
-    const outs = game.outs + 1;
-    const halfOver = outs >= 3;
-    // No free Fireball for a forced K — you spent one to get it.
-    setGame((g) => ({ ...g, fireballs: Math.max(0, g.fireballs - 1), strikes: 0, balls: 0, outs }));
-    setSwingResult({ type: 'K', description: '🔥 FIREBALL — Strikeout! The batter never had a chance.' });
-    setTimeout(() => setSwingResult(null), 1400);
-    if (halfOver) setTimeout(() => finishAiHalf(), 1500);
-    else setDefBatter((n) => n + 1);
+    setGame((g) => ({ ...g, fireballs: Math.max(0, g.fireballs - 1) }));
+    // Aims at your crosshair but always stays in the zone — a fireball never misses.
+    const target = pitchTargetRef.current;
+    const pitch = {
+      type: 'Fireball',
+      x: Math.max(-0.8, Math.min(0.8, target.x)),
+      y: Math.max(-0.8, Math.min(0.8, target.y)),
+      isStrike: true,
+      speedMul: 0.34,   // twice as fast as a fastball
+      breakX: 0,
+      breakY: 0,
+      defense: true,
+      fireball: true,
+    };
+    const duration = pitchDurationMs(6, pitch.speedMul);
+    const result = {
+      kind: 'strike-swinging',
+      description: '🔥 FIREBALL — way too fast! Strike!',
+      noBank: true,  // a K finished with a fireball doesn't earn a fireball back
+    };
+    hitBallRef.current = null;
+    fielderChaseRef.current = null;
+    pitchRef.current = { pitch, startTime: Date.now(), duration, resolved: false, defResult: result };
+    setDefPitchLive(true);
   }
 
   function finishAiHalf() {
@@ -2790,12 +2780,6 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
             )}
           </div>
         )}
-        {fireballAnim && (
-          <div className="fireball-overlay">
-            <canvas ref={fireballCanvasRef} width={300} height={300} className="fireball-canvas" />
-            <p className="fireball-stage-label">{'\u{1F525}'} FIREBALL!</p>
-          </div>
-        )}
       </div>
 
       {/* Who's up — your batter when batting, the opponent when pitching */}
@@ -2860,7 +2844,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
             <button
               className="btn btn-pitch"
               onClick={throwDefensePitch}
-              disabled={defensePitchLive || fireballAnim || game.outs >= 3}
+              disabled={defensePitchLive || game.outs >= 3}
             >
               Pitch!
             </button>
@@ -2869,7 +2853,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
                 className="btn btn-swing"
                 style={{ backgroundColor: '#e74c3c', marginLeft: 10 }}
                 onClick={throwFireball}
-                disabled={defensePitchLive || fireballAnim || game.outs >= 3}
+                disabled={defensePitchLive || game.outs >= 3}
               >
                 {'\u{1F525}'} FIREBALL
               </button>
