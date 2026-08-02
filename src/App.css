@@ -871,6 +871,23 @@ body {
   background: linear-gradient(90deg, #27ae60, #2ecc71);
 }
 
+.phase-banner.pitching {
+  background: linear-gradient(90deg, #c0392b, #e74c3c);
+}
+
+/* Fireball animation overlaid on the field during interactive defense */
+.fireball-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  z-index: 5;
+}
+
 .field-wrap {
   position: relative;
   width: 100%;

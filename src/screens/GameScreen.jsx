@@ -6,9 +6,10 @@ import {
   pitchDurationMs,
   calculateSwingResult,
   advanceRunners,
-  simulateAIHalfInningSteps,
   checkMercyRule,
   getTeamAverage,
+  PLAYER_PITCH_TYPES,
+  calculateDefensePitchResult,
 } from '../game/GameEngine';
 import StudyBreak from './StudyBreak';
 import DidYouKnowCard from './DidYouKnowCard';
@@ -48,6 +49,16 @@ const SWING_TYPES = [
   { id: 'bunt', label: 'Bunt', color: '#16a085' },
   { id: 'half', label: 'Half', color: '#8e44ad' },
 ];
+
+// Your pitch choices on defense — same button row, swapped labels.
+const PITCH_SEL_TYPES = [
+  { id: 'Slow Curve', label: 'Slow Curve', color: '#16a085' },
+  { id: 'Fastball', label: 'Fastball', color: '#e67e22' },
+  { id: 'Slider', label: 'Slider', color: '#8e44ad' },
+];
+
+// Opponent batters wear red so the kid instantly knows who's up.
+const OPP_COLOR = '#c0392b';
 
 function getRandomFact() {
   const facts = scienceQuestions.didYouKnow;
@@ -1812,7 +1823,11 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   const [swingResult, setSwingResult] = useState(null);
   const [didYouKnow, setDidYouKnow] = useState(null);
   const [studyQuestions, setStudyQuestions] = useState(null);
-  const [aiHalf, setAiHalf] = useState(null); // { steps, idx }
+  // ---- Interactive defense (you pitch) ----
+  const [pitchSel, setPitchSel] = useState('Fastball');  // chosen pitch type
+  const [defBatter, setDefBatter] = useState(1);         // opponent batter number this half
+  const [defPitchLive, setDefPitchLive] = useState(false); // your pitch is in the air
+  const pitchTargetRef = useRef({ x: 0, y: 0 });         // where the kid placed the ball (zone coords)
   const [showExitDialog, setShowExitDialog] = useState(false); // Exit → Save/Close
   const [fireballAnim, setFireballAnim] = useState(false); // flaming-pitch animation playing
 
@@ -2003,13 +2018,33 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         }
       }
 
-      // 5. Batter's box / strike-zone target — floats over home plate during batting.
+      // 5. Batter's box / strike-zone target — floats over home plate during
+      // batting AND while you're pitching (defense).
       if (
         game.phase === GAME_PHASES.BATTING ||
         game.phase === GAME_PHASES.PITCH_INCOMING ||
-        game.phase === GAME_PHASES.SWING_RESULT
+        game.phase === GAME_PHASES.SWING_RESULT ||
+        game.phase === GAME_PHASES.AI_BATTING
       ) {
         drawStrikeZone(ctx);
+      }
+
+      // 5b. Your pitch target (defense) — red crosshair where the ball will aim.
+      if (game.phase === GAME_PHASES.AI_BATTING) {
+        const tgt = pitchTargetRef.current;
+        const tx = ZONE.cx + tgt.x * (ZONE.w / 2);
+        const ty = ZONE.cy + tgt.y * (ZONE.h / 2);
+        ctx.save();
+        ctx.strokeStyle = '#FF5050';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(tx, ty, 9, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(tx - 13, ty); ctx.lineTo(tx + 13, ty);
+        ctx.moveTo(tx, ty - 13); ctx.lineTo(tx, ty + 13);
+        ctx.stroke();
+        ctx.restore();
       }
 
       // 6. Ball in flight (drawn before batter so batter obscures ball if it passes behind him)
@@ -2022,7 +2057,8 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         if (t >= 1 && !p.resolved) {
           p.resolved = true;
           pitchRef.current = null;
-          if (p.pitch.isStrike) resolveStrike();
+          if (p.pitch.defense) resolveDefensePitch(p.defResult);
+          else if (p.pitch.isStrike) resolveStrike();
           else resolveBall();
         }
       }
@@ -2059,13 +2095,21 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       //     the user passed ?sprites=placeholders to preview the placeholders.
       // This means dropping real PNGs into public/sprites/batter/ is the only
       // step needed to switch from the canvas batter to the sprite batter.
+      const defending = game.phase === GAME_PHASES.AI_BATTING;
       const sprites = batterSpritesRef.current;
       let drewWithSprites = false;
-      if (sprites && sprites.ready && (!sprites.usingPlaceholders || showPlaceholders)) {
+      // On defense the batter at the plate is the OPPONENT — always the
+      // canvas-drawn batter in red, never your team's sprite.
+      if (!defending && sprites && sprites.ready && (!sprites.usingPlaceholders || showPlaceholders)) {
         drewWithSprites = drawBatterSprite(ctx, sprites, batT);
       }
       if (!drewWithSprites) {
-        drawBatter(ctx, profile.teamColor?.primary || '#1f3a93', batT, profile.teamName);
+        drawBatter(
+          ctx,
+          defending ? OPP_COLOR : (profile.teamColor?.primary || '#1f3a93'),
+          batT,
+          defending ? 'OPP' : profile.teamName
+        );
       }
 
       // (Corner bases-inset removed — base runners now live on the jumbotron)
@@ -2387,46 +2431,137 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   // ---- Half-inning transitions ----
 
   function startAiHalfInning() {
-    const { steps } = simulateAIHalfInningSteps(teamAvg);
-    setAiHalf({ steps, idx: 0, runs: 0, outs: 0, bases: [false, false, false] });
+    setDefBatter(1);
+    pitchTargetRef.current = { x: 0, y: 0 };
     setGame((g) => ({ ...g, phase: GAME_PHASES.AI_BATTING, isTopHalf: false, outs: 0, bases: [false, false, false], strikes: 0, balls: 0 }));
   }
 
-  function advanceAiStep() {
-    setAiHalf((h) => {
-      if (!h) return h;
-      const step = h.steps[h.idx];
-      const runsAdded = step.runs || 0;
-      // Strikeout by your defense → bank a Fireball powerup.
-      const earnedFireball = step.kind === 'K' && !step.fireballThrown;
-      setGame((g) => ({
-        ...g,
-        aiScore: g.aiScore + runsAdded,
-        bases: step.bases,
-        outs: step.outs,
-        fireballs: g.fireballs + (earnedFireball ? 1 : 0),
-      }));
-      const nextIdx = h.idx + 1;
-      if (nextIdx >= h.steps.length) {
-        queueMicrotask(() => {
-          setAiHalf(null);
-          finishAiHalf();
-        });
-        return h; // stay on last visible step until transition
-      }
-      return { ...h, idx: nextIdx };
-    });
+  // Tap the strike zone (or just around it) to place where your pitch aims.
+  function placePitchTarget(e) {
+    const canvas = canvasRef.current;
+    if (!canvas || pitchRef.current) return;  // can't move the target mid-pitch
+    const rect = canvas.getBoundingClientRect();
+    const px = (e.clientX - rect.left) * (CW / rect.width);
+    const py = (e.clientY - rect.top) * (CH / rect.height);
+    const zx = (px - ZONE.cx) / (ZONE.w / 2);
+    const zy = (py - ZONE.cy) / (ZONE.h / 2);
+    // Ignore taps nowhere near the zone; clamp the rest so "just outside"
+    // stays reachable (that's how you make batters chase).
+    if (Math.abs(zx) > 2.4 || Math.abs(zy) > 2.4) return;
+    pitchTargetRef.current = {
+      x: Math.max(-1.6, Math.min(1.6, zx)),
+      y: Math.max(-1.6, Math.min(1.6, zy)),
+    };
   }
 
-  // Spend a Fireball: play the flaming-pitch animation, then rewrite the
-  // CURRENT opponent at-bat into a guaranteed strikeout.
+  // Throw the chosen pitch at the chosen spot. The outcome is decided now;
+  // the ball animates in, then resolveDefensePitch applies it.
+  function throwDefensePitch() {
+    if (pitchRef.current || fireballAnim) return;
+    if (game.outs >= 3) return;
+    const prof = PLAYER_PITCH_TYPES[pitchSel];
+    const target = pitchTargetRef.current;
+    const breakDir = Math.random() < 0.5 ? -1 : 1;
+    const pitch = {
+      type: pitchSel,
+      x: target.x,
+      y: target.y,
+      isStrike: Math.abs(target.x) <= 1 && Math.abs(target.y) <= 1,
+      speedMul: prof.speedMul,
+      breakX: prof.breakX * breakDir,
+      breakY: prof.breakY,
+      defense: true,
+    };
+    const duration = pitchDurationMs(6, prof.speedMul);  // fixed mid speed — it's YOUR arm
+    const result = calculateDefensePitchResult(pitchSel, target);
+    hitBallRef.current = null;
+    fielderChaseRef.current = null;
+    pitchRef.current = { pitch, startTime: Date.now(), duration, resolved: false, defResult: result };
+    setDefPitchLive(true);
+  }
+
+  // Apply the pre-rolled result once the ball reaches the plate.
+  function resolveDefensePitch(result) {
+    setDefPitchLive(false);
+    const contact = ['single', 'double', 'homerun', 'groundout', 'flyout', 'foul'].includes(result.kind);
+    if (contact || result.kind === 'strike-swinging') {
+      batRef.current = { startTime: Date.now(), duration: 520 };  // opponent swings
+    }
+    // Ball flies off the bat for real contact (not fouls — those go backwards).
+    if (contact && result.kind !== 'foul') {
+      const traj = buildHitTrajectory(result.kind);
+      const ballStart = Date.now() + 150;
+      hitBallRef.current = { startTime: ballStart, duration: traj.duration, traj };
+      if (result.kind !== 'homerun') {
+        const ssDist = Math.hypot(traj.target.x - SHORTSTOP_HOME.x, traj.target.y - SHORTSTOP_HOME.y);
+        const sbDist = Math.hypot(traj.target.x - SECOND_BASE_HOME.x, traj.target.y - SECOND_BASE_HOME.y);
+        const who = ssDist <= sbDist ? 'ss' : '2b';
+        fielderChaseRef.current = {
+          who,
+          target: { x: traj.target.x, y: traj.target.y },
+          chaseStart: ballStart,
+          chaseEnd: ballStart + traj.duration,
+          returnEnd: ballStart + traj.duration + 800,
+        };
+      }
+    }
+
+    let halfOver = false;
+    let nextBatter = false;
+    let desc = result.description;
+
+    setGame((g) => {
+      let { strikes, balls, outs, bases, aiScore, fireballs } = g;
+      bases = [...bases];
+
+      if (result.kind === 'ball') {
+        balls += 1;
+        if (balls >= 4) {
+          const adv = advanceRunners(bases, 1);
+          bases = adv.newBases;
+          aiScore += adv.runs;
+          desc = 'Ball four — the batter walks.';
+          balls = 0; strikes = 0; nextBatter = true;
+        }
+      } else if (result.kind === 'strike-swinging' || result.kind === 'strike-looking' || result.kind === 'foul') {
+        if (result.kind === 'foul') {
+          if (strikes < 2) strikes += 1;  // foul never strikes you out
+        } else {
+          strikes += 1;
+        }
+        if (strikes >= 3) {
+          outs += 1;
+          fireballs += 1;  // strikeout by your defense banks a Fireball
+          desc = 'STRIKE THREE! He\'s out — you earned a Fireball! 🔥';
+          balls = 0; strikes = 0; nextBatter = true;
+        }
+      } else if (result.kind === 'groundout' || result.kind === 'flyout') {
+        outs += 1;
+        balls = 0; strikes = 0; nextBatter = true;
+      } else {
+        // A hit: single 1, double 2, homerun 4
+        const nBases = result.kind === 'single' ? 1 : result.kind === 'double' ? 2 : 4;
+        const adv = advanceRunners(bases, nBases);
+        bases = adv.newBases;
+        aiScore += adv.runs;
+        balls = 0; strikes = 0; nextBatter = true;
+      }
+
+      halfOver = outs >= 3;
+      return { ...g, strikes, balls, outs, bases, aiScore, fireballs };
+    });
+
+    setSwingResult({ type: result.kind, description: desc });
+    setTimeout(() => setSwingResult(null), 1400);
+    if (nextBatter && !halfOver) setDefBatter((n) => n + 1);
+    if (halfOver) setTimeout(() => finishAiHalf(), 1500);
+  }
+
+  // Spend a Fireball: flaming pitch, guaranteed strikeout on this batter.
   function throwFireball() {
-    if (fireballAnim) return;           // already throwing
-    if (game.fireballs <= 0) return;
+    if (fireballAnim || pitchRef.current) return;
+    if (game.fireballs <= 0 || game.outs >= 3) return;
     setFireballAnim(true);
-    // The animation canvas runs its own loop (see the AI_BATTING render). The
-    // flaming ball flies in at 2x fastball speed — a short ~700ms zip — then we
-    // apply the strikeout and clear the animation.
     setTimeout(() => {
       setFireballAnim(false);
       applyFireballStrikeout();
@@ -2434,26 +2569,17 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   }
 
   function applyFireballStrikeout() {
-    setGame((g) => (g.fireballs > 0 ? { ...g, fireballs: g.fireballs - 1 } : g));
-    setAiHalf((h) => {
-      if (!h) return h;
-      const steps = h.steps.slice();
-      const cur = steps[h.idx];
-      // Recompute outs: this play is now an out. Keep bases as they were BEFORE
-      // this step by using the previous step's bases (or empty at the start).
-      const prevBases = h.idx > 0 ? steps[h.idx - 1].bases : [false, false, false];
-      const newOuts = Math.min(3, (h.idx > 0 ? steps[h.idx - 1].outs : 0) + 1);
-      steps[h.idx] = {
-        ...cur,
-        description: '🔥 FIREBALL — Strikeout! The batter never had a chance.',
-        kind: 'K',
-        runs: 0,
-        outs: newOuts,
-        bases: [...prevBases],
-        fireballThrown: true,  // don't grant a fireball for this forced K
-      };
-      return { ...h, steps };
+    let halfOver = false;
+    setGame((g) => {
+      const outs = g.outs + 1;
+      halfOver = outs >= 3;
+      // No free Fireball for a forced K — you spent one to get it.
+      return { ...g, fireballs: Math.max(0, g.fireballs - 1), strikes: 0, balls: 0, outs };
     });
+    setSwingResult({ type: 'K', description: '🔥 FIREBALL — Strikeout! The batter never had a chance.' });
+    setTimeout(() => setSwingResult(null), 1400);
+    if (halfOver) setTimeout(() => finishAiHalf(), 1500);
+    else setDefBatter((n) => n + 1);
   }
 
   function finishAiHalf() {
@@ -2631,52 +2757,12 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
     );
   }
 
-  if (game.phase === GAME_PHASES.AI_BATTING && aiHalf) {
-    const step = aiHalf.steps[aiHalf.idx];
-    const isLast = aiHalf.idx + 1 >= aiHalf.steps.length;
-    return (
-      <div className="ai-batting-screen">
-        <div className="ai-batting-header">
-          <span className="ai-batting-label">OPPONENT AT BAT</span>
-          <div className="ai-score-pill">
-            You {game.playerScore} &nbsp; &ndash; &nbsp; Opp {game.aiScore}
-          </div>
-          <div className="ai-count">
-            Outs: {'\u25CF'.repeat(step?.outs ?? 0)}{'\u25CB'.repeat(3 - (step?.outs ?? 0))}
-          </div>
-        </div>
-        <div className="ai-play-card">
-          {fireballAnim ? (
-            <div className="fireball-stage">
-              <canvas ref={fireballCanvasRef} width={300} height={300} className="fireball-canvas" />
-              <p className="fireball-stage-label">{'\u{1F525}'} FIREBALL!</p>
-            </div>
-          ) : (
-            <>
-              <p className="ai-play-description">{step?.description}</p>
-              {/* Fireball powerup \u2014 earned from strikeouts, spent to force one */}
-              <div className="fireball-bar">
-                <span className="fireball-count">{'\u{1F525}'.repeat(game.fireballs)} {game.fireballs} Fireball{game.fireballs === 1 ? '' : 's'}</span>
-                {game.fireballs > 0 && step?.kind !== 'K' && (
-                  <button className="btn btn-fireball" onClick={throwFireball}>
-                    {'\u{1F525}'} Throw Fireball &mdash; Strikeout!
-                  </button>
-                )}
-              </div>
-              <button className="btn btn-primary btn-big" onClick={advanceAiStep}>
-                {isLast ? 'End Half Inning' : 'Next Play'}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // ---- Main batting UI ----
+  // ---- Main game UI (batting AND pitching share the same layout) ----
 
   const pitchReady = game.phase === GAME_PHASES.BATTING;
   const pitchLive = game.phase === GAME_PHASES.PITCH_INCOMING;
+  const defending = game.phase === GAME_PHASES.AI_BATTING;
+  const defensePitchLive = defending && defPitchLive;
 
   return (
     <div className="game-screen v2">
@@ -2684,7 +2770,9 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
           canvas (see drawJumbotron). No separate HTML scoreboard bar. */}
 
       {/* Phase banner */}
-      <div className="phase-banner batting">YOU&rsquo;RE BATTING</div>
+      <div className={`phase-banner ${defending ? 'pitching' : 'batting'}`}>
+        {defending ? 'YOU’RE PITCHING — TAP THE ZONE TO AIM' : 'YOU’RE BATTING'}
+      </div>
 
       {/* Field scene */}
       <div className="field-wrap">
@@ -2693,7 +2781,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
           width={CW}
           height={CH}
           className="game-field v2"
-          onClick={pitchLive ? handleSwing : undefined}
+          onClick={pitchLive ? handleSwing : (defending ? placePitchTarget : undefined)}
         />
         {swingResult && (
           <div className={`swing-result ${swingResult.type}`}>
@@ -2703,27 +2791,45 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
             )}
           </div>
         )}
+        {fireballAnim && (
+          <div className="fireball-overlay">
+            <canvas ref={fireballCanvasRef} width={300} height={300} className="fireball-canvas" />
+            <p className="fireball-stage-label">{'\u{1F525}'} FIREBALL!</p>
+          </div>
+        )}
       </div>
 
-      {/* Batter info — pitch type is hidden; the kid reads it from the movement */}
+      {/* Who's up — your batter when batting, the opponent when pitching */}
       <div className="batter-info">
-        <span className="batter-name">Now batting: <strong>{currentBatter.name}</strong></span>
-        <span className="batter-stat">BAT {currentBatter.batting}</span>
+        {defending ? (
+          <>
+            <span className="batter-name">Opponent batter <strong>#{defBatter}</strong></span>
+            <span className="batter-stat">{'\u{1F525}'} {game.fireballs}</span>
+          </>
+        ) : (
+          <>
+            <span className="batter-name">Now batting: <strong>{currentBatter.name}</strong></span>
+            <span className="batter-stat">BAT {currentBatter.batting}</span>
+          </>
+        )}
       </div>
 
-      {/* Swing type selector */}
+      {/* Type selector — swing types when batting, pitch types when pitching */}
       <div className="swing-types">
-        {SWING_TYPES.map((s) => (
-          <button
-            key={s.id}
-            className={`swing-type-btn ${swingType === s.id ? 'active' : ''}`}
-            style={swingType === s.id ? { backgroundColor: s.color, color: '#fff' } : undefined}
-            onClick={() => setSwingType(s.id)}
-            disabled={pitchLive}
-          >
-            {s.label}
-          </button>
-        ))}
+        {(defending ? PITCH_SEL_TYPES : SWING_TYPES).map((s) => {
+          const active = defending ? pitchSel === s.id : swingType === s.id;
+          return (
+            <button
+              key={s.id}
+              className={`swing-type-btn ${active ? 'active' : ''}`}
+              style={active ? { backgroundColor: s.color, color: '#fff' } : undefined}
+              onClick={() => (defending ? setPitchSel(s.id) : setSwingType(s.id))}
+              disabled={defending ? defensePitchLive : pitchLive}
+            >
+              {s.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Action */}
@@ -2746,6 +2852,27 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
                 onClick={handleSteal}
               >
                 STEAL!
+              </button>
+            )}
+          </>
+        )}
+        {defending && (
+          <>
+            <button
+              className="btn btn-pitch"
+              onClick={throwDefensePitch}
+              disabled={defensePitchLive || fireballAnim || game.outs >= 3}
+            >
+              Pitch!
+            </button>
+            {game.fireballs > 0 && (
+              <button
+                className="btn btn-swing"
+                style={{ backgroundColor: '#e74c3c', marginLeft: 10 }}
+                onClick={throwFireball}
+                disabled={defensePitchLive || fireballAnim || game.outs >= 3}
+              >
+                {'\u{1F525}'} FIREBALL
               </button>
             )}
           </>

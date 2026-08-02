@@ -80,6 +80,65 @@ export function generatePitch(aiDifficulty) {
   };
 }
 
+// The three pitches YOU can throw on defense. Reuses the same movement
+// profiles the AI pitcher has, so pitches look the same both ways.
+export const PLAYER_PITCH_TYPES = {
+  'Slow Curve': PITCH_TYPES.Curveball,
+  'Fastball': PITCH_TYPES.Fastball,
+  'Slider': PITCH_TYPES.Slider,
+};
+
+// How the opponent batter reacts to YOUR pitch (interactive defense).
+// target is where you placed the ball in zone coords: |x|,|y| <= 1 is in the
+// strike zone, beyond is outside. The strategy the kid learns:
+//   - paint the corners → whiffs and weak contact
+//   - miss just off the zone → batters chase
+//   - groove it middle-middle → get punished
+export function calculateDefensePitchResult(typeKey, target) {
+  const mods = {
+    'Fastball': { whiff: 0.34, power: 1.2 },   // blows by them, but dangerous over the middle
+    'Slider': { whiff: 0.44, power: 0.95 },    // best swing-and-miss pitch
+    'Slow Curve': { whiff: 0.34, power: 0.7 }, // hard to square up — weak contact
+  }[typeKey] || { whiff: 0.34, power: 1.0 };
+
+  const inZone = Math.abs(target.x) <= 1 && Math.abs(target.y) <= 1;
+
+  if (!inZone) {
+    // Outside the zone: will the batter chase? More likely just off the edge.
+    const past = Math.max(Math.abs(target.x), Math.abs(target.y)) - 1;
+    const chaseChance = Math.max(0.05, 0.5 - past * 0.55);
+    if (Math.random() < chaseChance) {
+      return Math.random() < 0.65
+        ? { kind: 'strike-swinging', description: 'Chased it — swing and a miss!' }
+        : { kind: 'foul', description: 'Chased it and fouled it off.' };
+    }
+    return { kind: 'ball', description: 'The batter takes it. Ball.' };
+  }
+
+  // In the zone. Batters occasionally freeze looking.
+  if (Math.random() < 0.10) {
+    return { kind: 'strike-looking', description: 'Right in there — strike looking!' };
+  }
+
+  // 0 = middle-middle meatball, 1 = painted on the edge
+  const edge = Math.min(1, Math.hypot(target.x, target.y));
+  const whiffChance = mods.whiff * (0.45 + 0.85 * edge);
+  if (Math.random() < whiffChance) {
+    return { kind: 'strike-swinging', description: 'Swing and a miss!' };
+  }
+
+  // Contact. Edge pitches produce weak contact; middle pitches get crushed.
+  const quality = (1 - edge * 0.65) * mods.power * (0.4 + Math.random() * 0.6);
+  const roll = Math.random();
+  if (roll < 0.22) return { kind: 'foul', description: 'Fouled off.' };
+  if (quality > 0.62) return { kind: 'homerun', description: 'CRUSHED — home run. That one caught too much plate!' };
+  if (quality > 0.48) return { kind: 'double', description: 'Ripped into the gap — double.' };
+  if (quality > 0.34) return { kind: 'single', description: 'Base hit through the infield.' };
+  return Math.random() < 0.55
+    ? { kind: 'groundout', description: 'Weak grounder — out!' }
+    : { kind: 'flyout', description: 'Easy fly ball — caught!' };
+}
+
 // Map team strength to pitch duration in ms (lower = faster = harder).
 // speedMul (from the pitch type) scales it: fastballs come quicker, changeups
 // float in slower.
