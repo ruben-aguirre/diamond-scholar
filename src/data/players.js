@@ -62,11 +62,11 @@ export const minorLeaguePool = [
 
 export const DRAFT_COST = 100;  // scholar coins per minor-league draft pick
 
-// Secret custom-player name: a player named "Bebe oof" comes out maxed at 10
+// Secret custom-player name: a player named "Babe Oof" comes out maxed at 10
 // in all four skills. The check ignores capitals, spaces, and any punctuation
-// ("Bebe Oof!", "bebe-oof", "BEBEOOF" all work).
+// ("Babe Oof!", "babe-oof", "BABEOOF" all work).
 export function isSecretName(name) {
-  return (name || '').toLowerCase().replace(/[^a-z]/g, '') === 'bebeoof';
+  return (name || '').toLowerCase().replace(/[^a-z]/g, '') === 'babeoof';
 }
 
 export const packPrices = {
