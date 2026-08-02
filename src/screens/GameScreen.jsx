@@ -2062,7 +2062,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
           p.resolved = true;
           pitchRef.current = null;
           if (p.pitch.defense) resolveDefensePitch(p.defResult);
-          else if (p.pitch.isStrike) resolveStrike();
+          else if (p.pitch.isStrike) resolveStrike(p.pitch.fireball);
           else resolveBall();
         }
       }
@@ -2161,11 +2161,13 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   // ---- Pitch & swing ----
 
   function throwPitch() {
-    // The CPU pitcher throws Fireballs too — a flaming 2x-speed strike.
-    // More likely when he's ahead with two strikes and going for the K.
-    const fireballChance = game.strikes >= 2 ? 0.28 : 0.06;
+    // The CPU pitcher throws Fireballs too — but ONLY ones it has earned by
+    // striking you out (same rule as yours). Most likely at two strikes when
+    // it's going for the K.
+    const fireballChance = game.strikes >= 2 ? 0.45 : 0.08;
     let pitch;
-    if (Math.random() < fireballChance) {
+    if (game.cpuFireballs > 0 && Math.random() < fireballChance) {
+      setGame((g) => ({ ...g, cpuFireballs: Math.max(0, g.cpuFireballs - 1) }));
       pitch = {
         type: 'Fireball',
         x: (Math.random() - 0.5) * 1.0,
@@ -2290,7 +2292,10 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         if (newStrikes >= 3) {
           // Don't count the out here — afterPlay(true) counts it so the out
           // total and the half-over check happen in one atomic update.
-          return { ...g, strikes: 0, balls: 0, phase: GAME_PHASES.SWING_RESULT };
+          // The CPU banks a Fireball for striking you out — unless it spent
+          // a fireball on this very pitch (no free refills).
+          const cpuEarn = p.pitch.fireball ? 0 : 1;
+          return { ...g, strikes: 0, balls: 0, cpuFireballs: g.cpuFireballs + cpuEarn, phase: GAME_PHASES.SWING_RESULT };
         }
         return { ...g, strikes: newStrikes, phase: GAME_PHASES.SWING_RESULT };
       });
@@ -2337,17 +2342,19 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
     setTimeout(() => { setSwingResult(null); afterPlay(); }, 2200);
   }, [game.phase, currentBatter, swingType]);
 
-  function resolveStrike() {
+  function resolveStrike(wasFireball) {
     setGame((g) => {
       const newStrikes = g.strikes + 1;
       if (newStrikes >= 3) {
         // Strikeout — no points; afterPlay(true) counts the out.
+        // The CPU banks a Fireball for striking you out — unless it spent
+        // a fireball on this very pitch (no free refills).
         setSwingResult({ type: 'miss', description: 'STRIKE THREE — YOU\'RE OUT!' });
         setTimeout(() => {
           setSwingResult(null);
           afterPlay(true);
         }, 1400);
-        return { ...g, strikes: 0, balls: 0, phase: GAME_PHASES.SWING_RESULT };
+        return { ...g, strikes: 0, balls: 0, cpuFireballs: g.cpuFireballs + (wasFireball ? 0 : 1), phase: GAME_PHASES.SWING_RESULT };
       }
       setSwingResult({ type: 'strike', description: 'Strike!' });
       setTimeout(() => setSwingResult(null), 900);

@@ -34,6 +34,9 @@ export function createGameState(profile) {
     // Fireball powerups: earned when your defense strikes a batter out, spent
     // on defense to force a guaranteed strikeout. Seeded from the saved profile.
     fireballs: profile.fireballs || 0,
+    // The CPU pitcher's fireballs — earned the same way, by striking YOU out.
+    // Starts at zero every game; no strikeouts, no fireballs.
+    cpuFireballs: 0,
   };
 }
 
