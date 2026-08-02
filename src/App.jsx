@@ -131,6 +131,36 @@ function App() {
       );
       p = { ...p, roster };
     }
+    // Position heal: all 9 field positions should be covered whenever there
+    // are enough players. New players arrive with no position (and pack swaps
+    // could vacate one), which left holes on the field with no way to fill
+    // them. Clear duplicate/invalid positions, then hand empty positions to
+    // unassigned players.
+    const POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
+    const seen = new Set();
+    let posChanged = false;
+    let healedRoster = roster.map((pl) => {
+      if (pl.position && POSITIONS.includes(pl.position) && !seen.has(pl.position)) {
+        seen.add(pl.position);
+        return pl;
+      }
+      if (pl.position) { posChanged = true; return { ...pl, position: null }; }
+      return pl;
+    });
+    const emptyPositions = POSITIONS.filter((pos) => !seen.has(pos));
+    let ei = 0;
+    healedRoster = healedRoster.map((pl) => {
+      if (!pl.position && ei < emptyPositions.length) {
+        posChanged = true;
+        return { ...pl, position: emptyPositions[ei++] };
+      }
+      return pl;
+    });
+    if (posChanged) {
+      roster = healedRoster;
+      p = { ...p, roster };
+    }
+
     const rosterIds = roster.map((pl) => pl.id);
     const lineup = (p.lineup || []).filter((id) => rosterIds.includes(id));
     const missing = rosterIds.filter((id) => !lineup.includes(id));

@@ -750,6 +750,38 @@ body {
   border-color: #9b59b6;
 }
 
+/* ---- Bench (Fielders view) ---- */
+
+.bench-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.bench-label {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #7f8c9b;
+}
+
+.bench-chip {
+  padding: 8px 14px;
+  border: 2px solid #dfe6ec;
+  border-radius: 20px;
+  background: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #2c3e50;
+  cursor: pointer;
+}
+
+.bench-chip.selected {
+  border-color: #f39c12;
+  background: #fff7ea;
+}
+
 /* ---- Player upgrade (My Team) ---- */
 
 .btn-upgrade {

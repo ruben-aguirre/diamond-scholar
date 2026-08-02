@@ -84,22 +84,30 @@ export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
     return profile.roster.find((p) => p.position === pos) || null;
   }
 
-  // Tap a spot: first tap selects it, second tap swaps the two players'
-  // positions. Tapping the same spot again cancels.
-  function tapSpot(pos) {
+  // Tap a spot (or a bench player): first tap selects, second tap swaps.
+  // Tapping the same one again cancels. Selections are either a position
+  // string ('CF') or a bench player ('bench:<id>'). Swapping with the bench
+  // sends the displaced fielder to the bench (position null).
+  function tapSpot(sel) {
     if (swapFrom === null) {
-      setSwapFrom(pos);
+      setSwapFrom(sel);
       return;
     }
-    if (swapFrom === pos) {
+    if (swapFrom === sel) {
       setSwapFrom(null);
       return;
     }
-    const a = playerAt(swapFrom);
-    const b = playerAt(pos);
+    const isBench = (s) => s.startsWith('bench:');
+    const getPlayer = (s) =>
+      isBench(s) ? profile.roster.find((p) => p.id === s.slice(6)) : playerAt(s);
+    const posOf = (s) => (isBench(s) ? null : s);
+    const a = getPlayer(swapFrom);
+    const b = getPlayer(sel);
+    const posA = posOf(swapFrom);
+    const posB = posOf(sel);
     const newRoster = profile.roster.map((p) => {
-      if (a && p.id === a.id) return { ...p, position: pos };
-      if (b && p.id === b.id) return { ...p, position: swapFrom };
+      if (a && p.id === a.id) return { ...p, position: posB };
+      if (b && p.id === b.id) return { ...p, position: posA };
       return p;
     });
     onUpdateProfile({ roster: newRoster });
@@ -169,6 +177,20 @@ export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
                 );
               })}
             </div>
+            {profile.roster.some((p) => !p.position) && (
+              <div className="bench-row">
+                <span className="bench-label">Bench:</span>
+                {profile.roster.filter((p) => !p.position).map((p) => (
+                  <button
+                    key={p.id}
+                    className={`bench-chip ${swapFrom === `bench:${p.id}` ? 'selected' : ''}`}
+                    onClick={() => tapSpot(`bench:${p.id}`)}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
