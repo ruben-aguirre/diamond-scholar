@@ -2151,7 +2151,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   }, [
     game.phase, game.bases, profile.teamColor,
     game.playerScore, game.aiScore, game.inning, game.isTopHalf,
-    game.balls, game.strikes, game.outs,
+    game.balls, game.strikes, game.outs, game.fireballs,
   ]);
 
   // Fireball pitch animation — a red flaming baseball zips across the small
@@ -2506,50 +2506,50 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       }
     }
 
-    let halfOver = false;
+    // Compute the play's effect from the CURRENT state (the render-loop
+    // closure is fresh per pitch), THEN commit it. Deciding "half over?"
+    // inside the setGame updater doesn't work — React runs the updater
+    // later, so the check always saw stale outs and the inning never ended.
+    let { strikes, balls, outs, aiScore, fireballs } = game;
+    let bases = [...game.bases];
     let nextBatter = false;
     let desc = result.description;
 
-    setGame((g) => {
-      let { strikes, balls, outs, bases, aiScore, fireballs } = g;
-      bases = [...bases];
-
-      if (result.kind === 'ball') {
-        balls += 1;
-        if (balls >= 4) {
-          const adv = advanceRunners(bases, 1);
-          bases = adv.newBases;
-          aiScore += adv.runs;
-          desc = 'Ball four — the batter walks.';
-          balls = 0; strikes = 0; nextBatter = true;
-        }
-      } else if (result.kind === 'strike-swinging' || result.kind === 'strike-looking' || result.kind === 'foul') {
-        if (result.kind === 'foul') {
-          if (strikes < 2) strikes += 1;  // foul never strikes you out
-        } else {
-          strikes += 1;
-        }
-        if (strikes >= 3) {
-          outs += 1;
-          fireballs += 1;  // strikeout by your defense banks a Fireball
-          desc = 'STRIKE THREE! He\'s out — you earned a Fireball! 🔥';
-          balls = 0; strikes = 0; nextBatter = true;
-        }
-      } else if (result.kind === 'groundout' || result.kind === 'flyout') {
-        outs += 1;
-        balls = 0; strikes = 0; nextBatter = true;
-      } else {
-        // A hit: single 1, double 2, homerun 4
-        const nBases = result.kind === 'single' ? 1 : result.kind === 'double' ? 2 : 4;
-        const adv = advanceRunners(bases, nBases);
+    if (result.kind === 'ball') {
+      balls += 1;
+      if (balls >= 4) {
+        const adv = advanceRunners(bases, 1);
         bases = adv.newBases;
         aiScore += adv.runs;
+        desc = 'Ball four — the batter walks.';
         balls = 0; strikes = 0; nextBatter = true;
       }
+    } else if (result.kind === 'strike-swinging' || result.kind === 'strike-looking' || result.kind === 'foul') {
+      if (result.kind === 'foul') {
+        if (strikes < 2) strikes += 1;  // foul never strikes you out
+      } else {
+        strikes += 1;
+      }
+      if (strikes >= 3) {
+        outs += 1;
+        fireballs += 1;  // strikeout by your defense banks a Fireball
+        desc = 'STRIKE THREE! He\'s out — you earned a Fireball! 🔥';
+        balls = 0; strikes = 0; nextBatter = true;
+      }
+    } else if (result.kind === 'groundout' || result.kind === 'flyout') {
+      outs += 1;
+      balls = 0; strikes = 0; nextBatter = true;
+    } else {
+      // A hit: single 1, double 2, homerun 4
+      const nBases = result.kind === 'single' ? 1 : result.kind === 'double' ? 2 : 4;
+      const adv = advanceRunners(bases, nBases);
+      bases = adv.newBases;
+      aiScore += adv.runs;
+      balls = 0; strikes = 0; nextBatter = true;
+    }
 
-      halfOver = outs >= 3;
-      return { ...g, strikes, balls, outs, bases, aiScore, fireballs };
-    });
+    const halfOver = outs >= 3;
+    setGame((g) => ({ ...g, strikes, balls, outs, bases, aiScore, fireballs }));
 
     setSwingResult({ type: result.kind, description: desc });
     setTimeout(() => setSwingResult(null), 1400);
@@ -2569,13 +2569,12 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   }
 
   function applyFireballStrikeout() {
-    let halfOver = false;
-    setGame((g) => {
-      const outs = g.outs + 1;
-      halfOver = outs >= 3;
-      // No free Fireball for a forced K — you spent one to get it.
-      return { ...g, fireballs: Math.max(0, g.fireballs - 1), strikes: 0, balls: 0, outs };
-    });
+    // Same stale-state trap as resolveDefensePitch: decide "half over?" from
+    // the current outs BEFORE handing the update to React.
+    const outs = game.outs + 1;
+    const halfOver = outs >= 3;
+    // No free Fireball for a forced K — you spent one to get it.
+    setGame((g) => ({ ...g, fireballs: Math.max(0, g.fireballs - 1), strikes: 0, balls: 0, outs }));
     setSwingResult({ type: 'K', description: '🔥 FIREBALL — Strikeout! The batter never had a chance.' });
     setTimeout(() => setSwingResult(null), 1400);
     if (halfOver) setTimeout(() => finishAiHalf(), 1500);
