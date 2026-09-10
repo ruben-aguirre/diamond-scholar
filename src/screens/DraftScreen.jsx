@@ -28,6 +28,23 @@ export default function DraftScreen({ profile, onUpdateProfile, onBack }) {
   const prospects = minorLeaguePool.filter((p) => !ownedNames.has(p.name));
   const teamFull = profile.roster.length >= MAX_TEAM;
 
+  // Sort each prospect into ONE section based on the skill they're best at.
+  // If two skills tie, the earlier one in this order wins, so every player
+  // lands in exactly one section.
+  const SECTIONS = [
+    { key: 'pitching', title: 'Pitching' },
+    { key: 'speed', title: 'Running' },
+    { key: 'fielding', title: 'Fielding' },
+    { key: 'batting', title: 'Batting' },
+  ];
+  function bestSection(p) {
+    let best = SECTIONS[0].key;
+    for (const s of SECTIONS) {
+      if (p[s.key] > p[best]) best = s.key;
+    }
+    return best;
+  }
+
   function draftPlayer(prospect) {
     if (teamFull) {
       setError('Your team is full! Sell a player in My Team to make room.');
@@ -114,8 +131,8 @@ export default function DraftScreen({ profile, onUpdateProfile, onBack }) {
 
         {error && <p className="shop-error">{error}</p>}
 
+        {/* Create-your-own-player card sits on top, above the sections */}
         <div className="draft-grid">
-          {/* Create-your-own-player card, always first on the board */}
           <div className="draft-card draft-card-custom">
             <span className="draft-name">Customize Player</span>
             <span className="draft-overall">Make your OWN player!</span>
@@ -128,29 +145,52 @@ export default function DraftScreen({ profile, onUpdateProfile, onBack }) {
               Create <span className="coin-icon">&#x1FA99;</span> {CUSTOM_COST}
             </button>
           </div>
-          {prospects.map((p) => {
-              const canAfford = profile.coins >= DRAFT_COST;
-              return (
-                <div key={p.name} className="draft-card">
-                  <span className="draft-name">{p.name}</span>
-                  <span className="draft-overall">Overall {playerAverage(p)}</span>
-                  <div className="reveal-stats">
-                    <span>BAT {p.batting}</span>
-                    <span>PIT {p.pitching}</span>
-                    <span>FLD {p.fielding}</span>
-                    <span>SPD {p.speed}</span>
-                  </div>
-                  <button
-                    className="btn btn-buy"
-                    onClick={() => draftPlayer(p)}
-                    disabled={!canAfford || teamFull}
-                  >
-                    Draft <span className="coin-icon">&#x1FA99;</span> {DRAFT_COST}
-                  </button>
-                </div>
-              );
-            })}
         </div>
+
+        {/* Four columns — one per skill. Each column is a big square that holds
+            up to six players who are best at that skill. Players still bat, run,
+            field, and pitch once drafted; the column just says what they're
+            best at, so the kid can find the type of player he wants fast. */}
+        <div className="draft-columns">
+          {SECTIONS.map((section) => {
+            const inSection = prospects
+              .filter((p) => bestSection(p) === section.key)
+              .slice(0, 6);
+            return (
+              <div key={section.key} className="draft-column">
+                <h2 className="draft-column-title">{section.title}</h2>
+                <div className="draft-column-cards">
+                  {inSection.length === 0 && (
+                    <p className="draft-column-empty">No players yet.</p>
+                  )}
+                  {inSection.map((p) => {
+                    const canAfford = profile.coins >= DRAFT_COST;
+                    return (
+                      <div key={p.name} className="draft-card">
+                        <span className="draft-name">{p.name}</span>
+                        <span className="draft-overall">Overall {playerAverage(p)}</span>
+                        <div className="reveal-stats">
+                          <span>BAT {p.batting}</span>
+                          <span>PIT {p.pitching}</span>
+                          <span>FLD {p.fielding}</span>
+                          <span>SPD {p.speed}</span>
+                        </div>
+                        <button
+                          className="btn btn-buy"
+                          onClick={() => draftPlayer(p)}
+                          disabled={!canAfford || teamFull}
+                        >
+                          Draft <span className="coin-icon">&#x1FA99;</span> {DRAFT_COST}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         {prospects.length === 0 && (
           <p className="section-help">
             You drafted everyone! The minor leagues are empty for now.

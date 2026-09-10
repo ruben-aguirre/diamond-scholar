@@ -697,6 +697,52 @@ body {
   gap: 14px;
 }
 
+/* Four big squares side by side: Pitching, Running, Fielding, Batting */
+.draft-columns {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.draft-column {
+  background: rgba(0, 0, 0, 0.04);
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.draft-column-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  text-align: center;
+  margin: 0 0 12px;
+  color: var(--text);
+}
+
+.draft-column-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.draft-column-empty {
+  text-align: center;
+  color: var(--text-muted, #7f8c8d);
+  font-size: 0.9rem;
+  padding: 12px 0;
+}
+
+/* On phones, drop to two columns so cards stay readable */
+@media (max-width: 700px) {
+  .draft-columns {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
 .draft-card {
   display: flex;
   flex-direction: column;
@@ -1084,6 +1130,13 @@ body {
 .swing-result.ball {
   background: rgba(0, 0, 0, 0.5);
   color: #ecf0f1;
+}
+
+.hit-distance {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-top: 8px;
+  letter-spacing: 0.5px;
 }
 
 .timing-hint {

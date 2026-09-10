@@ -1530,6 +1530,23 @@ function computeBallAt(pitch, t) {
   return { x, y, size, land };
 }
 
+// How far the ball flew, in feet. A home run always clears the 309 ft wall;
+// every other kind of contact lands somewhere shorter. We pick a random number
+// in each band so the same hit type shows a different distance each time.
+function hitDistanceFt(type) {
+  const randInt = (min, max) => Math.floor(min + Math.random() * (max - min + 1));
+  switch (type) {
+    case 'homerun': return randInt(310, 460);
+    case 'triple':  return randInt(280, 308);
+    case 'double':  return randInt(210, 279);
+    case 'single':  return randInt(120, 209);
+    case 'flyout':  return randInt(230, 300);
+    case 'groundout': return randInt(45, 130);
+    case 'foul':    return randInt(60, 250);
+    default:        return randInt(80, 200);
+  }
+}
+
 // Build a hit-ball trajectory based on the swing result type. The ball flies
 // from the contact point (near the strike zone) outward toward the field, on
 // an arc that varies by hit type — grounders are flat, fly balls peak high,
@@ -2278,6 +2295,10 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
     else if (rawOffset > 0 && !isHit) result.timingHint = 'Slightly late';
     else if (isHit) result.timingHint = 'Great timing!';
     else result.timingHint = rawOffset <= 0 ? 'Slightly early' : 'Slightly late';
+    // How far the ball flew. Home runs clear the wall (309+ ft); other hits
+    // land in the yard. Fouls and outs off contact still get a distance so
+    // the kid always sees how far he hit it.
+    result.distanceFt = hitDistanceFt(result.type);
     setSwingResult(result);
 
     if (result.type === 'miss') {
@@ -2807,6 +2828,9 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         {swingResult && (
           <div className={`swing-result ${swingResult.type}`}>
             {swingResult.description}
+            {swingResult.type !== 'miss' && swingResult.distanceFt != null && (
+              <div className="hit-distance">{swingResult.distanceFt} feet</div>
+            )}
             {swingResult.timingHint && (
               <div className="timing-hint">{swingResult.timingHint}</div>
             )}
