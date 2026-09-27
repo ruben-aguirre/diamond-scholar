@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   GAME_PHASES,
   createGameState,
@@ -18,6 +18,7 @@ import scienceQuestions from '../data/questions/science-4th.json';
 // Canvas internal drawing size
 const CW = 800;
 const CH = 500;
+const HIT_POINTS = { single: 10, double: 20, triple: 30, homerun: 60 };
 
 // Scene anchor points - CATCHER CAM PERSPECTIVE
 // Camera sits behind home plate looking toward center field.
@@ -169,7 +170,7 @@ function drawOutfield(ctx) {
 
   // Light tower dots across roofline
   ctx.fillStyle = '#f1c40f';
-  [80, 220, 360, 500, 640, 720].forEach((tx, i) => {
+  [80, 220, 360, 500, 640, 720].forEach((tx) => {
     const ty = 155 + Math.abs((tx - CW / 2)) * -0.05 + 20;
     ctx.beginPath();
     ctx.arc(tx, ty, 2.5, 0, Math.PI * 2);
@@ -603,7 +604,7 @@ function drawStrikeZone(ctx) {
   ctx.restore();
 }
 
-function drawPitcher(ctx, teamColor) {
+function drawPitcher(ctx) {
   // Catcher-cam view: pitcher is SMALL (far away on the mound), facing the camera
   // head-on. We see his front, not his profile. Mid-windup pose: glove up,
   // throwing arm back.
@@ -613,7 +614,6 @@ function drawPitcher(ctx, teamColor) {
   const jersey = '#c0392b';              // opponent jersey (red - contrasts with our team colors)
   const jerseyDark = darken(jersey, 0.35);
   const pants = '#F5F1E8';
-  const pantsDark = darken(pants, 0.2);
   const skin = '#F2C8A0';
 
   // Legs (planted stance, both facing camera) — longer legs so the pitcher
@@ -1868,18 +1868,15 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   // profile can fold it into each player's career hit points.
   const battingStatsRef = useRef({});
 
-  // Points a hit is worth, by hit type.
-  const HIT_POINTS = { single: 10, double: 20, triple: 30, homerun: 60 };
-
   // Add a hit's points to the current batter. Outs don't call this — that's
   // how the average only climbs and never drops.
-  function recordHit(batter, hitType) {
+  const recordHit = useCallback((batter, hitType) => {
     if (!batter || !batter.id) return;
     const points = HIT_POINTS[hitType] || 0;
     if (!points) return;
     const tally = battingStatsRef.current;
     tally[batter.id] = (tally[batter.id] || 0) + points;
-  }
+  }, []);
 
   // Diagnostic: ?sprites=placeholders forces the placeholder rectangles to
   // render even when real art isn't dropped in yet. Used to verify the swap
@@ -1902,7 +1899,10 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
     return () => { cancelled = true; };
   }, []);
 
-  const currentBatter = game.lineup[game.currentBatterIndex % game.lineup.length] || { name: '—', batting: 3 };
+  const currentBatter = useMemo(
+    () => game.lineup[game.currentBatterIndex % game.lineup.length] || { name: '—', batting: 3 },
+    [game.lineup, game.currentBatterIndex]
+  );
   const teamAvg = getTeamAverage(profile.roster);
 
   // Render loop
@@ -2361,7 +2361,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       };
     });
     setTimeout(() => { setSwingResult(null); afterPlay(); }, 2200);
-  }, [game.phase, currentBatter, swingType]);
+  }, [game.phase, game.strikes, currentBatter, swingType, recordHit]);
 
   function resolveStrike(wasFireball) {
     setGame((g) => {

@@ -7,6 +7,7 @@ import TeamScreen from './screens/TeamScreen';
 import ShopScreen from './screens/ShopScreen';
 import DraftScreen from './screens/DraftScreen';
 import GameScreen from './screens/GameScreen';
+import PracticeScreen from './screens/PracticeScreen';
 import { isSecretName } from './data/players';
 import './App.css';
 
@@ -202,6 +203,12 @@ function App() {
       return <ShopScreen profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'draft':
       return <DraftScreen profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
+    case 'batting-practice':
+      return <PracticeScreen mode="batting" profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
+    case 'fielding-practice':
+      return <PracticeScreen mode="fielding" profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
+    case 'running-practice':
+      return <PracticeScreen mode="running" profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'game':
       return (
         <GameScreen

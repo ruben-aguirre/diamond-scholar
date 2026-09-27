@@ -161,6 +161,58 @@ body {
   transform: scale(1.2);
 }
 
+.team-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-height: 340px;
+  padding: 3px;
+  overflow-y: auto;
+}
+
+.team-choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #2c3e50;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: left;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.team-choice:hover,
+.team-choice.selected {
+  border-color: #27ae60;
+  background: #eafaf1;
+}
+
+.team-choice.custom {
+  grid-column: 1 / -1;
+  justify-content: center;
+}
+
+.team-choice-dot {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #cbd5e1;
+}
+
+.custom-team-box {
+  margin-top: 14px;
+}
+
 /* Grade Selection */
 .grade-row {
   display: flex;
@@ -1991,6 +2043,244 @@ body {
   cursor: not-allowed;
 }
 
+/* ===== Practice modes ===== */
+.practice-screen {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #eaf4fb 0%, #f8fbfd 100%);
+}
+
+.practice-header-icon {
+  font-size: 1.6rem;
+}
+
+.practice-content {
+  width: min(720px, 100%);
+  margin: 0 auto;
+  padding: 22px 16px 40px;
+}
+
+.practice-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 8px 26px rgba(31, 64, 104, 0.12);
+}
+
+.practice-card h2 {
+  margin-bottom: 8px;
+  color: #203a43;
+  line-height: 1.35;
+}
+
+.practice-player-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.practice-player {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px;
+  border: 2px solid #dfe9ef;
+  border-radius: 12px;
+  background: #f8fbfd;
+  color: #2c3e50;
+  text-align: left;
+  cursor: pointer;
+}
+
+.practice-player span {
+  color: #718096;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.practice-player.selected {
+  border-color: #27ae60;
+  background: #eafaf1;
+}
+
+.practice-kicker {
+  display: block;
+  margin-bottom: 10px;
+  color: #e67e22;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.practice-answers {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.practice-answers button,
+.decision-buttons button {
+  border: 2px solid #dfe9ef;
+  border-radius: 12px;
+  padding: 14px;
+  background: #f8fbfd;
+  color: #2c3e50;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.practice-answers button.correct {
+  border-color: #27ae60;
+  background: #eafaf1;
+}
+
+.practice-answers button.wrong {
+  border-color: #e74c3c;
+  background: #fdedec;
+}
+
+.practice-feedback {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 12px;
+  line-height: 1.45;
+}
+
+.practice-feedback.correct {
+  background: #eafaf1;
+  color: #207a43;
+}
+
+.practice-feedback.wrong {
+  background: #fff4e5;
+  color: #8a5418;
+}
+
+.practice-scoreline {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: -6px -4px 20px;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.practice-play-card {
+  text-align: center;
+}
+
+.batting-drill,
+.decision-drill {
+  margin-top: 28px;
+}
+
+.timing-track {
+  position: relative;
+  height: 38px;
+  margin: 0 4px 28px;
+  overflow: hidden;
+  border: 3px solid #203a43;
+  border-radius: 20px;
+  background: linear-gradient(90deg, #f6c1bd, #f8e9a1 30%, #f8e9a1 70%, #f6c1bd);
+}
+
+.timing-sweet-spot {
+  position: absolute;
+  inset: 0 35%;
+  background: rgba(39, 174, 96, 0.72);
+}
+
+.timing-needle {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  width: 8px;
+  height: 38px;
+  border-radius: 4px;
+  background: #203a43;
+  transition: left 45ms linear;
+}
+
+.practice-action-button {
+  width: min(280px, 90%);
+  border: 0;
+  border-radius: 18px;
+  padding: 22px;
+  background: #e74c3c;
+  color: #fff;
+  font: inherit;
+  font-size: 1.5rem;
+  font-weight: 900;
+  box-shadow: 0 6px 0 #b93c30;
+  cursor: pointer;
+}
+
+.practice-action-button:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #b93c30;
+}
+
+.decision-prompt {
+  min-height: 68px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.decision-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.decision-buttons button {
+  border-color: #3498db;
+  background: #ebf5fb;
+  color: #1f5f86;
+}
+
+.practice-live-feedback {
+  margin-top: 20px;
+  color: #27ae60;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.practice-finish {
+  text-align: center;
+}
+
+.practice-finish-icon {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 4rem;
+}
+
+.practice-improvement {
+  margin: 16px 0 8px;
+  color: #27ae60;
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+@media (max-width: 520px) {
+  .practice-player-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .practice-card {
+    padding: 20px 16px;
+  }
+
+  .decision-buttons {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ===== Team view toggle ===== */
 .view-toggle {
   display: flex;
@@ -2023,15 +2313,143 @@ body {
   margin: 0 auto 8px;
   aspect-ratio: 1 / 1;
   background:
-    radial-gradient(circle at 50% 62%, #b07a44 0 26%, transparent 26%),
-    linear-gradient(#3fa34d, #2e7d38);
+    repeating-radial-gradient(
+      ellipse at 50% 88%,
+      rgba(255, 255, 255, 0.035) 0 24px,
+      rgba(0, 0, 0, 0.035) 25px 48px
+    ),
+    linear-gradient(145deg, #47a955, #2f8d40 64%, #287a36);
   border-radius: 50% 50% 12px 12px;
-  border: 3px solid #256a2e;
+  border: 3px solid #1f642d;
   overflow: hidden;
+  box-shadow:
+    inset 0 0 0 5px rgba(255, 255, 255, 0.08),
+    0 4px 12px rgba(31, 100, 45, 0.2);
+}
+
+.field-warning-track {
+  position: absolute;
+  z-index: 0;
+  inset: 5px 6px auto;
+  height: 52%;
+  border: 8px solid #b97b43;
+  border-bottom: 0;
+  border-radius: 50% 50% 0 0;
+  opacity: 0.9;
+}
+
+.field-foul-line {
+  position: absolute;
+  z-index: 1;
+  bottom: 15%;
+  left: 50%;
+  width: 2px;
+  height: 76%;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.25);
+  transform-origin: bottom center;
+}
+
+.field-foul-line-left {
+  transform: rotate(-34deg);
+}
+
+.field-foul-line-right {
+  transform: rotate(34deg);
+}
+
+.field-infield-dirt {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: 64%;
+  width: 45%;
+  height: 45%;
+  padding: 8%;
+  border-radius: 18% 44% 18% 44%;
+  background: #bd8248;
+  transform: translate(-50%, -50%) rotate(45deg);
+  box-shadow: inset 0 0 12px rgba(105, 62, 26, 0.18);
+}
+
+.field-infield-grass {
+  width: 100%;
+  height: 100%;
+  border-radius: 12%;
+  background: linear-gradient(145deg, #439f4e, #31843d);
+  box-shadow: inset 0 0 0 2px rgba(31, 100, 45, 0.18);
+}
+
+.field-base,
+.field-mound,
+.field-home-plate {
+  position: absolute;
+  z-index: 2;
+  display: block;
+}
+
+.field-base {
+  width: 12px;
+  height: 12px;
+  border: 1px solid #d4d9dc;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.field-base-second {
+  left: 50%;
+  top: 42%;
+}
+
+.field-base-third {
+  left: 28%;
+  top: 64%;
+}
+
+.field-base-first {
+  left: 72%;
+  top: 64%;
+}
+
+.field-mound {
+  left: 50%;
+  top: 63%;
+  width: 34px;
+  height: 18px;
+  border-radius: 50%;
+  background: #bd8248;
+  transform: translate(-50%, -50%);
+  box-shadow: inset 0 0 0 1px rgba(105, 62, 26, 0.2);
+}
+
+.field-mound::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 7px;
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  background: #fff;
+  transform: translateX(-50%);
+}
+
+.field-home-plate {
+  left: 50%;
+  top: 86%;
+  width: 17px;
+  height: 15px;
+  background: #fff;
+  clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%);
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
 }
 
 .field-spot {
   position: absolute;
+  z-index: 3;
   transform: translate(-50%, -50%);
   min-width: 64px;
   padding: 5px 6px;

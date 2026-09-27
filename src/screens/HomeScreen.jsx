@@ -2,9 +2,9 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile }) {
   const menuItems = [
     { id: 'game', label: 'Play Ball!', icon: '&#9918;', enabled: true, description: 'Start a game' },
     { id: 'team', label: 'My Team', icon: '&#128101;', enabled: true, description: 'View roster & lineup' },
-    { id: 'batting-practice', label: 'Batting Practice', icon: '&#127951;', enabled: false, description: 'Coming soon' },
-    { id: 'fielding-practice', label: 'Fielding Practice', icon: '&#129351;', enabled: false, description: 'Coming soon' },
-    { id: 'running-practice', label: 'Running Practice', icon: '&#127939;', enabled: false, description: 'Coming soon' },
+    { id: 'batting-practice', label: 'Batting Practice', icon: '&#127951;', enabled: true },
+    { id: 'fielding-practice', label: 'Fielding Practice', icon: '&#129351;', enabled: true },
+    { id: 'running-practice', label: 'Running Practice', icon: '&#127939;', enabled: true },
     { id: 'shop', label: 'Card Shop', icon: '&#127183;', enabled: true, description: 'Buy player packs' },
     { id: 'draft', label: 'Draft Day', icon: '&#128203;', enabled: true, description: 'Pick players from the minor leagues' },
   ];

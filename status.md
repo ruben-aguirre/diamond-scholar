@@ -1,31 +1,31 @@
 # Diamond Scholar — Status
 
-**Current state:** Passes 1–4 mostly built (batter's-box view, interactive pitching, fielding, lineup editor), all on one HTML canvas in a single 2,771-line `GameScreen.jsx`. Repo is now public. Actively working on batter character art via Atlas Cloud — have a good behind-the-batter pixel-art swing sheet (v3), still needs transparency fixed.
+**Current state:** All six agreed build passes are now playable. The game has batting, pitching, fielding, lineup management, a 30-club picker, animated card packs, and short Batting / Fielding / Running practice modes with a science entry question, coin rewards, and saved skill growth. Production build and lint both pass.
 
-**Next move:** Run Atlas Cloud background remover on the v3 sprite sheet to get a true transparent PNG. Then decide with son: is 10 frames fine, or force exactly 8. Separately, still owe son a playtest of the June pitching/fielding work before building Pass 5 (Card Shop).
+**Next move:** Put the full loop in front of Ruben's son: create a fresh profile, play one game, open a pack, and try each practice mode. Log only the places where he gets confused, bored, or stuck before adding season features.
 
 <!-- HANDOFF: refreshed by /handoff -->
-_Handoff updated: 2026-07-01_
+_Handoff updated: 2026-09-26_
 
 **Where things live**
 1. Game code: `ruben-aguirre/diamond-scholar` repo (branch `master`, public), cloned at `personal-projects/baseball-learning-game/diamond-scholar/`. Almost everything is in `src/screens/GameScreen.jsx` (2,771 lines).
-2. Sprite work-in-progress: `personal-projects/baseball-learning-game/working files/` — `batter-swing-spritesheet-behind-v3.png` is the keeper (behind view, pixel art, 5x2 = 10 frames). v1/v2 were side-profile tries.
+2. Sprite work-in-progress: `personal-projects/baseball-learning-game/working files/`. The live game currently uses `public/sprites/batter/swing-sheet.png` with a safe placeholder fallback.
 3. Community help post draft: `personal-projects/baseball-learning-game/clief-notes-help-post.md` — ready to post, not posted yet.
 
 **Since last handoff**
-1. Made the repo public. Scrubbed all personal details about the kids from the PRD (spelling struggle, homeschool, family makeup) in both the live file AND git history (force-pushed), then added PRD + status.md to the repo.
-2. Fixed CLAUDE.md: repo is `ruben-aguirre/diamond-scholar` (personal account, public), not `8signal/`.
-3. Wrote the Clief Notes help post — reframed to "my son and I want the fundamentals," repo + PRD links included.
-4. Generated batter sprites on Atlas Cloud (Nano Banana Pro Edit). Landed on behind-the-batter pixel-art swing (v3) matching the Baseball 9 camera angle Ruben referenced.
+1. Added and enabled all three practice modes. Each starts with one science question, awards 10 coins for a correct answer, runs six short reps, and saves a 0.1–0.3 skill gain for the chosen player.
+2. Added a phone-friendly picker with 30 fictional, MLB-city-inspired clubs plus a custom-team option.
+3. Verified the new-player and batting-practice flow in the browser at 390 × 844. Coins and the skill increase persisted, with no browser errors.
+4. Cleared the existing lint failures in `GameScreen.jsx`; both `npm run lint` and `npm run build` now pass.
 
 **Open decisions / waiting on**
-1. Sprite frame count: model keeps giving 10 frames in a grid, not 8 in a row. Decide if 10 is fine (it slices in code either way) or push for exactly 8.
-2. Whether to run the help post live in the Clief Notes Skool community.
+1. Son's playtest result for the now-complete six-pass loop.
+2. Whether to build the PRD's larger season/calendar layer after that playtest.
+3. Whether to run the help post live in the Clief Notes Skool community.
 
 **Watch out**
-1. Atlas keeps returning JPG/RGB with the transparency baked in as a gray checkerboard (no real alpha). v3 is RGB — the checkerboard is fake. Must run the background remover before it's usable in-game.
-2. The private source PRD at `baseball-learning-game/Diamond-Scholar-PRD-v2.1.md` still has the kids' personal details. Do NOT re-copy it over the public repo copy without scrubbing again.
-3. Getting exactly-8-frames-single-row out of these image models is unreliable. Don't burn generations chasing it — slice by grid in code instead.
+1. The private source PRD at `baseball-learning-game/Diamond-Scholar-PRD-v2.1.md` still has the kids' personal details. Do NOT re-copy it over the public repo copy without scrubbing again.
+2. `GameScreen.jsx` is still about 3,000 lines. The game works, but future changes there need careful browser checks.
 <!-- /HANDOFF -->
 
 ---
@@ -33,11 +33,11 @@ _Handoff updated: 2026-07-01_
 ## Pass progress (order locked in CLAUDE.md)
 
 1. Batter's-box view + DYK fix + study-break manual advance — **DONE** (Apr 2026)
-2. Interactive fielding (tap-a-base throw, visible fielders) — **mostly done**
-3. Interactive pitching (pitch type + location) — **done+** (pitch types move differently, named on screen, Fireball powerup)
-4. Lineup editor + team picker — **lineup editor done**; all-30 MLB-team picker not started
-5. Card Shop (Bronze/Silver/Gold/Diamond packs + open animation) — **not started**
-6. Practice modes (Batting / Fielding / Running) — **not started**
+2. Interactive fielding (tap-a-base throw, visible fielders) — **DONE**
+3. Interactive pitching (pitch type + location) — **DONE** (pitch types move differently, named on screen, Fireball powerup)
+4. Lineup editor + team picker — **DONE**
+5. Card Shop (Bronze/Silver/Gold/Diamond packs + open animation) — **DONE**
+6. Practice modes (Batting / Fielding / Running) — **DONE**
 
 Beyond the plan: STEAL mechanic with animated catcher throw; Exit → Save/Close dialog; batting average that only goes up (kid-friendly).
 

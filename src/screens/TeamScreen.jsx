@@ -179,6 +179,17 @@ export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
               Tap a player, then tap another to swap their positions.
             </p>
             <div className="mini-field">
+              <div className="field-warning-track" aria-hidden="true" />
+              <div className="field-foul-line field-foul-line-left" aria-hidden="true" />
+              <div className="field-foul-line field-foul-line-right" aria-hidden="true" />
+              <div className="field-infield-dirt" aria-hidden="true">
+                <div className="field-infield-grass" />
+              </div>
+              <span className="field-base field-base-second" aria-hidden="true" />
+              <span className="field-base field-base-third" aria-hidden="true" />
+              <span className="field-base field-base-first" aria-hidden="true" />
+              <span className="field-mound" aria-hidden="true" />
+              <span className="field-home-plate" aria-hidden="true" />
               {FIELD_SPOTS.map((spot) => {
                 const player = playerAt(spot.pos);
                 const selected = swapFrom === spot.pos;
