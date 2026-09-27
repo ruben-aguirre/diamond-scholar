@@ -1761,11 +1761,44 @@ function makePlaceholderSheet() {
   return c.toDataURL('image/png');
 }
 
+// Make the opponent from the exact same art as the player's batter, changing
+// only blue uniform pixels to red. Skin, bat, pants, shoes, and shading stay
+// untouched, so both batters have the same healthy pose and animation.
+function makeOpponentBatterSheet(source) {
+  if (typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = source.naturalWidth;
+  canvas.height = source.naturalHeight;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  context.drawImage(source, 0, 0);
+  const image = context.getImageData(0, 0, canvas.width, canvas.height);
+  const pixels = image.data;
+
+  for (let i = 0; i < pixels.length; i += 4) {
+    const red = pixels[i];
+    const green = pixels[i + 1];
+    const blue = pixels[i + 2];
+    const alpha = pixels[i + 3];
+    const isUniformBlue = alpha > 0 && blue > 55 && blue > red * 1.18 && blue > green * 1.08;
+    if (!isUniformBlue) continue;
+
+    // Rotate the blue palette into a warm red palette while retaining each
+    // pixel's original brightness, highlights, shadows, and dark outlines.
+    pixels[i] = blue;
+    pixels[i + 1] = Math.round(green * 0.42);
+    pixels[i + 2] = Math.round(red * 0.55);
+  }
+
+  context.putImageData(image, 0, 0);
+  return canvas;
+}
+
 // Preload the sprite sheet. Returns an object holding the loaded image, its
 // natural dimensions, and whether we fell back to placeholders.
 function loadBatterSprites() {
   const result = {
     sheet: null,                  // HTMLImageElement
+    opponentSheet: null,          // same sheet with blue uniform changed to red
     frameW: SPRITE_SOURCE_FRAME,  // source-rect width per frame (derived after load)
     frameH: SPRITE_SOURCE_FRAME,  // source-rect height per frame
     usingPlaceholders: false,
@@ -1775,6 +1808,7 @@ function loadBatterSprites() {
     const img = new Image();
     img.onload = () => {
       result.sheet = img;
+      result.opponentSheet = makeOpponentBatterSheet(img);
       // Derive per-frame width from the actual sheet dimensions so future
       // re-sizes by the artist Just Work as long as it's still 8 frames wide.
       result.frameW = img.naturalWidth / SPRITE_FRAME_COUNT;
@@ -1810,7 +1844,7 @@ function pickSwingFrameIdx(t) {
 
 // Draw the batter by slicing one frame out of the sprite sheet. Anchored at
 // the batter's feet so the character doesn't drift through the swing.
-function drawBatterSprite(ctx, sprites, batSwingT) {
+function drawBatterSprite(ctx, sprites, batSwingT, opponent = false) {
   if (!sprites || !sprites.sheet) return false;
   const idx = pickSwingFrameIdx(batSwingT);
   const sx = idx * sprites.frameW;
@@ -1828,7 +1862,8 @@ function drawBatterSprite(ctx, sprites, batSwingT) {
   const FEET_X_RATIO = 0.38;   // visible-feet horizontal position (0=left, 1=right)
   const dx = BATTER.x - SPRITE_DISPLAY_SIZE * FEET_X_RATIO;
   const dy = BATTER.y - SPRITE_DISPLAY_SIZE * FEET_Y_RATIO;
-  ctx.drawImage(sprites.sheet, sx, sy, sw, sh, dx, dy, SPRITE_DISPLAY_SIZE, SPRITE_DISPLAY_SIZE);
+  const sheet = opponent && sprites.opponentSheet ? sprites.opponentSheet : sprites.sheet;
+  ctx.drawImage(sheet, sx, sy, sw, sh, dx, dy, SPRITE_DISPLAY_SIZE, SPRITE_DISPLAY_SIZE);
   return true;
 }
 
@@ -2119,10 +2154,10 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       const defending = game.phase === GAME_PHASES.AI_BATTING;
       const sprites = batterSpritesRef.current;
       let drewWithSprites = false;
-      // On defense the batter at the plate is the OPPONENT — always the
-      // canvas-drawn batter in red, never your team's sprite.
-      if (!defending && sprites && sprites.ready && (!sprites.usingPlaceholders || showPlaceholders)) {
-        drewWithSprites = drawBatterSprite(ctx, sprites, batT);
+      // Both teams use the same healthy character and swing animation. The
+      // opponent version swaps only the blue uniform pixels to red.
+      if (sprites && sprites.ready && (!sprites.usingPlaceholders || showPlaceholders)) {
+        drewWithSprites = drawBatterSprite(ctx, sprites, batT, defending);
       }
       if (!drewWithSprites) {
         drawBatter(
