@@ -73,7 +73,7 @@ export const packPrices = {
   bronze: { cost: 100, sellPrice: 30 },
   silver: { cost: 250, sellPrice: 80 },
   gold: { cost: 500, sellPrice: 175 },
-  diamond: { cost: 1500, sellPrice: 500 },
+  diamond: { cost: 1050, tokenCost: 3, sellPrice: 500 },
 };
 
 // A player's overall rating — the average of their four stats, rounded to

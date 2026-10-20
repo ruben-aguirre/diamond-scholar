@@ -28,6 +28,51 @@ body {
   overflow-x: hidden;
 }
 
+.header-right { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
+.home-settings-button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #ffffff80;
+  border-radius: 12px;
+  background: #0003;
+  color: #fff;
+  font-size: 1.6rem;
+  cursor: pointer;
+}
+.home-settings-button:hover { background: #0005; }
+.home-settings-button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.home-game-length { display: block; margin-top: 3px; font-size: 0.78rem; font-weight: 600; }
+.settings-screen { min-height: 100vh; background: var(--bg); }
+.settings-card {
+  width: min(580px, calc(100% - 32px));
+  margin: 28px auto;
+  padding: 24px;
+  background: var(--card);
+  color: var(--text);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+.settings-card h2 { margin-bottom: 10px; }
+.settings-card p { line-height: 1.5; }
+.inning-options { border: none; margin: 24px 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.inning-options legend { margin-bottom: 10px; font-weight: 700; }
+.inning-option { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 16px 8px; border: 2px solid var(--text-light); border-radius: 12px; cursor: pointer; }
+.inning-option.selected { border-color: var(--green); box-shadow: 0 0 0 2px var(--green); }
+.inning-option input { width: 20px; height: 20px; accent-color: var(--green); }
+.inning-option strong { font-size: 1.2rem; }
+.inning-option span { font-size: 0.82rem; color: var(--text-light); }
+.settings-saved { font-weight: 700; }
+.settings-note { margin-top: 8px; font-size: 0.85rem; color: var(--text-light); }
+.inning-progress { margin: 0 0 8px; font-weight: 700; font-size: 0.9rem; }
+@media (max-width: 420px) {
+  .inning-options { grid-template-columns: 1fr; }
+  .inning-option { flex-direction: row; gap: 12px; padding: 14px; }
+  .inning-option span { margin-left: auto; }
+  .header-right { gap: 6px; }
+}
+
 /* Buttons */
 .btn {
   font-family: 'Fredoka', sans-serif;
@@ -1931,6 +1976,36 @@ body {
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
 }
 
+.diamond-bat-bar {
+  width: 100%;
+  max-width: 720px;
+  padding: 8px 12px;
+  text-align: center;
+}
+
+.diamond-bat-btn {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #79dfff;
+  border-radius: 10px;
+  background: #143f58;
+  color: #e2faff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.diamond-bat-btn.equipped {
+  background: #b4efff;
+  color: #10324b;
+  box-shadow: 0 0 12px #79dfff66;
+}
+
+.diamond-bat-btn:disabled { cursor: default; }
+.diamond-bat-btn:disabled:not(.equipped) { opacity: 0.6; }
+.diamond-bat-btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.diamond-bat-bar p { margin: 6px 0 0; font-size: 0.85rem; color: #d0e7f0; }
+
 /* Feedback body wrap (for the tap-to-continue explanation) */
 .feedback-body {
   flex: 1;
@@ -2078,6 +2153,15 @@ body {
 }
 
 /* ===== Card Shop ===== */
+.pack-payment-or { font-size: 0.85rem; font-weight: 700; color: var(--text-light); }
+.pack-card .btn-buy-tokens { background: #cab6f5; color: #30204c; }
+.shop-screen .screen-header { flex-wrap: wrap; }
+.shop-screen .coin-display { flex-wrap: wrap; justify-content: center; }
+.pack-choice-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+.pack-choice-buttons .btn { margin-top: 0; }
+.pack-choice-help { text-align: center; line-height: 1.4; color: var(--text-light); margin: 12px 0; }
+.shop-choice-notice { padding: 12px 16px; margin-bottom: 16px; border: 2px solid var(--green); border-radius: var(--radius); background: var(--card); color: var(--text); }
+
 .shop-content {
   padding: 16px;
   max-width: 720px;

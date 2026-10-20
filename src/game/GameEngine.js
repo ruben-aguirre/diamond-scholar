@@ -1,3 +1,5 @@
+import { getGameInnings } from './gameSettings.js';
+
 // Game state machine
 export const GAME_PHASES = {
   PRE_GAME: 'PRE_GAME',
@@ -15,6 +17,7 @@ export const GAME_PHASES = {
 export function createGameState(profile) {
   return {
     inning: 1,
+    totalInnings: getGameInnings(profile),
     isTopHalf: true,
     outs: 0,
     strikes: 0,
@@ -34,6 +37,7 @@ export function createGameState(profile) {
     // Fireball powerups: earned when your defense strikes a batter out, spent
     // on defense to force a guaranteed strikeout. Seeded from the saved profile.
     fireballs: profile.fireballs || 0,
+    diamondBatUses: profile.diamondBatUses || 0,
     // The CPU pitcher's fireballs — earned the same way, by striking YOU out.
     // Starts at zero every game; no strikeouts, no fireballs.
     cpuFireballs: 0,
@@ -160,16 +164,22 @@ export function pitchDurationMs(teamAvg, speedMul = 1) {
 // Swing type modifiers
 // - normal: baseline
 // - power: bigger payoff, more miss risk
-// - bunt: tiny window, always soft contact if made
+// - bunt: fixed 75% chance of a single, regardless of timing or batting skill
 // - half: safer (no swinging strike on close pitches), less power
 const SWING_PROFILES = {
   normal: { contactMul: 1.0, powerMul: 1.0, missMul: 1.0, label: 'Normal' },
   power:  { contactMul: 0.8, powerMul: 1.6, missMul: 1.4, label: 'Power' },
-  bunt:   { contactMul: 0.6, powerMul: 0.3, missMul: 1.2, label: 'Bunt' },
   half:   { contactMul: 1.1, powerMul: 0.6, missMul: 0.6, label: 'Half Swing' },
 };
 
 export function calculateSwingResult(timing, pitch, batter, swingType = 'normal') {
+  // Keep bunting forgiving: every attempt has the same chance to connect.
+  if (swingType === 'bunt') {
+    return Math.random() < 0.75
+      ? { type: 'single', description: 'Bunt single!', bases: 1 }
+      : { type: 'miss', description: 'Missed the bunt!' };
+  }
+
   // timing: 0 = perfect, 1 = worst
   const profile = SWING_PROFILES[swingType] || SWING_PROFILES.normal;
 
@@ -183,17 +193,6 @@ export function calculateSwingResult(timing, pitch, batter, swingType = 'normal'
   // Contact chance: floor of 0.4 so even bad batters aren't hopeless
   const rawContact = (0.45 + batter.batting / 14) * (1 - effectiveTiming * 0.6) * profile.contactMul;
   const contactChance = Math.max(0.4, Math.min(0.98, rawContact));
-
-  // Bunt: any contact becomes a bunt-single if well-timed, else a foul or miss
-  if (swingType === 'bunt') {
-    if (effectiveTiming > 0.4 || Math.random() > contactChance) {
-      return { type: 'miss', description: 'Missed the bunt!' };
-    }
-    if (effectiveTiming > 0.25) {
-      return { type: 'foul', description: 'Bunt foul.' };
-    }
-    return { type: 'single', description: 'Bunt single!', bases: 1 };
-  }
 
   // Only the truly awful swings whiff completely
   if (effectiveTiming > 0.92 * profile.missMul || Math.random() > contactChance) {
@@ -229,6 +228,29 @@ export function calculateSwingResult(timing, pitch, batter, swingType = 'normal'
     return { type: 'flyout', description: 'Fly ball... caught! Out!', isOut: true };
   }
   return { type: 'groundout', description: 'Grounder... thrown out!', isOut: true };
+}
+
+// Resolve the power-up before animation, scoring, or runner advancement.
+export function resolveBattingSwing(timing, pitch, batter, swingType, diamondBatUses, equipped) {
+  const result = calculateSwingResult(timing, pitch, batter, swingType);
+  const usedDiamondBat = equipped && diamondBatUses > 0;
+  if (usedDiamondBat) {
+    return {
+      result: result.type === 'miss' || result.type === 'foul'
+        ? result
+        : { type: 'homerun', description: 'DIAMOND BAT HOME RUN!', bases: 4 },
+      diamondBatUses: diamondBatUses - 1,
+      usedDiamondBat: true,
+    };
+  }
+  const earnedDiamondBat = result.type === 'homerun';
+  return {
+    result: earnedDiamondBat
+      ? { ...result, description: 'HOME RUN! Diamond Bat earned — 2 uses!' }
+      : result,
+    diamondBatUses: earnedDiamondBat ? 2 : diamondBatUses,
+    usedDiamondBat: false,
+  };
 }
 
 export function advanceRunners(bases, hitBases) {
@@ -339,6 +361,13 @@ export function simulateAIHalfInningSteps(playerTeamAvg) {
 
 export function checkMercyRule(playerScore, aiScore) {
   return Math.abs(playerScore - aiScore) >= 7;
+}
+
+export function getPostStudyPhase(game, correctCount) {
+  const lastInning = game.inning >= game.totalInnings;
+  if (lastInning && correctCount >= 4) return GAME_PHASES.BONUS_ROUND;
+  if (lastInning || checkMercyRule(game.playerScore, game.aiScore)) return GAME_PHASES.GAME_OVER;
+  return GAME_PHASES.BATTING;
 }
 
 export function getTeamAverage(roster) {

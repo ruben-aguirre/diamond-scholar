@@ -1,4 +1,9 @@
-export default function HomeScreen({ profile, onNavigate, onSwitchProfile }) {
+import { canClaimSeasonalPack } from '../game/seasons';
+import HalloweenDecorations from './HalloweenDecorations';
+import NightStadium from './NightStadium';
+import { getGameInnings } from '../game/gameSettings';
+
+export default function HomeScreen({ profile, onNavigate, onSwitchProfile, season }) {
   const menuItems = [
     { id: 'team', label: 'My Team', icon: '&#128101;', enabled: true, description: 'Set your lineup' },
     { id: 'batting-practice', label: 'Batting Practice', icon: '&#127951;', enabled: true, description: 'Time your swing' },
@@ -20,6 +25,9 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile }) {
           <span className="player-name">{profile.name}</span>
         </div>
         <div className="header-right">
+          <button className="home-settings-button" onClick={() => onNavigate('settings')} aria-label="Settings" title="Settings">
+            <span aria-hidden="true">⚙️</span>
+          </button>
           <div className="coin-display">
             <span className="coin-icon">&#x1FA99;</span>
             <span className="coin-amount">{profile.coins}</span>
@@ -30,14 +38,31 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile }) {
       </header>
 
       <div className="home-content">
+        {season?.id === 'halloween' && (
+          <>
+            <HalloweenDecorations />
+            <HalloweenDecorations garland />
+          </>
+        )}
+        {(canClaimSeasonalPack(profile, season) || profile.seasonalPackReveal) && (
+          <section className="holiday-gift">
+            <span className="holiday-gift-icon" aria-hidden="true">🎁</span>
+            <div>
+              <strong>{profile.seasonalPackReveal ? 'Your Gold Pack is waiting!' : `Happy ${season.name}!`}</strong>
+              <p>A free Gold Pack for your team. No coins needed!</p>
+            </div>
+            <button className="btn" onClick={() => onNavigate('shop')}>Open your gift</button>
+          </section>
+        )}
         <section className="home-hero">
+          {season?.id === 'halloween' && <NightStadium />}
           <div className="home-hero-shade" />
           <div className="home-hero-copy">
             <span className="home-hero-kicker">&#9918; TODAY&apos;S GAME</span>
             <h2>Take the field,<br />{profile.name}!</h2>
             <p>Crush pitches, make great plays, and earn rewards with every right answer.</p>
             <button className="home-play-button" onClick={() => onNavigate('game')}>
-              <span>PLAY BALL!</span>
+              <span>PLAY BALL!<small className="home-game-length">{getGameInnings(profile)} {getGameInnings(profile) === 1 ? 'inning' : 'innings'}</small></span>
               <span className="home-play-arrow">&#9654;</span>
             </button>
           </div>
@@ -53,7 +78,7 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile }) {
             <span className="home-section-kicker">YOUR CLUBHOUSE</span>
             <h2>What do you want to do?</h2>
           </div>
-          <span className="home-section-ball" aria-hidden="true">&#9918;</span>
+          <span className="home-section-ball" aria-hidden="true">{season?.id === 'halloween' ? '🎃' : '⚾'}</span>
         </div>
 
         <div className="menu-grid">

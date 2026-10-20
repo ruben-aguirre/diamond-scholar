@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { canClaimSeasonalPack, claimSeasonalPack } from '../game/seasons';
+import { MAX_TEAM, getPendingPack, purchasePack, resolvePackChoice } from '../game/cardPacks';
 import {
   packPrices,
-  createPlayerFromPool,
   playerAverage,
 } from '../data/players';
-
-const MAX_TEAM = 12; // most players you can keep on the team
 
 // The four packs, cheap-to-fancy so kids read them left to right.
 const PACKS = [
@@ -22,63 +21,75 @@ const TIER_COLOR = {
   diamond: '#4fc3f7',
 };
 
-export default function ShopScreen({ profile, onUpdateProfile, onBack }) {
-  // reveal: the card just pulled ({ player, tier }); null when no pack is open.
-  const [reveal, setReveal] = useState(null);
-  const [flipped, setFlipped] = useState(false);
+export default function ShopScreen({ profile, onUpdateProfile, onBack, season }) {
+  // Paid and free cards survive refreshing until the player chooses.
+  const [reveal, setReveal] = useState(() => getPendingPack(profile));
+  const [flipped, setFlipped] = useState(Boolean(getPendingPack(profile)));
+  const openingGift = useRef(false);
+  const settlingPack = useRef(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [choosingReplacement, setChoosingReplacement] = useState(false);
   // swap: when the team is full, which old player is selected to maybe replace.
   const [swapPick, setSwapPick] = useState(null);
 
   const teamFull = profile.roster.length >= MAX_TEAM;
 
-  function buyPack(pack) {
-    const cost = packPrices[pack.tier].cost;
-    if (profile.coins < cost) {
-      setError(`Not enough coins for the ${pack.label}. You need ${cost}.`);
-      return;
-    }
+  function openSeasonalPack() {
+    if (openingGift.current || reveal) return;
+    const gift = claimSeasonalPack(profile, season);
+    if (!gift) return;
+    openingGift.current = true;
+    settlingPack.current = false;
+    onUpdateProfile(gift);
     setError('');
-    // Spend the coins, but DON'T add the player yet — the player only joins
-    // when you tap "Add to Team" (or swap them in when the team is full).
-    const ownedNames = profile.roster.map((p) => p.name);
-    const newPlayer = createPlayerFromPool(pack.tier, ownedNames);
-    onUpdateProfile({ coins: profile.coins - cost });
+    setNotice('');
     setFlipped(false);
     setSwapPick(null);
-    setReveal({ player: newPlayer, tier: pack.tier });
+    setReveal(gift.seasonalPackReveal);
     setTimeout(() => setFlipped(true), 400);
   }
 
-  // Room on the team → just add the new player.
-  function addToTeam() {
-    onUpdateProfile({ roster: [...profile.roster, reveal.player] });
-    closeReveal();
+  function buyPack(pack, currency = 'coins') {
+    if (openingGift.current || reveal) return;
+    const cost = currency === 'tokens' ? packPrices[pack.tier].tokenCost : packPrices[pack.tier].cost;
+    if ((profile[currency] || 0) < cost) {
+      setError(`Not enough ${currency} for the ${pack.label}. You need ${cost}.`);
+      return;
+    }
+    const purchase = purchasePack(profile, pack.tier, currency);
+    if (!purchase) return;
+    openingGift.current = true;
+    settlingPack.current = false;
+    setError('');
+    setNotice('');
+    onUpdateProfile(purchase);
+    setFlipped(false);
+    setSwapPick(null);
+    setReveal(purchase.shopPackReveal);
+    setTimeout(() => setFlipped(true), 400);
   }
 
-  // Team full → replace the picked old player with the new card.
-  function getRidOf(oldPlayer) {
-    const newRoster = profile.roster.map((p) =>
-      p.id === oldPlayer.id ? reveal.player : p
-    );
-    // If the dropped player was in the batting lineup, put the new player in
-    // that same spot so the lineup stays full.
-    const newLineup = (profile.lineup || []).map((id) =>
-      id === oldPlayer.id ? reveal.player.id : id
-    );
-    onUpdateProfile({ roster: newRoster, lineup: newLineup });
-    closeReveal();
-  }
-
-  // Team full → keep everyone, throw the new card away (coins already spent).
-  function keepTeam() {
-    closeReveal();
-  }
-
-  function closeReveal() {
+  function chooseCard(keep) {
+    if (!reveal || settlingPack.current || !flipped) return;
+    if (keep && teamFull && !choosingReplacement) {
+      setChoosingReplacement(true);
+      return;
+    }
+    const updates = resolvePackChoice(profile, reveal.player.id, keep, swapPick);
+    if (!updates) return;
+    settlingPack.current = true;
+    onUpdateProfile(updates);
+    setNotice(keep
+      ? `${reveal.player.name} joined your team!`
+      : reveal.cost > 0
+        ? `${reveal.cost} ${reveal.currency || 'coins'} returned. You didn't keep the player.`
+        : 'You didn’t keep the player. Your free pack has been used.');
+    openingGift.current = false;
     setReveal(null);
     setFlipped(false);
     setSwapPick(null);
+    setChoosingReplacement(false);
   }
 
   return (
@@ -89,10 +100,19 @@ export default function ShopScreen({ profile, onUpdateProfile, onBack }) {
         <div className="coin-display">
           <span className="coin-icon">&#x1FA99;</span>
           <span className="coin-amount">{profile.coins}</span>
+          <span className="coin-icon" aria-label="Tokens">🎟️</span>
+          <span className="coin-amount">{profile.tokens || 0}</span>
         </div>
       </header>
 
       <div className="shop-content">
+        {canClaimSeasonalPack(profile, season) && (
+          <section className="holiday-gift">
+            <span className="holiday-gift-icon" aria-hidden="true">🎁</span>
+            <div><strong>Your {season.name} gift</strong><p>One free Gold Pack, just for you!</p></div>
+            <button className="btn" onClick={openSeasonalPack}>Open free Gold Pack</button>
+          </section>
+        )}
         <p className="section-help">
           Buy a pack to get a new player for your team. Fancier packs cost more coins
           but give better players!
@@ -102,10 +122,12 @@ export default function ShopScreen({ profile, onUpdateProfile, onBack }) {
         </p>
 
         {error && <p className="shop-error">{error}</p>}
+        {notice && <p className="shop-choice-notice" role="status">{notice}</p>}
 
         <div className="pack-grid">
           {PACKS.map((pack) => {
             const cost = packPrices[pack.tier].cost;
+            const tokenCost = packPrices[pack.tier].tokenCost;
             const canAfford = profile.coins >= cost;
             return (
               <div key={pack.tier} className="pack-card" style={{ borderColor: pack.color }}>
@@ -119,8 +141,20 @@ export default function ShopScreen({ profile, onUpdateProfile, onBack }) {
                   onClick={() => buyPack(pack)}
                   disabled={!canAfford}
                 >
-                  <span className="coin-icon">&#x1FA99;</span> {cost}
+                  <span className="coin-icon" aria-hidden="true">&#x1FA99;</span> {cost.toLocaleString('en-US')} coins
                 </button>
+                {tokenCost != null && (
+                  <>
+                    <span className="pack-payment-or">or</span>
+                    <button
+                      className="btn btn-buy btn-buy-tokens"
+                      onClick={() => buyPack(pack, 'tokens')}
+                      disabled={(profile.tokens || 0) < tokenCost}
+                    >
+                      <span aria-hidden="true">🎟️</span> {tokenCost} tokens
+                    </button>
+                  </>
+                )}
               </div>
             );
           })}
@@ -130,7 +164,7 @@ export default function ShopScreen({ profile, onUpdateProfile, onBack }) {
       {reveal && (
         <div className="reveal-backdrop">
           <div className="reveal-panel" onClick={(e) => e.stopPropagation()}>
-            <span className="reveal-title">You got a new player!</span>
+            <span className="reveal-title">Keep this player?</span>
             <div className={`reveal-card ${flipped ? 'flipped' : ''}`}>
               <div className="reveal-card-inner">
                 <div className="reveal-card-back" style={{ backgroundColor: TIER_COLOR[reveal.tier] }}>
@@ -152,16 +186,10 @@ export default function ShopScreen({ profile, onUpdateProfile, onBack }) {
               </div>
             </div>
 
-            {!teamFull ? (
-              // Room on the team — simple add.
-              <button className="btn btn-primary" onClick={addToTeam}>
-                Add to Team
-              </button>
-            ) : (
-              // Team is full — pick someone to get rid of, or keep your team.
+            {choosingReplacement && (
               <div className="swap-area">
                 <p className="swap-help">
-                  Your team is full. Pick a player to get rid of, or keep your team.
+                  Your team is full. Choose a teammate to replace with {reveal.player.name}.
                 </p>
                 <div className="swap-list">
                   {profile.roster.map((p) => (
@@ -175,22 +203,17 @@ export default function ShopScreen({ profile, onUpdateProfile, onBack }) {
                     </button>
                   ))}
                 </div>
-                <div className="swap-buttons">
-                  <button className="btn btn-secondary" onClick={keepTeam}>
-                    Keep My Team
-                  </button>
-                  <button
-                    className="btn btn-danger"
-                    disabled={!swapPick}
-                    onClick={() =>
-                      getRidOf(profile.roster.find((p) => p.id === swapPick))
-                    }
-                  >
-                    Get Rid Of
-                  </button>
-                </div>
               </div>
             )}
+            <p className="pack-choice-help">
+              {reveal.cost > 0
+                ? `Don't Keep returns all ${reveal.cost} ${reveal.currency || 'coins'}.`
+                : 'This pack was free. No coins were spent.'}
+            </p>
+            <div className="pack-choice-buttons">
+              <button className="btn btn-primary" disabled={!flipped || (choosingReplacement && !swapPick)} onClick={() => chooseCard(true)}>Keep</button>
+              <button className="btn btn-secondary" disabled={!flipped} onClick={() => chooseCard(false)}>Don’t Keep</button>
+            </div>
           </div>
         </div>
       )}

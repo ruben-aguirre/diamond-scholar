@@ -2,7 +2,48 @@
 
 **Current state:** All six agreed build passes are now playable. The game has batting, pitching, fielding, lineup management, a 30-club picker, animated card packs, and short Batting / Fielding / Running practice modes with a science entry question, coin rewards, and saved skill growth. Production build and lint both pass.
 
-**Next move:** Put the full loop in front of Ruben's son: create a fresh profile, play one game, open a pack, and try each practice mode. Log only the places where he gets confused, bored, or stuck before adding season features.
+**Next move:** Refresh https://diamond-scholar.vercel.app and check the pitcher on the mound: right-hand glove, left-hand ball, and an empty hand after throwing. Continue Diamond Pack payment/refund and game-length playtests.
+
+## Pitcher on the mound — 2026-10-08
+
+- Second positioning pass from screenshot: moved the pitcher's cleats 10 canvas pixels toward the batter and shortened the leg geometry from 30 to 20 drawing pixels. Kept the 78% overall scale; release point follows the updated hand. Published `dpl_DiWM7aFU9wULh9mMKBbAqkP96M9b`; live build verified, lint/build pass.
+- Playtest size correction: pitcher scaled to 78%, about one head shorter, anchored at his cleats. Pitch release coordinates follow the scaled hand. Published `dpl_VfM78gKD6SF9Xw91rzpKhgJY1FFf`; live build verified, lint/build pass.
+- Pitcher now draws over the painted stadium as well as the fallback field, with feet on the mound, a small glove on his right hand (viewer left), and a ball in his left hand. Opponent jersey is red; the player's defensive pitcher wears the team color.
+- Throwing arm follows through over 260ms. The held ball disappears at pitch release; the airborne ball begins at that exact hand position. It stays out of his hand during contact/results and returns when ready for the next pitch. Applies to batting, defense, and Fireballs.
+- Published `dpl_D3jGEcUzMm5e7wDPPupLfCdvmH5R`; live asset verified. All 33 tests, lint, and build pass. Visual playtest remains with Ruben and his son. Changes remain uncommitted locally.
+
+## Diamond Pack payments — 2026-10-08
+
+- Diamond Packs cost 1,050 Scholar Coins or 3 tokens, with separate buttons and balances visible in Card Shop. Each button checks only its own balance. Other packs retain coin-only prices.
+- Pending packs save their price and payment type. Don't Keep returns coins or tokens as paid; older pending purchases without a currency field still refund their original coin price.
+- Published `dpl_734GEKym4yrNUXKVYWHkVsj8LL3d`; live price/buttons verified. All 29 tests, lint, and build pass. Changes remain uncommitted locally.
+
+## Card choices — 2026-10-08
+
+- Card Shop now offers Keep and Don't Keep for every revealed card. Don't Keep refunds the full pack price and leaves the roster alone. Keep adds the player or asks for a replacement when the team has 12 players.
+- Paid cards and their original cost are saved until resolved, so refresh preserves the pending choice. Purchase/choice guards prevent duplicate refunds or duplicate additions. Free holiday cards refund zero and remain claimed for the season.
+- Published `dpl_7hPYV2L3iq4HFb4a9fFejTyZcrvy` and verified live scripts. All 24 tests, lint, and build pass. Changes remain uncommitted locally.
+
+## Game length — 2026-10-08
+
+- Added a home-page gear button and Settings screen with 1, 3, or 9 innings. Saves immediately per profile; existing profiles default to 3. Play Ball and both scoreboards show the chosen length, which is fixed when a game starts.
+- End-of-game and bonus-round checks use the selected length, so a 9-inning game no longer stops at inning 3. The existing 7-run mercy rule remains and is explained in Settings.
+- Published `dpl_2Z32KPA6ggxQCEGXowzpD8juYzBB` to the live Vercel game and verified its script. Eighteen tests, lint, and build pass. Local changes remain uncommitted.
+
+## Holiday update — 2026-10-08
+
+- Halloween night games: home stadium and gameplay background now have a dark sky, stars, moon, bright floodlight banks and beams. Background is cached; the ball, players and scoreboard keep normal brightness. Halloween victories launch a short orange/purple/green fireworks display behind the results, with a still version for reduced motion. Losses/ties and other seasons have no fireworks. Published `dpl_7x12jnERNLAUiTpWMBu5NSopkFyU`; live assets verified, lint/build and rendered-component checks passed. Visual playtest remains with Ruben and his son.
+- Follow-up from Ruben's home-screen screenshot: added large SVG jack-o'-lanterns and wrapped candy in the desktop gutters, a pumpkin/candy garland above the stadium that remains visible on phones, and an orange stadium border. Decorative art cannot intercept clicks. Published deployment `dpl_7s79joN9rbKUXMKzeEqBtVY261pB`; live decoration bundle verified, lint/build pass.
+- Halloween runs October 1–31 using the player's local calendar: dark gray backgrounds, a dimmer field, pumpkins, candy, and orange/purple lights. Christmas runs December 1–31: white backgrounds, colorful lights, trees, and presents. The calendar is checked every minute while the app is open.
+- Each profile can open one free Gold Pack per holiday per year. Home and Card Shop show the gift. Claim history and the unopened card are saved together; refreshing preserves the card and cannot claim another pack. A full team uses the usual replace/keep-team choices. Unfinished gifts can be completed after the season ends.
+- Published deployment `dpl_6bRf2VGPmHF2ZbJthpQyWq7z9MYe` to https://diamond-scholar.vercel.app; READY and live scripts/styles verified. Fourteen engine/season tests, lint, and production build pass. Visual playtest remains with Ruben and his son. Changes remain uncommitted locally.
+
+## Playtest changes — 2026-10-08
+
+- Ruben reported bunts never connect. Bunts now have a fixed 75% chance of a single, independent of timing and batting skill.
+- Added Diamond Bat: a regular home run fills the counter to two uses. Equip it before the pitch; each swing consumes one use, including misses and fouls. Fair contact becomes a home run, with the existing over-the-fence animation and scoring; foul balls stay foul. Boosted home runs do not refill the bat.
+- Unused Diamond Bat uses persist through Save and completed games, like Fireballs. Old profiles start with zero.
+- Published to https://diamond-scholar.vercel.app on 2026-10-08 after Ruben reported the bat was missing in the Vercel game. Deployment `dpl_7RcVy3B7M3b9PW7Npy6yN7Xzbhc8` is READY; the live script contains Diamond Bat and the foul-ball exception. Eight engine tests, lint, and production build pass. Changes remain uncommitted locally.
 
 <!-- HANDOFF: refreshed by /handoff -->
 _Handoff updated: 2026-09-26_

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import ProfileSetup from './screens/ProfileSetup';
 import ProfileSelect from './screens/ProfileSelect';
@@ -8,10 +8,22 @@ import ShopScreen from './screens/ShopScreen';
 import DraftScreen from './screens/DraftScreen';
 import GameScreen from './screens/GameScreen';
 import PracticeScreen from './screens/PracticeScreen';
+import SeasonalFrame from './screens/SeasonalFrame';
+import SettingsScreen from './screens/SettingsScreen';
+import { getSeason } from './game/seasons';
 import { isSecretName } from './data/players';
 import './App.css';
+import './seasonal.css';
 
 function App() {
+  const [season, setSeason] = useState(() => getSeason());
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const next = getSeason();
+      setSeason((current) => current?.key === next?.key ? current : next);
+    }, 60000);
+    return () => window.clearInterval(timer);
+  }, []);
   const [profiles, setProfiles] = useLocalStorage('diamond-scholar-profiles', []);
   const [activeProfileId, setActiveProfileId] = useLocalStorage('diamond-scholar-active', null);
   const [screen, setScreen] = useState('auto'); // auto, setup, select, home, team, game
@@ -82,12 +94,13 @@ function App() {
   // Save-and-exit: keep the batting stats, any Fireballs, AND the coins earned
   // from study breaks so far, but don't count this as a finished game (no
   // win/loss, no games-played bump).
-  function handleSaveAndExit(battingStats, fireballs, coinsEarned, tokensEarned) {
+  function handleSaveAndExit(battingStats, fireballs, coinsEarned, tokensEarned, diamondBatUses) {
     updateProfile({
       coins: activeProfile.coins + (coinsEarned || 0),
       tokens: (activeProfile.tokens || 0) + (tokensEarned || 0),
       roster: applyBattingStats(activeProfile.roster, battingStats),
       fireballs: fireballs != null ? fireballs : (activeProfile.fireballs || 0),
+      diamondBatUses: diamondBatUses ?? activeProfile.diamondBatUses ?? 0,
     });
     setScreen('team');
   }
@@ -100,6 +113,7 @@ function App() {
       tokens: (activeProfile.tokens || 0) + (results.tokensEarned || 0),
       roster: updatedRoster,
       fireballs: results.fireballs != null ? results.fireballs : (activeProfile.fireballs || 0),
+      diamondBatUses: results.diamondBatUses ?? activeProfile.diamondBatUses ?? 0,
       stats: {
         ...activeProfile.stats,
         gamesPlayed: activeProfile.stats.gamesPlayed + 1,
@@ -178,6 +192,7 @@ function App() {
   // Re-read active profile after updates
   const freshProfile = healLineup(profiles.find((p) => p.id === activeProfileId) || activeProfile);
 
+  function renderScreen() {
   switch (currentScreen) {
     case 'setup':
       return <ProfileSetup onComplete={handleProfileCreated} />;
@@ -192,6 +207,7 @@ function App() {
     case 'home':
       return (
         <HomeScreen
+          season={season}
           profile={freshProfile}
           onNavigate={handleNavigate}
           onSwitchProfile={handleSwitchProfile}
@@ -199,8 +215,10 @@ function App() {
       );
     case 'team':
       return <TeamScreen profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
+    case 'settings':
+      return <SettingsScreen profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'shop':
-      return <ShopScreen profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
+      return <ShopScreen season={season} profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'draft':
       return <DraftScreen profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'batting-practice':
@@ -212,14 +230,18 @@ function App() {
     case 'game':
       return (
         <GameScreen
+          season={season}
           profile={freshProfile}
           onGameEnd={handleGameEnd}
           onSaveAndExit={handleSaveAndExit}
         />
       );
     default:
-      return <HomeScreen profile={freshProfile} onNavigate={handleNavigate} onSwitchProfile={handleSwitchProfile} />;
+      return <HomeScreen season={season} profile={freshProfile} onNavigate={handleNavigate} onSwitchProfile={handleSwitchProfile} />;
   }
+  }
+
+  return <SeasonalFrame season={season}>{renderScreen()}</SeasonalFrame>;
 }
 
 export default App;

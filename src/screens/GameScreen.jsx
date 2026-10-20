@@ -2,9 +2,10 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   GAME_PHASES,
   createGameState,
+  getPostStudyPhase,
   generatePitch,
   pitchDurationMs,
-  calculateSwingResult,
+  resolveBattingSwing,
   advanceRunners,
   checkMercyRule,
   getTeamAverage,
@@ -13,6 +14,9 @@ import {
 } from '../game/GameEngine';
 import StudyBreak from './StudyBreak';
 import DidYouKnowCard from './DidYouKnowCard';
+import WinFireworks from './WinFireworks';
+import { drawNightAtmosphere, drawNightStadium } from '../game/nightStadium';
+import { getPitcherPose } from '../game/pitcherPose';
 import scienceQuestions from '../data/questions/science-4th.json';
 
 // Canvas internal drawing size
@@ -24,6 +28,13 @@ const HIT_POINTS = { single: 10, double: 20, triple: 30, homerun: 60 };
 // Camera sits behind home plate looking toward center field.
 // Depth axis: far (small, high on screen) -> near (big, low on screen)
 const MOUND = { x: 400, y: 270 };        // pitcher's mound, centered in middle distance
+const PITCHER_SCALE = 0.78; // About one head shorter, anchored at his cleats.
+const PITCHER_DRAW_FEET_Y = MOUND.y + 12; // Cleats after shortening the legs.
+const PITCHER_FEET_Y = MOUND.y + 32; // Ten pixels closer to the batter.
+const PITCH_RELEASE = {
+  x: MOUND.x + 17 * PITCHER_SCALE,
+  y: PITCHER_FEET_Y + (MOUND.y - 37 - PITCHER_DRAW_FEET_Y) * PITCHER_SCALE,
+};
 const PLATE = { x: 400, y: 475 };        // home plate, bottom center foreground
 const BATTER = { x: 250, y: 460 };       // right-handed batter, LEFT batter's box; feet centered inside the chalk box (x∈[160,340], y∈[430,490])
 const ZONE = { cx: 400, cy: 405, w: 70, h: 48 }; // strike zone — shorter box, lifted above home plate
@@ -354,7 +365,7 @@ function drawJumbotron(ctx, game, teamNameShort) {
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 13px Fredoka, sans-serif';
   const halfArrow = game.isTopHalf ? '▲' : '▼';  // ▲ top / ▼ bottom
-  ctx.fillText(`${halfArrow} INNING ${game.inning} / 3`, CW / 2, py + 50);
+  ctx.fillText(`${halfArrow} INNING ${game.inning} / ${game.totalInnings}`, CW / 2, py + 50);
 
   // ---- BOTTOM-LEFT: B / S / O count as LED dot rows ----
   const countX = px + pad;
@@ -448,6 +459,9 @@ function drawImageScoreboard(ctx, game, teamNameShort) {
   ctx.fillStyle = green;
   ctx.font = 'bold 20px Fredoka, sans-serif';
   ctx.fillText(`${game.playerScore} - ${game.aiScore}`, cx, sy + 30);
+  ctx.font = 'bold 9px Fredoka, sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(`${game.isTopHalf ? '▲' : '▼'} ${game.inning} / ${game.totalInnings}`, sx + 33, sy + 47);
 
   // ---- Outs (bottom-left): label + 3 LED dots ----
   const outsY = sy + sh - 18;
@@ -604,39 +618,41 @@ function drawStrikeZone(ctx) {
   ctx.restore();
 }
 
-function drawPitcher(ctx) {
+function drawPitcher(ctx, { jersey = '#c0392b', hasBall, throwProgress }) {
+  ctx.save();
+  ctx.translate(MOUND.x, PITCHER_FEET_Y);
+  ctx.scale(PITCHER_SCALE, PITCHER_SCALE);
+  ctx.translate(-MOUND.x, -PITCHER_DRAW_FEET_Y);
   // Catcher-cam view: pitcher is SMALL (far away on the mound), facing the camera
   // head-on. We see his front, not his profile. Mid-windup pose: glove up,
   // throwing arm back.
-  // Lifted 14px above MOUND.y so his feet land ON the dirt mound, not buried in it.
+  // Drawing coordinates; the transform above places his cleats on the mound.
   const x = MOUND.x;
   const y = MOUND.y - 14;
-  const jersey = '#c0392b';              // opponent jersey (red - contrasts with our team colors)
   const jerseyDark = darken(jersey, 0.35);
   const pants = '#F5F1E8';
   const skin = '#F2C8A0';
 
-  // Legs (planted stance, both facing camera) — longer legs so the pitcher
-  // looks like a real person and not a torso-on-cleats.
+  // Shorter legs, planted stance, both facing the camera.
   // Right leg (from viewer's perspective)
   outlinedPath(ctx, (c) => {
     c.moveTo(x + 1, y + 4);
     c.lineTo(x + 9, y + 4);
-    c.lineTo(x + 11, y + 34);
-    c.lineTo(x + 3, y + 34);
+    c.lineTo(x + 11, y + 24);
+    c.lineTo(x + 3, y + 24);
     c.closePath();
   }, pants);
-  outlinedRect(ctx, x + 1, y + 32, 12, 4, INK);
+  outlinedRect(ctx, x + 1, y + 22, 12, 4, INK);
 
   // Left leg
   outlinedPath(ctx, (c) => {
     c.moveTo(x - 9, y + 4);
     c.lineTo(x - 1, y + 4);
-    c.lineTo(x - 3, y + 34);
-    c.lineTo(x - 11, y + 34);
+    c.lineTo(x - 3, y + 24);
+    c.lineTo(x - 11, y + 24);
     c.closePath();
   }, pants);
-  outlinedRect(ctx, x - 13, y + 32, 12, 4, INK);
+  outlinedRect(ctx, x - 13, y + 22, 12, 4, INK);
 
   // Belt
   outlinedRect(ctx, x - 11, y + 2, 22, 3, INK);
@@ -661,11 +677,16 @@ function drawPitcher(ctx) {
     c.lineTo(x - 10, y - 2);
     c.closePath();
   }, jersey);
-  // Glove (in front of torso, center)
+  // His right hand is on the viewer's left; it wears the small glove.
   outlinedCircle(ctx, x - 4, y - 4, 5, '#6b4a2b');
   outlinedCircle(ctx, x - 4, y - 4, 2, '#4e3420');
 
   // Throwing arm (cocked back - up and to the right from camera view)
+  // Rotate forward as the ball leaves his left hand.
+  ctx.save();
+  ctx.translate(x + 10, y - 13);
+  ctx.rotate(throwProgress * 1.45);
+  ctx.translate(-(x + 10), -(y - 13));
   outlinedPath(ctx, (c) => {
     c.moveTo(x + 8, y - 14);
     c.lineTo(x + 14, y - 12);
@@ -675,6 +696,8 @@ function drawPitcher(ctx) {
   }, jersey);
   // Throwing hand (small circle - holding ball)
   outlinedCircle(ctx, x + 17, y - 23, 3, skin);
+  if (hasBall) drawBall(ctx, x + 17, y - 23, 3.2);
+  ctx.restore();
 
   // Head (facing camera)
   outlinedCircle(ctx, x, y - 22, 8, skin);
@@ -695,6 +718,7 @@ function drawPitcher(ctx) {
   ctx.arc(x - 3, y - 20, 1.3, 0, Math.PI * 2);
   ctx.arc(x + 3, y - 20, 1.3, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
 }
 
 // Generic fielder — same proportions as the pitcher but in a "ready" stance
@@ -1504,8 +1528,8 @@ function computeBallAt(pitch, t) {
   // Catcher cam: ball starts tiny at pitcher's release point (far away) and
   // grows dramatically as it approaches the camera. This is the key depth cue.
   const land = computeLanding(pitch);
-  const sx = MOUND.x + 17;   // pitcher's throwing hand (cocked back)
-  const sy = MOUND.y - 23;
+  const sx = PITCH_RELEASE.x;
+  const sy = PITCH_RELEASE.y;
 
   // Changeup deception: the ball LOOKS fast out of the hand, then slows down
   // before the plate. We ease the visual progress (fast early, slow late) with
@@ -1869,9 +1893,11 @@ function drawBatterSprite(ctx, sprites, batSwingT, opponent = false) {
 
 // ---- Component ----
 
-export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
+export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season }) {
+  const halloween = season?.id === 'halloween';
   const [game, setGame] = useState(() => createGameState(profile));
   const [swingType, setSwingType] = useState('normal');
+  const [diamondBatEquipped, setDiamondBatEquipped] = useState(false);
   const [swingResult, setSwingResult] = useState(null);
   const [didYouKnow, setDidYouKnow] = useState(null);
   const [studyQuestions, setStudyQuestions] = useState(null);
@@ -1896,6 +1922,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   const rafRef = useRef(null);
   const batterSpritesRef = useRef(null);  // populated by loadBatterSprites()
   const fieldImageRef = useRef(null);     // painted stadium background; null until loaded
+  const nightFieldRef = useRef(null);
 
   // Per-game hit points by player: { [playerId]: points }. A hit adds points
   // (single 10, double 20, triple 30, HR 60); outs add nothing, so a player's
@@ -1929,7 +1956,15 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
     // Preload the painted stadium background. Stays null on error so the render
     // loop falls back to the original code-drawn sky/outfield/jumbotron.
     const field = new Image();
-    field.onload = () => { if (!cancelled) fieldImageRef.current = field; };
+    field.onload = () => {
+      if (cancelled) return;
+      fieldImageRef.current = field;
+      const nightField = document.createElement('canvas');
+      nightField.width = CW;
+      nightField.height = CH;
+      drawNightStadium(nightField.getContext('2d'), field, CW, CH);
+      nightFieldRef.current = nightField;
+    };
     field.src = FIELD_IMAGE_PATH;
     return () => { cancelled = true; };
   }, []);
@@ -1957,21 +1992,18 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       // still draws in code so gameplay positions stay aligned). Otherwise fall
       // back to the original all-code background.
       if (fieldImageRef.current) {
-        ctx.drawImage(fieldImageRef.current, 0, 0, CW, CH);
+        ctx.drawImage(halloween && nightFieldRef.current ? nightFieldRef.current : fieldImageRef.current, 0, 0, CW, CH);
         // Live game info on the image's dark jumbotron screen
         drawImageScoreboard(ctx, game, profile.teamName);
       } else {
         drawSky(ctx);
         drawOutfield(ctx);
+        if (halloween) drawNightAtmosphere(ctx, CW, CH);
         drawJumbotron(ctx, game, profile.teamName);
       }
-      // 3-4. Code-drawn field furniture (pitcher, middle infielders, infield
-      // dirt/foul-lines/batter's-box/home-plate). The painted stadium image
-      // already contains ALL of this, so we only draw it as a fallback when the
-      // image hasn't loaded — otherwise it just clutters the background.
+      // The painted stadium supplies the field furniture. Draw the fallback
+      // field first, then the live pitcher on top of either background.
       if (!fieldImageRef.current) {
-        // Pitcher on the mound (mid-distance)
-        drawPitcher(ctx, profile.teamColor?.primary);
         // Middle infielders — shortstop (left) and second baseman (right).
         const ssPos = computeFielderPos('ss', fielderChaseRef.current, Date.now());
         const sbPos = computeFielderPos('2b', fielderChaseRef.current, Date.now());
@@ -1980,6 +2012,17 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         // Infield (dirt, foul lines, batter's box, home plate)
         drawInfield(ctx);
       }
+      const pitcherPose = getPitcherPose({
+        ready: game.phase === GAME_PHASES.BATTING
+          || (game.phase === GAME_PHASES.AI_BATTING && game.outs < 3),
+        pitch: pitchRef.current,
+        hitBall: hitBallRef.current,
+        now: Date.now(),
+      });
+      drawPitcher(ctx, {
+        ...pitcherPose,
+        jersey: game.isTopHalf ? '#c0392b' : (profile.teamColor?.primary || '#2456a8'),
+      });
       // Clear a finished fielder-chase regardless (harmless when fielders aren't drawn).
       if (fielderChaseRef.current && Date.now() >= fielderChaseRef.current.returnEnd) {
         fielderChaseRef.current = null;
@@ -2205,7 +2248,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
     // any displayed value changes so the scoreboard stays in sync.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    game.phase, game.bases, profile.teamColor,
+    game.phase, game.bases, profile.teamColor, halloween,
     game.playerScore, game.aiScore, game.inning, game.isTopHalf,
     game.balls, game.strikes, game.outs, game.fireballs,
   ]);
@@ -2280,7 +2323,12 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
     p.resolved = true;
     pitchRef.current = null;
 
-    const result = calculateSwingResult(timing, p.pitch, currentBatter, swingType);
+    const swing = resolveBattingSwing(
+      timing, p.pitch, currentBatter, swingType, game.diamondBatUses, diamondBatEquipped
+    );
+    const result = swing.result;
+    setGame((g) => ({ ...g, diamondBatUses: swing.diamondBatUses }));
+    if (swing.usedDiamondBat && swing.diamondBatUses === 0) setDiamondBatEquipped(false);
     // If contact was made (any non-miss result), launch the ball on a hit
     // trajectory so the player sees the ball get hit, not just disappear.
     // The trajectory starts ~150ms after the swing begins so it lines up
@@ -2396,7 +2444,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       };
     });
     setTimeout(() => { setSwingResult(null); afterPlay(); }, 2200);
-  }, [game.phase, game.strikes, currentBatter, swingType, recordHit]);
+  }, [game.phase, game.strikes, game.diamondBatUses, currentBatter, swingType, diamondBatEquipped, recordHit]);
 
   function resolveStrike(wasFireball) {
     setGame((g) => {
@@ -2683,10 +2731,9 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       const newResults = [...prev.studyBreakResults, { correct: correctCount, total: 5 }];
       const newCoins = prev.coinsEarned + coinsFromBreak;
       const tokenPatch = { tokenStreak: streak, tokensEarned: (prev.tokensEarned || 0) + tokensWon };
-      const isLastBreak = prev.studyBreakNumber >= 3;
-      const mercy = checkMercyRule(prev.playerScore, prev.aiScore);
+      const nextPhase = getPostStudyPhase(prev, correctCount);
 
-      if (isLastBreak && correctCount >= 4) {
+      if (nextPhase === GAME_PHASES.BONUS_ROUND) {
         setStudyQuestions(null);
         return {
           ...prev,
@@ -2696,7 +2743,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
           phase: GAME_PHASES.BONUS_ROUND,
         };
       }
-      if (prev.inning >= 3 || mercy) {
+      if (nextPhase === GAME_PHASES.GAME_OVER) {
         setStudyQuestions(null);
         return {
           ...prev,
@@ -2740,7 +2787,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
 
   function handleExitSave() {
     setShowExitDialog(false);
-    onSaveAndExit(battingStatsRef.current, game.fireballs, game.coinsEarned, game.tokensEarned);
+    onSaveAndExit(battingStatsRef.current, game.fireballs, game.coinsEarned, game.tokensEarned, game.diamondBatUses);
   }
 
   function handleExitClose() {
@@ -2756,6 +2803,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       won: game.playerScore > game.aiScore,
       battingStats: battingStatsRef.current,  // { [playerId]: { ab, hits } }
       fireballs: game.fireballs,
+      diamondBatUses: game.diamondBatUses,
       tokensEarned: game.tokensEarned,
     });
   }
@@ -2779,7 +2827,8 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
   if (game.phase === GAME_PHASES.GAME_OVER) {
     const won = game.playerScore > game.aiScore;
     return (
-      <div className="game-over-screen">
+      <div className={`game-over-screen ${halloween && won ? 'halloween-victory' : ''}`}>
+        <WinFireworks season={season} won={won} />
         <div className="game-over-card">
           <h1 className={won ? 'win-text' : 'loss-text'}>
             {won ? 'YOU WIN!' : game.playerScore === game.aiScore ? 'TIE GAME!' : 'GAME OVER'}
@@ -2850,6 +2899,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
       <div className={`phase-banner ${defending ? 'pitching' : 'batting'}`}>
         {defending ? 'YOU’RE PITCHING — TAP THE ZONE TO AIM' : 'YOU’RE BATTING'}
       </div>
+      <div className="inning-progress">Inning {game.inning} of {game.totalInnings}</div>
 
       {/* Field scene */}
       <div className="field-wrap">
@@ -2906,6 +2956,27 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         })}
       </div>
 
+      {!defending && (
+        <div className="diamond-bat-bar">
+          <button
+            className={`diamond-bat-btn ${diamondBatEquipped && game.diamondBatUses > 0 ? 'equipped' : ''}`}
+            aria-pressed={diamondBatEquipped && game.diamondBatUses > 0}
+            disabled={!pitchReady || game.diamondBatUses === 0}
+            onClick={() => setDiamondBatEquipped((equipped) => !equipped)}
+          >
+            💎 Diamond Bat · {game.diamondBatUses} {game.diamondBatUses === 1 ? 'use' : 'uses'}
+            {diamondBatEquipped && game.diamondBatUses > 0 ? ' · ON' : ''}
+          </button>
+          <p>
+            {game.diamondBatUses === 0
+              ? 'Hit a home run with your regular bat to earn 2 uses.'
+              : diamondBatEquipped
+                ? 'Fair contact is a home run. Fouls stay foul. Every swing uses a turn.'
+                : 'Tap to equip before the pitch. Every swing uses a turn, even a miss.'}
+          </p>
+        </div>
+      )}
+
       {/* Action */}
       <div className="game-controls">
         {pitchReady && (
@@ -2916,7 +2987,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit }) {
         {pitchLive && (
           <>
             <button className="btn btn-swing" onClick={handleSwing}>
-              SWING!
+              {diamondBatEquipped && game.diamondBatUses > 0 ? '💎 DIAMOND SWING!' : 'SWING!'}
             </button>
             {/* Steal — only enabled when someone's on base */}
             {(game.bases[0] || game.bases[1] || game.bases[2]) && (

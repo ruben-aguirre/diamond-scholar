@@ -1,0 +1,231 @@
+/* Calendar-driven decorations stay outside the playing field and controls. */
+:root[data-season='halloween'] {
+  --bg: #26262d;
+  --card: #35353f;
+  --text: #f7f2e9;
+  --text-light: #c5c2cc;
+  --shadow: 0 4px 16px #0004;
+  --holiday-accent: #ffa940;
+}
+
+:root[data-season='christmas'] {
+  --bg: #fff;
+  --card: #fff;
+  --holiday-accent: #b8293d;
+}
+
+[data-season] .seasonal-app { min-height: 100vh; background: var(--bg); }
+[data-season] :is(.home-screen, .practice-screen, .game-screen.v2, .setup-screen, .game-over-screen) {
+  background: var(--bg);
+}
+
+.holiday-banner {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 28px 12px 12px;
+  background: var(--card);
+  color: var(--text);
+  border-bottom: 1px solid var(--holiday-accent);
+  text-align: center;
+}
+.holiday-banner > span { font-size: 1.7rem; }
+.holiday-banner strong { font-size: clamp(0.85rem, 3vw, 1.15rem); }
+.holiday-lights {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 20px;
+  border-top: 3px solid #555;
+  display: flex;
+  justify-content: space-around;
+  pointer-events: none;
+}
+.holiday-lights i {
+  display: block;
+  width: 9px;
+  height: 14px;
+  border-radius: 3px 3px 50% 50%;
+  background: #ffad42;
+  color: #ffad42;
+  box-shadow: 0 3px 10px currentColor;
+}
+.holiday-lights i:nth-child(even) { background: #ba83ff; color: #ba83ff; }
+[data-season='christmas'] .holiday-lights i { background: #d83148; color: #d83148; }
+[data-season='christmas'] .holiday-lights i:nth-child(3n) { background: #32b779; color: #32b779; }
+[data-season='christmas'] .holiday-lights i:nth-child(3n + 1) { background: #e8b23a; color: #e8b23a; }
+.holiday-scenery {
+  padding: 16px 12px 24px;
+  text-align: center;
+  font-size: clamp(1.6rem, 6vw, 3rem);
+  word-spacing: clamp(8px, 4vw, 40px);
+  background: var(--bg);
+  pointer-events: none;
+}
+.holiday-gift {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 18px;
+  border: 2px solid #e8b23a;
+  border-radius: 16px;
+  background: #fff6d9;
+  color: #45330b;
+  box-shadow: 0 4px 18px #e8b23a22;
+}
+.holiday-gift-icon { font-size: 2.2rem; }
+.holiday-gift > div { flex: 1 1 180px; }
+.holiday-gift strong { font-size: 1.15rem; }
+.holiday-gift p { margin-top: 4px; font-size: 0.9rem; }
+.holiday-gift .btn { background: #efbc45; color: #382a09; }
+
+[data-season='halloween'] :is(.home-hero, .game-field) { filter: none; }
+[data-season='halloween'] :is(.menu-label, .home-section-heading h2, .practice-card h2) { color: var(--text); }
+[data-season='halloween'] :is(.menu-description, .home-section-kicker) { color: var(--text-light); }
+[data-season='halloween'] :is(.practice-card, .field-spot, .btn-secondary, .coins-earned) {
+  background: var(--card);
+  color: var(--text);
+}
+[data-season='halloween'] :is(.btn-buy, .swing-result.homerun) { color: #382a09; }
+[data-season='halloween'] .holiday-gift { background: #403528; color: #fff3d4; }
+[data-season='christmas'] .game-screen { color: var(--text); }
+[data-season='christmas'] .swing-type-btn { background: #edf2f4; color: #2c3e50; border-color: #bac8d0; }
+[data-season='christmas'] .swing-type-btn.active { border-color: #2c3e50; }
+[data-season='christmas'] .diamond-bat-bar p { color: #435b6c; }
+[data-season='christmas'] .batter-stat { background: #e6eef3; }
+
+@media (max-width: 480px) {
+  .holiday-gift .btn { width: 100%; }
+}
+
+/* Big decorations fill the home screen's empty side space. On phones,
+   the garland keeps pumpkins and candy visible without covering controls. */
+[data-season='halloween'] .home-screen {
+  overflow-x: clip;
+  background:
+    radial-gradient(ellipse at 8% 48%, #a9501529, transparent 28%),
+    radial-gradient(ellipse at 95% 30%, #9251d926, transparent 28%),
+    var(--bg);
+}
+[data-season='halloween'] .home-content { position: relative; }
+[data-season='halloween'] .home-hero {
+  border-color: #ed9d4d;
+  box-shadow: 0 0 25px #ef862122, 0 14px 34px #0004;
+}
+.halloween-yard, .halloween-garland {
+  pointer-events: none;
+  user-select: none;
+}
+.halloween-piece { display: block; color: #a779ed; }
+.halloween-piece svg { display: block; width: 100%; height: auto; }
+.halloween-piece:nth-child(3n) { color: #a6d65c; }
+.halloween-piece:nth-child(4n) { color: #fa9f43; }
+.halloween-yard { position: absolute; inset: 0; }
+.halloween-yard .halloween-piece {
+  position: absolute;
+  width: 82px;
+  filter: drop-shadow(0 9px 8px #0005);
+}
+.halloween-yard .pumpkin { width: 145px; filter: drop-shadow(0 0 20px #f5892433); }
+.halloween-yard .piece-0 { left: -185px; top: 75px; transform: rotate(-12deg); }
+.halloween-yard .piece-1 { right: -155px; top: 55px; transform: rotate(24deg); }
+.halloween-yard .piece-2 { left: -120px; top: 310px; transform: rotate(32deg); }
+.halloween-yard .piece-3 { right: -185px; top: 245px; transform: rotate(12deg); }
+.halloween-yard .piece-4 { left: -235px; top: 420px; transform: rotate(-25deg); }
+.halloween-yard .piece-5 { left: -180px; top: 545px; transform: rotate(-6deg); }
+.halloween-yard .piece-6 { right: -120px; top: 485px; transform: rotate(-30deg); }
+.halloween-yard .piece-7 { right: -230px; top: 620px; transform: rotate(22deg); }
+.halloween-garland {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+.halloween-garland .halloween-piece { width: 45px; transform: rotate(-14deg); }
+.halloween-garland .pumpkin { width: 52px; }
+.halloween-garland .halloween-piece:nth-child(even) { transform: rotate(18deg); }
+
+.night-stadium {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 58%;
+  pointer-events: none;
+  z-index: 0;
+}
+[data-season='halloween'] .home-hero-shade {
+  background: linear-gradient(90deg, #050a1bd9 0%, #050a1b80 40%, transparent 72%);
+}
+.game-over-screen { position: relative; isolation: isolate; overflow: hidden; }
+.game-over-card { position: relative; z-index: 1; }
+[data-season='halloween'] .halloween-victory {
+  background: radial-gradient(ellipse at 50% 100%, #39234e, #070b1b 75%);
+}
+.halloween-victory .game-over-card { border: 2px solid #f3b455; box-shadow: 0 0 40px #f3b45533; }
+.win-fireworks {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.firework-burst, .firework-ray { position: absolute; width: 0; height: 0; }
+.firework-spark, .firework-rocket {
+  position: absolute;
+  display: block;
+  width: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 7px currentColor;
+  opacity: 0;
+}
+.firework-spark {
+  height: 12px;
+  animation: halloween-spark 3s ease-out 3 both;
+  animation-delay: calc(var(--delay) + 0.65s);
+}
+.firework-rocket {
+  height: 22px;
+  animation: halloween-launch 3s ease-out 3 both;
+  animation-delay: var(--delay);
+}
+@keyframes halloween-launch {
+  0% { opacity: 0; transform: translateY(65vh) scaleY(1.8); }
+  7% { opacity: 1; }
+  21% { opacity: 1; transform: translateY(0) scaleY(0.6); }
+  23%, 100% { opacity: 0; transform: translateY(0); }
+}
+@keyframes halloween-spark {
+  0% { opacity: 0; transform: translateY(0) scale(0.2); }
+  6% { opacity: 1; }
+  35% { opacity: 1; }
+  66%, 100% { opacity: 0; transform: translateY(clamp(75px, 16vw, 170px)) scale(0.3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .firework-rocket { display: none; }
+  .firework-spark { animation: none; opacity: 0.65; transform: translateY(70px) scale(0.5); }
+}
+
+@media (max-width: 1500px) {
+  .halloween-yard .halloween-piece { width: 60px; }
+  .halloween-yard .pumpkin { width: 90px; }
+  .halloween-yard .piece-0, .halloween-yard .piece-5 { left: -95px; }
+  .halloween-yard .piece-2, .halloween-yard .piece-4 { left: -70px; }
+  .halloween-yard .piece-3 { right: -95px; }
+  .halloween-yard .piece-1, .halloween-yard .piece-6, .halloween-yard .piece-7 { right: -70px; }
+}
+@media (max-width: 1250px) {
+  .halloween-yard { display: none; }
+}
+@media (max-width: 480px) {
+  .halloween-garland { gap: 8px; padding: 0 0 12px; }
+  .halloween-garland .halloween-piece { width: 30px; }
+  .halloween-garland .pumpkin { width: 40px; }
+  .halloween-garland .piece-2, .halloween-garland .piece-5 { display: none; }
+}
