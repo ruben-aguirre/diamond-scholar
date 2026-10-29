@@ -2,7 +2,13 @@
 
 **Current state:** All six agreed build passes are playable. The live game now also has a 15-team league: the player's club and 14 computer clubs, saved standings, rotating opponents, and simulated computer games. All 40 tests, lint, production build, and rendered-screen checks pass; the production bundle is verified.
 
-**Next move:** Refresh https://diamond-scholar.vercel.app, open Team Standings, and play a game. Return home after the final score and check that your record, the computer records, and your next opponent update. Ruben and his son's visual playtest remains pending.
+**Next move:** Refresh https://diamond-scholar.vercel.app and open Team Standings to check the larger words/numbers, roomier rows, and Halloween pumpkins/candy. Then finish a game and check that the records and next opponent update. Ruben and his son's visual playtest remains pending.
+
+## Standings readability and Halloween decorations — 2026-10-28
+
+- ✓ Done. From Ruben's screenshot: enlarged standings text to 18px and numbers to 20px on larger screens, increased cell padding from 12px to 18px vertically, widened the card to 980px, and gave the number columns more room. Help text and captions are 16px; phone rows retain 16px text and 17px numbers with wrapping team names.
+- Reused the existing pumpkin/candy SVG artwork above and below the table, plus decorations in the side gutters on wide screens. An orange border frames the card during Halloween. Decorations follow the existing seasonal calendar, cannot intercept clicks, and are hidden from screen readers.
+- Code commit `f8ad634` pushed to `origin/master`. Production deployment `dpl_6fFHbmNQ4JexscQ4zzaCqGi5TtpT` is Ready at https://diamond-scholar.vercel.app; updated live styles and script verified. Lint/build and rendered-screen checks passed; all 15 rows and one YOU marker remain, with Halloween decorations absent outside that season. Visual review remains with Ruben and his son.
 
 ## 15-team league — 2026-10-28
 
