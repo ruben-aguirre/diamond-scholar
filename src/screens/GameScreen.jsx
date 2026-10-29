@@ -1894,9 +1894,9 @@ function drawBatterSprite(ctx, sprites, batSwingT, opponent = false) {
 
 // ---- Component ----
 
-export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season }) {
+export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, leagueMatchup }) {
   const halloween = season?.id === 'halloween';
-  const [matchup] = useState(() => getNextLeagueGame(profile));
+  const [matchup] = useState(() => leagueMatchup || getNextLeagueGame(profile));
   const [game, setGame] = useState(() => ({ ...createGameState(profile), opponentName: matchup.opponent.name }));
   const [swingType, setSwingType] = useState('normal');
   const [diamondBatEquipped, setDiamondBatEquipped] = useState(false);

@@ -6,7 +6,7 @@ import HomeScreen from './screens/HomeScreen';
 import TeamScreen from './screens/TeamScreen';
 import ShopScreen from './screens/ShopScreen';
 import DraftScreen from './screens/DraftScreen';
-import GameScreen from './screens/GameScreen';
+import GameIntro from './screens/GameIntro';
 import PracticeScreen from './screens/PracticeScreen';
 import SeasonalFrame from './screens/SeasonalFrame';
 import SettingsScreen from './screens/SettingsScreen';
@@ -238,9 +238,10 @@ function App() {
       return <PracticeScreen mode="running" profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'game':
       return (
-        <GameScreen
+        <GameIntro
           season={season}
           profile={freshProfile}
+          onBack={() => setScreen('home')}
           onGameEnd={handleGameEnd}
           onSaveAndExit={handleSaveAndExit}
         />
