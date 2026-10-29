@@ -1,8 +1,14 @@
 # Diamond Scholar — Status
 
-**Current state:** All six agreed build passes are playable. The live game now also has a 15-team league: the player's club and 14 computer clubs, saved standings, rotating opponents, and simulated computer games. All 40 tests, lint, production build, and rendered-screen checks pass; the production bundle is verified.
+**Current state:** All six agreed build passes are playable. The live game now also has a 15-team league, larger standings with Halloween decorations, and a five-second matchup screen before each game. All 43 tests, lint, production build, and rendered-screen checks pass; the production bundle is verified.
 
-**Next move:** Refresh https://diamond-scholar.vercel.app and open Team Standings to check the larger words/numbers, roomier rows, and Halloween pumpkins/candy. Then finish a game and check that the records and next opponent update. Ruben and his son's visual playtest remains pending.
+**Next move:** Refresh https://diamond-scholar.vercel.app and press Play Ball from Home or Team Standings. Check that the matchup shows both teams, counts down five seconds, and starts a game against the same opponent. Ruben and his son's visual playtest remains pending.
+
+## Five-second matchup intro — 2026-10-28
+
+- ✓ Done. Both Play Ball entry points now show the player's club and the scheduled computer opponent with team-color badges, win/loss/tie records, and a 5–4–3–2–1 countdown. The game starts automatically after five seconds. Halloween artwork appears during Halloween.
+- The intro freezes the opponent and passes that same matchup into gameplay. Gameplay remains unmounted until the countdown finishes. Back to Home cancels both timers; another game gets a fresh five-second intro. Previewing or cancelling does not advance standings or spend rewards.
+- Code commit `caec935` pushed to `origin/master`. Production deployment `dpl_2WPC55oVHdxn5rq4ctnTXXst5ovk` is Ready at https://diamond-scholar.vercel.app; the live script contains the matchup countdown and team layout. All 43 tests, lint, and production build pass. New timer tests verify the five-second boundary, a single start, cancellation, and restarting; rendered-screen checks verify both correct teams and no gameplay canvas during the intro. Visual playtest remains with Ruben and his son.
 
 ## Standings readability and Halloween decorations — 2026-10-28
 
