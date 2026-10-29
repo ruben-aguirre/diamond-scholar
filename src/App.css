@@ -1,4 +1,30 @@
 /* Diamond Scholar - Main Styles */
+.standings-screen { min-height: 100vh; background: var(--bg); }
+.standings-card { width: min(850px, calc(100% - 24px)); margin: 24px auto; padding: 24px; border-radius: 18px; background: var(--card); box-shadow: var(--shadow); }
+.standings-intro h2 { margin: 8px 0; }
+.standings-intro p, .league-matchup p { line-height: 1.5; }
+.league-matchup { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 20px 0; padding: 16px; border: 2px solid var(--green); border-radius: 12px; }
+.league-matchup .btn { flex-shrink: 0; }
+.standings-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.standings-table caption { text-align: left; margin-bottom: 12px; color: var(--text-light); font-size: .85rem; line-height: 1.5; }
+.standings-table th, .standings-table td { padding: 12px 6px; text-align: center; border-bottom: 1px solid var(--text-light); }
+.standings-table th:nth-child(1) { width: 7%; }
+.standings-table th:nth-child(2) { width: 49%; text-align: left; overflow-wrap: anywhere; }
+.standings-table th:last-child { width: 14%; }
+.standings-table tbody th { text-align: left; font-weight: 500; }
+.standings-table .your-team-row { background: color-mix(in srgb, var(--green) 15%, var(--card)); font-weight: 700; }
+.standings-table .your-team-row th { font-weight: 700; }
+.league-team-dot { display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%; }
+.league-you { display: inline-block; margin-left: 6px; padding: 2px 5px; border-radius: 5px; background: var(--green-dark); color: white; font-size: .65rem; }
+.standings-help { margin-top: 14px; color: var(--text-light); font-size: .85rem; line-height: 1.6; }
+.league-standings-link { border: 0; background: transparent; color: inherit; text-decoration: underline; font: inherit; cursor: pointer; padding: 8px; }
+@media (max-width: 480px) {
+  .standings-card { padding: 14px 10px; }
+  .standings-table th, .standings-table td { padding: 10px 3px; font-size: .8rem; }
+  .league-matchup { flex-direction: column; align-items: stretch; }
+  .league-team-dot { margin-right: 4px; width: 8px; height: 8px; }
+}
+
 :root {
   --green: #27ae60;
   --green-dark: #219a52;

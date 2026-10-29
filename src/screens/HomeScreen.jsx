@@ -2,10 +2,12 @@ import { canClaimSeasonalPack } from '../game/seasons';
 import HalloweenDecorations from './HalloweenDecorations';
 import NightStadium from './NightStadium';
 import { getGameInnings } from '../game/gameSettings';
+import { getLeague, getNextLeagueGame } from '../game/league';
 
 export default function HomeScreen({ profile, onNavigate, onSwitchProfile, season }) {
   const menuItems = [
     { id: 'team', label: 'My Team', icon: '&#128101;', enabled: true, description: 'Set your lineup' },
+    { id: 'standings', label: 'Team Standings', icon: '&#127942;', enabled: true, description: 'Your 15-team league' },
     { id: 'batting-practice', label: 'Batting Practice', icon: '&#127951;', enabled: true, description: 'Time your swing' },
     { id: 'fielding-practice', label: 'Fielding Practice', icon: '&#129351;', enabled: true, description: 'Make the right throw' },
     { id: 'running-practice', label: 'Running Practice', icon: '&#127939;', enabled: true, description: 'Run the bases' },
@@ -13,8 +15,9 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile, seaso
     { id: 'draft', label: 'Draft Day', icon: '&#128203;', enabled: true, description: 'Find a future star' },
   ];
 
-  const gamesPlayed = profile.stats?.gamesPlayed || 0;
-  const gamesWon = profile.stats?.gamesWon || 0;
+  const record = getLeague(profile).teams[0];
+  const gamesPlayed = record.wins + record.losses + record.ties;
+  const { opponent } = getNextLeagueGame(profile);
 
   return (
     <div className="home-screen">
@@ -60,16 +63,17 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile, seaso
           <div className="home-hero-copy">
             <span className="home-hero-kicker">&#9918; TODAY&apos;S GAME</span>
             <h2>Take the field,<br />{profile.name}!</h2>
-            <p>Crush pitches, make great plays, and earn rewards with every right answer.</p>
+            <p>Next opponent: <strong>{opponent.name}</strong></p>
             <button className="home-play-button" onClick={() => onNavigate('game')}>
               <span>PLAY BALL!<small className="home-game-length">{getGameInnings(profile)} {getGameInnings(profile) === 1 ? 'inning' : 'innings'}</small></span>
               <span className="home-play-arrow">&#9654;</span>
             </button>
           </div>
           <div className="home-record-card">
-            <span className="home-record-label">TEAM RECORD</span>
-            <strong>{gamesWon} - {Math.max(0, gamesPlayed - gamesWon)}</strong>
+            <span className="home-record-label">LEAGUE RECORD · W–L–T</span>
+            <strong>{record.wins} - {record.losses} - {record.ties}</strong>
             <span>{gamesPlayed === 0 ? 'Your season starts now!' : `${gamesPlayed} games played`}</span>
+            <button className="league-standings-link" onClick={() => onNavigate('standings')}>View standings →</button>
           </div>
         </section>
 

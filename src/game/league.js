@@ -1,0 +1,99 @@
+import { TEAM_CHOICES } from '../data/teams.js';
+
+export const PLAYER_TEAM_ID = 'player';
+
+const emptyRecord = { wins: 0, losses: 0, ties: 0, runsFor: 0, runsAgainst: 0 };
+
+// Older profiles start a fresh league without changing their career stats.
+export function getLeague(profile) {
+  if (profile.league?.version === 1) return profile.league;
+  const playerName = profile.teamName.trim().toLowerCase();
+  const teams = TEAM_CHOICES.filter((team) => team.name.toLowerCase() !== playerName)
+    .slice(0, 14).map((team) => ({ ...team, ...emptyRecord }));
+  return {
+    version: 1,
+    round: 0,
+    teams: [{ id: PLAYER_TEAM_ID, ...emptyRecord }, ...teams],
+  };
+}
+
+// Circle schedule: every club plays every other club once in 15 rounds.
+// With an odd number of teams, one club rests each round.
+export function getRoundFixtures(league, round = league.round) {
+  const rotating = [...league.teams.slice(1).map((team) => team.id), null];
+  const turn = round % rotating.length;
+  const order = [PLAYER_TEAM_ID, ...rotating.slice(turn), ...rotating.slice(0, turn)];
+  return Array.from({ length: order.length / 2 }, (_, i) => [order[i], order[order.length - 1 - i]])
+    .filter(([a, b]) => a !== null && b !== null);
+}
+
+export function getNextLeagueGame(profile) {
+  const league = getLeague(profile);
+  let round = league.round;
+  let fixture = getRoundFixtures(league, round).find((pair) => pair.includes(PLAYER_TEAM_ID));
+  while (!fixture) {
+    round += 1;
+    fixture = getRoundFixtures(league, round).find((pair) => pair.includes(PLAYER_TEAM_ID));
+  }
+  return {
+    round,
+    opponent: league.teams.find((team) => team.id === fixture.find((id) => id !== PLAYER_TEAM_ID)),
+  };
+}
+
+// A repeatable roll keeps React's state-update retries from changing results.
+function simulatedScore(round, id) {
+  let seed = round + 1;
+  for (const letter of id) seed = Math.imul(seed ^ letter.charCodeAt(0), 16777619);
+  seed = Math.imul(seed ^ (seed >>> 16), 2246822507);
+  return (seed >>> 0) % 10;
+}
+
+export function recordLeagueGame(profile, result) {
+  const league = getLeague(profile);
+  const next = getNextLeagueGame(profile);
+  if (result.leagueRound !== next.round || result.opponentId !== next.opponent.id
+    || !Number.isInteger(result.playerScore) || result.playerScore < 0
+    || !Number.isInteger(result.aiScore) || result.aiScore < 0) return league;
+
+  const teams = league.teams.map((team) => ({ ...team }));
+  const byId = new Map(teams.map((team) => [team.id, team]));
+  function record(a, b, scoreA, scoreB) {
+    for (const [id, scored, allowed] of [[a, scoreA, scoreB], [b, scoreB, scoreA]]) {
+      const team = byId.get(id);
+      team.wins += scored > allowed ? 1 : 0;
+      team.losses += scored < allowed ? 1 : 0;
+      team.ties += scored === allowed ? 1 : 0;
+      team.runsFor += scored;
+      team.runsAgainst += allowed;
+    }
+  }
+  for (let round = league.round; round <= next.round; round += 1) {
+    for (const [a, b] of getRoundFixtures(league, round)) {
+      if (a === PLAYER_TEAM_ID || b === PLAYER_TEAM_ID) {
+        record(PLAYER_TEAM_ID, next.opponent.id, result.playerScore, result.aiScore);
+      } else {
+        const scoreA = simulatedScore(round, a);
+        let scoreB = simulatedScore(round, b);
+        if (scoreA === scoreB) scoreB += 1;
+        record(a, b, scoreA, scoreB);
+      }
+    }
+  }
+  return { ...league, round: next.round + 1, teams };
+}
+
+export function getStandings(profile) {
+  return getLeague(profile).teams.map((team) => {
+    const gamesPlayed = team.wins + team.losses + team.ties;
+    return {
+      ...team,
+      name: team.id === PLAYER_TEAM_ID ? profile.teamName : team.name,
+      primary: team.id === PLAYER_TEAM_ID ? profile.teamColor.primary : team.primary,
+      gamesPlayed,
+      percentage: gamesPlayed ? (team.wins + team.ties / 2) / gamesPlayed : 0,
+    };
+  }).sort((a, b) => b.percentage - a.percentage || b.wins - a.wins
+    || (b.runsFor - b.runsAgainst) - (a.runsFor - a.runsAgainst)
+    || a.name.localeCompare(b.name));
+}

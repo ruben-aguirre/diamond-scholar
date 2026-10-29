@@ -10,6 +10,8 @@ import GameScreen from './screens/GameScreen';
 import PracticeScreen from './screens/PracticeScreen';
 import SeasonalFrame from './screens/SeasonalFrame';
 import SettingsScreen from './screens/SettingsScreen';
+import StandingsScreen from './screens/StandingsScreen';
+import { getLeague, recordLeagueGame } from './game/league';
 import { getSeason } from './game/seasons';
 import { isSecretName } from './data/players';
 import './App.css';
@@ -106,27 +108,32 @@ function App() {
   }
 
   function handleGameEnd(results) {
-    const updatedRoster = applyBattingStats(activeProfile.roster, results.battingStats);
-
-    updateProfile({
-      coins: activeProfile.coins + results.coinsEarned,
-      tokens: (activeProfile.tokens || 0) + (results.tokensEarned || 0),
-      roster: updatedRoster,
-      fireballs: results.fireballs != null ? results.fireballs : (activeProfile.fireballs || 0),
-      diamondBatUses: results.diamondBatUses ?? activeProfile.diamondBatUses ?? 0,
-      stats: {
-        ...activeProfile.stats,
-        gamesPlayed: activeProfile.stats.gamesPlayed + 1,
-        gamesWon: activeProfile.stats.gamesWon + (results.won ? 1 : 0),
-        totalCoinsEarned: activeProfile.stats.totalCoinsEarned + results.coinsEarned,
-        questionsCorrect:
-          activeProfile.stats.questionsCorrect +
-          results.studyBreakResults.reduce((sum, r) => sum + r.correct, 0),
-        questionsTotal:
-          activeProfile.stats.questionsTotal +
-          results.studyBreakResults.reduce((sum, r) => sum + r.total, 0),
-      },
-    });
+    setProfiles((prev) => prev.map((profile) => {
+      if (profile.id !== activeProfileId) return profile;
+      const league = recordLeagueGame(profile, results);
+      if (league.round === getLeague(profile).round) return profile;
+      return {
+        ...profile,
+        league,
+        coins: profile.coins + results.coinsEarned,
+        tokens: (profile.tokens || 0) + (results.tokensEarned || 0),
+        roster: applyBattingStats(profile.roster, results.battingStats),
+        fireballs: results.fireballs != null ? results.fireballs : (profile.fireballs || 0),
+        diamondBatUses: results.diamondBatUses ?? profile.diamondBatUses ?? 0,
+        stats: {
+          ...profile.stats,
+          gamesPlayed: profile.stats.gamesPlayed + 1,
+          gamesWon: profile.stats.gamesWon + (results.won ? 1 : 0),
+          totalCoinsEarned: profile.stats.totalCoinsEarned + results.coinsEarned,
+          questionsCorrect:
+            profile.stats.questionsCorrect +
+            results.studyBreakResults.reduce((sum, r) => sum + r.correct, 0),
+          questionsTotal:
+            profile.stats.questionsTotal +
+            results.studyBreakResults.reduce((sum, r) => sum + r.total, 0),
+        },
+      };
+    }));
     setScreen('home');
   }
 
@@ -217,6 +224,8 @@ function App() {
       return <TeamScreen profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'settings':
       return <SettingsScreen profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
+    case 'standings':
+      return <StandingsScreen profile={freshProfile} onBack={() => setScreen('home')} onPlay={() => setScreen('game')} />;
     case 'shop':
       return <ShopScreen season={season} profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'draft':

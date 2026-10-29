@@ -17,6 +17,7 @@ import DidYouKnowCard from './DidYouKnowCard';
 import WinFireworks from './WinFireworks';
 import { drawNightAtmosphere, drawNightStadium } from '../game/nightStadium';
 import { getPitcherPose } from '../game/pitcherPose';
+import { getNextLeagueGame } from '../game/league';
 import scienceQuestions from '../data/questions/science-4th.json';
 
 // Canvas internal drawing size
@@ -340,7 +341,7 @@ function drawJumbotron(ctx, game, teamNameShort) {
   ctx.textAlign = 'left';
   ctx.fillStyle = amber;
   ctx.font = 'bold 14px Fredoka, sans-serif';
-  ctx.fillText('OPP', midX + 14, rowY);
+  ctx.fillText((game.opponentName || 'OPP').split(' ').at(-1).toUpperCase().slice(0, 8), midX + 14, rowY);
   ctx.textAlign = 'right';
   ctx.font = 'bold 22px Fredoka, sans-serif';
   ctx.fillStyle = green;
@@ -453,7 +454,7 @@ function drawImageScoreboard(ctx, game, teamNameShort) {
   ctx.fillStyle = amber;
   ctx.font = 'bold 9px Fredoka, sans-serif';
   ctx.fillText(homeLabel, sx + sw * 0.28, sy + 12);
-  ctx.fillText('OPP', sx + sw * 0.72, sy + 12);
+  ctx.fillText((game.opponentName || 'OPP').split(' ').at(-1).toUpperCase().slice(0, 5), sx + sw * 0.72, sy + 12);
 
   // ---- Score (big, green) ----
   ctx.fillStyle = green;
@@ -1895,7 +1896,8 @@ function drawBatterSprite(ctx, sprites, batSwingT, opponent = false) {
 
 export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season }) {
   const halloween = season?.id === 'halloween';
-  const [game, setGame] = useState(() => createGameState(profile));
+  const [matchup] = useState(() => getNextLeagueGame(profile));
+  const [game, setGame] = useState(() => ({ ...createGameState(profile), opponentName: matchup.opponent.name }));
   const [swingType, setSwingType] = useState('normal');
   const [diamondBatEquipped, setDiamondBatEquipped] = useState(false);
   const [swingResult, setSwingResult] = useState(null);
@@ -2796,6 +2798,8 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season }
 
   function handleGameOver() {
     onGameEnd({
+      leagueRound: matchup.round,
+      opponentId: matchup.opponent.id,
       playerScore: game.playerScore,
       aiScore: game.aiScore,
       coinsEarned: game.coinsEarned,
@@ -2840,7 +2844,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season }
             </div>
             <span className="score-vs">vs</span>
             <div className="score-team">
-              <span className="score-label">Opponents</span>
+              <span className="score-label">{matchup.opponent.name}</span>
               <span className="score-number">{game.aiScore}</span>
             </div>
           </div>
@@ -2927,7 +2931,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season }
       <div className="batter-info">
         {defending ? (
           <>
-            <span className="batter-name">Opponent batter <strong>#{defBatter}</strong></span>
+            <span className="batter-name">{matchup.opponent.name} <strong>#{defBatter}</strong></span>
             <span className="batter-stat">{'\u{1F525}'} {game.fireballs}</span>
           </>
         ) : (
