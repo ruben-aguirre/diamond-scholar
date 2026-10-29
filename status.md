@@ -1,8 +1,15 @@
 # Diamond Scholar — Status
 
-**Current state:** All six agreed build passes are playable. The live game has 20-game seasons in the 15-team league, final standings and a next-season button, larger Halloween standings, a five-second matchup screen, and no doubleheaders. Existing progress and rewards are preserved. All 48 tests, lint, production build, and rendered-screen checks pass; the production bundle is verified.
+**Current state:** All six agreed build passes are playable. The live game has a monthly Games calendar with saved season dates and ranked daily matchups, 20-game seasons in the 15-team league, final standings, a five-second matchup intro, Halloween decorations, and no doubleheaders. Existing progress and rewards are preserved. All 53 tests, lint, production build, and rendered-screen checks pass; the production bundle is verified.
 
-**Next move:** Refresh https://diamond-scholar.vercel.app and check Game N of 20 on Home, Standings, and the pregame matchup. After game 20, review final standings and the champion; Start Next Season should reset league records while keeping players and rewards. Ruben and his son's visual playtest remains pending.
+**Next move:** Refresh https://diamond-scholar.vercel.app, open Games from Home, and choose a calendar date. Check the month arrows, next-game shortcut, seven ranked matchups, resting club, and Play Game button for the next scheduled game. Ruben and his son's visual playtest remains pending.
+
+## Monthly Games calendar — 2026-10-28
+
+- ✓ Done. Added Games to the home menu. Opens a real Sunday–Saturday month grid with month/year heading, previous/next month arrows, Today and Next Game shortcuts, game-number markers, opponents/current ranks on larger screens, and played/next/coming-up states. Phone cells keep the date and game number; selecting a date shows the full matchups below.
+- Each of the season's 20 dates shows the same seven fixtures used by gameplay, current standings positions for all 14 playing clubs, and the resting computer club's name/rank. The player's matchup leads the list. Only the next scheduled game can be launched; selecting a later date does not skip or simulate games. Completed seasons link to final standings. Rankings are explicitly current, including when viewing past dates; historical scores are not invented.
+- The season calendar anchor is saved on first Games visit or game launch, then stays fixed across refreshes. Existing saves place their next game on the first-visit date and earlier season dates are reconstructed game-day slots, not claimed historical play dates. Each next season clears the date anchor. Calendar slots are one per game day; players can play ahead without real-calendar waiting. Halloween garland reuses the existing artwork.
+- Code commit `f8563aa` pushed to `origin/master`. Production deployment `dpl_EsFGiz9HLwbqkVTaWW1ndjWtHGbv` is Ready at https://diamond-scholar.vercel.app; the live script contains the Games calendar, month navigation, and ranked matchup list. All 53 tests, lint, build, and rendered-screen checks pass. Tests cover all 20 scheduled fixtures versus gameplay, no doubleheaders, saved dates, migration, current ranks, next-season dates, weekday alignment, leap day and month/year boundaries. Visual playtest remains with Ruben and his son.
 
 ## 20-game seasons — 2026-10-28
 
