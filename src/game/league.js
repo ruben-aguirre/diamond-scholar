@@ -1,6 +1,7 @@
 import { TEAM_CHOICES } from '../data/teams.js';
 
 export const PLAYER_TEAM_ID = 'player';
+export const SEASON_GAMES = 20;
 
 const emptyRecord = { wins: 0, losses: 0, ties: 0, runsFor: 0, runsAgainst: 0 };
 
@@ -18,6 +19,32 @@ export function getLeague(profile) {
   };
 }
 
+export function getLeagueSeason(profile) {
+  const league = getLeague(profile);
+  const team = league.teams[0];
+  const gamesPlayed = team.wins + team.losses + team.ties;
+  return {
+    number: league.seasonNumber || 1,
+    gamesPlayed,
+    totalGames: SEASON_GAMES,
+    gamesRemaining: Math.max(0, SEASON_GAMES - gamesPlayed),
+    complete: gamesPlayed >= SEASON_GAMES,
+  };
+}
+
+export function startNextLeagueSeason(profile) {
+  const league = getLeague(profile);
+  const season = getLeagueSeason(profile);
+  if (!season.complete) return league;
+  return {
+    ...league,
+    round: 0,
+    seasonNumber: season.number + 1,
+    previousSeason: { number: season.number, standings: getStandings(profile) },
+    teams: league.teams.map((team) => ({ ...team, ...emptyRecord })),
+  };
+}
+
 // Circle schedule: every club plays every other club once in 15 rounds.
 // With an odd number of teams, one club rests each round.
 export function getRoundFixtures(league, round = league.round) {
@@ -30,6 +57,8 @@ export function getRoundFixtures(league, round = league.round) {
 
 export function getNextLeagueGame(profile) {
   const league = getLeague(profile);
+  const season = getLeagueSeason(profile);
+  if (season.complete) return null;
   let round = league.round;
   let fixture = getRoundFixtures(league, round).find((pair) => pair.includes(PLAYER_TEAM_ID));
   while (!fixture) {
@@ -39,6 +68,8 @@ export function getNextLeagueGame(profile) {
   return {
     round,
     day: league.teams[0].wins + league.teams[0].losses + league.teams[0].ties + 1,
+    seasonNumber: season.number,
+    totalGames: season.totalGames,
     opponent: league.teams.find((team) => team.id === fixture.find((id) => id !== PLAYER_TEAM_ID)),
   };
 }
@@ -85,7 +116,8 @@ function repairExtraRounds(league) {
 export function recordLeagueGame(profile, result) {
   const league = getLeague(profile);
   const next = getNextLeagueGame(profile);
-  if (result.leagueRound !== next.round || result.opponentId !== next.opponent.id
+  if (!next || (result.seasonNumber ?? 1) !== next.seasonNumber
+    || result.leagueRound !== next.round || result.opponentId !== next.opponent.id
     || !Number.isInteger(result.playerScore) || result.playerScore < 0
     || !Number.isInteger(result.aiScore) || result.aiScore < 0) return league;
 

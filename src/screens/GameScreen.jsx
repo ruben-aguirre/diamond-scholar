@@ -2799,6 +2799,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
   function handleGameOver() {
     onGameEnd({
       leagueRound: matchup.round,
+      seasonNumber: matchup.seasonNumber,
       opponentId: matchup.opponent.id,
       playerScore: game.playerScore,
       aiScore: game.aiScore,
@@ -2853,7 +2854,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
             <span className="coins-text">+{game.coinsEarned} Scholar Coins</span>
           </div>
           <button className="btn btn-primary btn-big" onClick={handleGameOver}>
-            Back to Home
+            {matchup.day === matchup.totalGames ? 'Final Standings' : 'Back to Home'}
           </button>
         </div>
       </div>

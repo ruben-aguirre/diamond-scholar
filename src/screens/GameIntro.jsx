@@ -8,7 +8,14 @@ export default function GameIntro({ profile, season, onBack, onGameEnd, onSaveAn
   const [matchup] = useState(() => getNextLeagueGame(profile));
   const [seconds, setSeconds] = useState(5);
   const [started, setStarted] = useState(false);
-  useEffect(() => startMatchupCountdown(setSeconds, () => setStarted(true)), []);
+  useEffect(() => {
+    if (!matchup) return;
+    return startMatchupCountdown(setSeconds, () => setStarted(true));
+  }, [matchup]);
+
+  if (!matchup) {
+    return <div className="matchup-screen"><main className="matchup-card"><h1>Season complete!</h1><button className="btn btn-primary" onClick={onBack}>Back to Home</button></main></div>;
+  }
 
   if (started) {
     return <GameScreen profile={profile} season={season} leagueMatchup={matchup} onGameEnd={onGameEnd} onSaveAndExit={onSaveAndExit} />;
@@ -19,7 +26,7 @@ export default function GameIntro({ profile, season, onBack, onGameEnd, onSaveAn
     <div className="matchup-screen">
       <main className="matchup-card" aria-labelledby="matchup-title">
         {season?.id === 'halloween' && <HalloweenDecorations garland />}
-        <span className="matchup-kicker">DIAMOND SCHOLAR LEAGUE · DAY {matchup.day}</span>
+        <span className="matchup-kicker">GAME {matchup.day} OF {matchup.totalGames}</span>
         <h1 id="matchup-title">Today&apos;s matchup</h1>
         <div className="matchup-teams">
           <section className="matchup-team" aria-label="Your team">

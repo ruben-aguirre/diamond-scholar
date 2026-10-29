@@ -11,7 +11,7 @@ import PracticeScreen from './screens/PracticeScreen';
 import SeasonalFrame from './screens/SeasonalFrame';
 import SettingsScreen from './screens/SettingsScreen';
 import StandingsScreen from './screens/StandingsScreen';
-import { getLeague, recordLeagueGame } from './game/league';
+import { getLeague, getLeagueSeason, recordLeagueGame, startNextLeagueSeason } from './game/league';
 import { getSeason } from './game/seasons';
 import { isSecretName } from './data/players';
 import './App.css';
@@ -35,6 +35,7 @@ function App() {
   // Auto-detect what screen to show
   const currentScreen = (() => {
     if (screen === 'setup') return 'setup';
+    if (screen === 'game' && activeProfile && getLeagueSeason(activeProfile).complete) return 'standings';
     if (screen !== 'auto') return screen;
     if (profiles.length === 0) return 'setup';
     if (!activeProfile) return 'select';
@@ -69,6 +70,11 @@ function App() {
     setProfiles((prev) =>
       prev.map((p) => (p.id === activeProfileId ? { ...p, ...updates } : p))
     );
+  }
+
+  function handleNextSeason() {
+    updateProfile({ league: startNextLeagueSeason(activeProfile) });
+    setScreen('home');
   }
 
   // Points a player gets the very first time they ever record a hit, so their
@@ -134,7 +140,7 @@ function App() {
         },
       };
     }));
-    setScreen('home');
+    setScreen(getLeagueSeason(activeProfile).gamesRemaining <= 1 ? 'standings' : 'home');
   }
 
   // Keep the batting lineup in sync with the roster: every player on the team
@@ -225,7 +231,7 @@ function App() {
     case 'settings':
       return <SettingsScreen profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'standings':
-      return <StandingsScreen season={season} profile={freshProfile} onBack={() => setScreen('home')} onPlay={() => setScreen('game')} />;
+      return <StandingsScreen season={season} profile={freshProfile} onBack={() => setScreen('home')} onPlay={() => setScreen('game')} onNextSeason={handleNextSeason} />;
     case 'shop':
       return <ShopScreen season={season} profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'draft':

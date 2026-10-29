@@ -2,7 +2,7 @@ import { canClaimSeasonalPack } from '../game/seasons';
 import HalloweenDecorations from './HalloweenDecorations';
 import NightStadium from './NightStadium';
 import { getGameInnings } from '../game/gameSettings';
-import { getLeague, getNextLeagueGame } from '../game/league';
+import { getLeague, getLeagueSeason, getNextLeagueGame } from '../game/league';
 
 export default function HomeScreen({ profile, onNavigate, onSwitchProfile, season }) {
   const menuItems = [
@@ -17,7 +17,8 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile, seaso
 
   const record = getLeague(profile).teams[0];
   const gamesPlayed = record.wins + record.losses + record.ties;
-  const { opponent, day } = getNextLeagueGame(profile);
+  const leagueSeason = getLeagueSeason(profile);
+  const matchup = getNextLeagueGame(profile);
 
   return (
     <div className="home-screen">
@@ -61,18 +62,18 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile, seaso
           {season?.id === 'halloween' && <NightStadium />}
           <div className="home-hero-shade" />
           <div className="home-hero-copy">
-            <span className="home-hero-kicker">&#9918; LEAGUE DAY {day}</span>
-            <h2>Take the field,<br />{profile.name}!</h2>
-            <p>Next opponent: <strong>{opponent.name}</strong></p>
-            <button className="home-play-button" onClick={() => onNavigate('game')}>
-              <span>PLAY BALL!<small className="home-game-length">{getGameInnings(profile)} {getGameInnings(profile) === 1 ? 'inning' : 'innings'}</small></span>
+            <span className="home-hero-kicker">&#9918; {leagueSeason.complete ? 'SEASON COMPLETE' : `GAME ${matchup.day} OF ${matchup.totalGames}`}</span>
+            <h2>{leagueSeason.complete ? 'Season complete,' : 'Take the field,'}<br />{profile.name}!</h2>
+            <p>{leagueSeason.complete ? 'Your final standings are ready!' : <>Next opponent: <strong>{matchup.opponent.name}</strong></>}</p>
+            <button className="home-play-button" onClick={() => onNavigate(leagueSeason.complete ? 'standings' : 'game')}>
+              <span>{leagueSeason.complete ? 'FINAL STANDINGS' : 'PLAY BALL!'}<small className="home-game-length">{leagueSeason.complete ? '20-game season finished' : `${getGameInnings(profile)} ${getGameInnings(profile) === 1 ? 'inning' : 'innings'}`}</small></span>
               <span className="home-play-arrow">&#9654;</span>
             </button>
           </div>
           <div className="home-record-card">
             <span className="home-record-label">LEAGUE RECORD · W–L–T</span>
             <strong>{record.wins} - {record.losses} - {record.ties}</strong>
-            <span>{gamesPlayed === 0 ? 'Your season starts now!' : `${gamesPlayed} games played`}</span>
+            <span>{gamesPlayed} of {leagueSeason.totalGames} games finished</span>
             <button className="league-standings-link" onClick={() => onNavigate('standings')}>View standings →</button>
           </div>
         </section>

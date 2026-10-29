@@ -1,9 +1,10 @@
-import { getNextLeagueGame, getStandings, PLAYER_TEAM_ID } from '../game/league';
+import { getLeagueSeason, getNextLeagueGame, getStandings, PLAYER_TEAM_ID } from '../game/league';
 import HalloweenDecorations from './HalloweenDecorations';
 
-export default function StandingsScreen({ profile, onBack, onPlay, season }) {
+export default function StandingsScreen({ profile, onBack, onPlay, onNextSeason, season }) {
   const standings = getStandings(profile);
-  const { opponent, day } = getNextLeagueGame(profile);
+  const leagueSeason = getLeagueSeason(profile);
+  const matchup = getNextLeagueGame(profile);
   const rank = standings.findIndex((team) => team.id === PLAYER_TEAM_ID) + 1;
   return (
     <div className="standings-screen">
@@ -15,12 +16,22 @@ export default function StandingsScreen({ profile, onBack, onPlay, season }) {
         {season?.id === 'halloween' && <HalloweenDecorations />}
         <div className="standings-intro">
           <span className="home-section-kicker">DIAMOND SCHOLAR LEAGUE</span>
-          <h2>15 teams. One climb to the top!</h2>
+          <h2>{leagueSeason.complete ? 'Final standings!' : '15 teams. 20 games. One climb to the top!'}</h2>
           <p>Your team is #{rank} of 15. The other 14 teams are computer teams.</p>
+          <p>Season {leagueSeason.number} · {leagueSeason.gamesPlayed} of {leagueSeason.totalGames} games finished.</p>
         </div>
-        <section className="league-matchup" aria-label="Next game">
-          <div><strong>Day {day}: {opponent.name}</strong><p>Your record updates when you finish a game and return home.</p></div>
-          <button className="btn btn-primary" onClick={onPlay}>Play Ball!</button>
+        <section className="league-matchup" aria-label={leagueSeason.complete ? 'Season results' : 'Next game'}>
+          {leagueSeason.complete ? (
+            <>
+              <div><strong>🏆 Season champion: {standings[0].name}</strong><p>All 20 games are finished! A new season starts fresh standings. Keep your players and rewards.</p></div>
+              <button className="btn btn-primary" onClick={onNextSeason}>Start Next Season</button>
+            </>
+          ) : (
+            <>
+              <div><strong>Game {matchup.day} of {matchup.totalGames}: {matchup.opponent.name}</strong><p>Your record updates when you finish a game and return home.</p></div>
+              <button className="btn btn-primary" onClick={onPlay}>Play Ball!</button>
+            </>
+          )}
         </section>
         {season?.id === 'halloween' && <HalloweenDecorations garland />}
         <table className="standings-table">
@@ -39,7 +50,7 @@ export default function StandingsScreen({ profile, onBack, onPlay, season }) {
         </table>
         {season?.id === 'halloween' && <HalloweenDecorations garland />}
         <p className="standings-help">W = wins · L = losses · T = ties · PCT = winning percentage.</p>
-        <p className="standings-help">Each finished game advances one league day. Every team plays at most once per day, and one computer team rests. Your team faces all 14 opponents before your schedule repeats. Ties count as half a win.</p>
+        <p className="standings-help">Your season lasts 20 finished games. Each game advances one league day. Every team plays at most once per day, and one computer team rests. Your team faces all 14 opponents before any rematches. Ties count as half a win.</p>
         <p className="standings-help">Your league starts at 0–0. Earlier games stay in your career record. Saving and leaving a game early does not change standings.</p>
       </main>
     </div>

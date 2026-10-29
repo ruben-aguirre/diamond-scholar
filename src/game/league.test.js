@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { getLeague, getNextLeagueGame, getRoundFixtures, getStandings, recordLeagueGame, PLAYER_TEAM_ID } from './league.js';
+import { getLeague, getLeagueSeason, getNextLeagueGame, getRoundFixtures, getStandings, recordLeagueGame, startNextLeagueSeason, PLAYER_TEAM_ID, SEASON_GAMES } from './league.js';
 
 const profile = { teamName: 'My Sluggers', teamColor: { primary: '#123456' }, stats: { gamesPlayed: 42, gamesWon: 30 } };
 function finish(p, playerScore = 5, aiScore = 2) {
   const match = getNextLeagueGame(p);
-  return { leagueRound: match.round, opponentId: match.opponent.id, playerScore, aiScore };
+  return { leagueRound: match.round, seasonNumber: match.seasonNumber, opponentId: match.opponent.id, playerScore, aiScore };
 }
 
 test('new and older profiles get exactly one player team and 14 unique NPCs', () => {
@@ -93,7 +93,8 @@ test('14 finished games face all 14 NPCs; saving and loading preserves the sched
 test('each finished game advances one league day with seven games and one resting club, across repeat schedules', () => {
   let p = { ...profile, league: getLeague(profile) };
   for (let day = 1; day <= 60; day += 1) {
-    assert.equal(getNextLeagueGame(p).day, day);
+    if (getLeagueSeason(p).complete) p = { ...p, league: startNextLeagueSeason(p) };
+    assert.equal(getNextLeagueGame(p).day, ((day - 1) % SEASON_GAMES) + 1);
     const before = new Map(getStandings(p).map((t) => [t.id, t.gamesPlayed]));
     p = { ...p, league: recordLeagueGame(p, finish(p, day % 3, 1)) };
     const increases = getStandings(p).map((t) => t.gamesPlayed - before.get(t.id));
@@ -103,6 +104,47 @@ test('each finished game advances one league day with seven games and one restin
     assert.equal(p.league.teams.reduce((sum, t) => sum + t.wins - t.losses, 0), 0);
     assert.equal(p.league.teams.reduce((sum, t) => sum + t.runsFor - t.runsAgainst, 0), 0);
   }
+});
+
+test('a season ends after exactly 20 finished games, counting wins, losses, and ties', () => {
+  let p = { ...profile };
+  let lastResult;
+  for (let game = 1; game <= 20; game += 1) {
+    assert.equal(getLeagueSeason(p).gamesRemaining, 21 - game);
+    assert.equal(getNextLeagueGame(p).day, game);
+    assert.equal(getNextLeagueGame(p).totalGames, 20);
+    lastResult = finish(p, game % 3, 1);
+    p = { ...p, league: recordLeagueGame(p, lastResult) };
+  }
+  assert.equal(getLeagueSeason(p).gamesPlayed, 20);
+  assert.equal(getLeagueSeason(p).gamesRemaining, 0);
+  assert.equal(getLeagueSeason(p).complete, true);
+  assert.equal(getNextLeagueGame(p), null);
+  assert.strictEqual(recordLeagueGame(p, lastResult), p.league);
+  assert.ok(p.league.teams[0].ties > 0);
+  assert.equal(getStandings(p).length, 15);
+});
+
+test('a new 20-game season preserves players, rewards, career stats and previous final standings', () => {
+  let p = { ...profile, coins: 321, tokens: 4, roster: [{ id: 'test-player' }] };
+  const firstSeasonResult = finish(p);
+  const unfinished = getLeague(profile);
+  assert.strictEqual(startNextLeagueSeason({ ...profile, league: unfinished }), unfinished);
+  for (let i = 0; i < 20; i += 1) p = { ...p, league: recordLeagueGame(p, finish(p)) };
+  const finalStandings = getStandings(p);
+  const next = { ...p, league: startNextLeagueSeason(p) };
+  assert.equal(getLeagueSeason(next).number, 2);
+  assert.equal(getLeagueSeason(next).gamesRemaining, 20);
+  assert.equal(getNextLeagueGame(next).day, 1);
+  assert.ok(next.league.teams.every((t) => t.wins + t.losses + t.ties === 0));
+  assert.deepEqual(next.league.previousSeason.standings, finalStandings);
+  assert.deepEqual(next.roster, p.roster);
+  assert.deepEqual(next.stats, p.stats);
+  assert.equal(next.coins, 321);
+  assert.equal(next.tokens, 4);
+  assert.strictEqual(recordLeagueGame(next, firstSeasonResult), next.league);
+  assert.equal(recordLeagueGame(next, finish(next)).teams[0].wins, 1);
+  assert.equal(getLeagueSeason(p).gamesPlayed, 20);
 });
 
 // Actual version-1 save snapshots, captured before the scheduling fix.
