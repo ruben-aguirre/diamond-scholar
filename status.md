@@ -1,8 +1,16 @@
 # Diamond Scholar — Status
 
-**Current state:** All six agreed build passes are now playable. The game has batting, pitching, fielding, lineup management, a 30-club picker, animated card packs, and short Batting / Fielding / Running practice modes with a science entry question, coin rewards, and saved skill growth. Production build and lint both pass.
+**Current state:** All six agreed build passes are playable. The live game now also has a 15-team league: the player's club and 14 computer clubs, saved standings, rotating opponents, and simulated computer games. All 40 tests, lint, production build, and rendered-screen checks pass; the production bundle is verified.
 
-**Next move:** Refresh https://diamond-scholar.vercel.app and check the pitcher on the mound: right-hand glove, left-hand ball, and an empty hand after throwing. Continue Diamond Pack payment/refund and game-length playtests.
+**Next move:** Refresh https://diamond-scholar.vercel.app, open Team Standings, and play a game. Return home after the final score and check that your record, the computer records, and your next opponent update. Ruben and his son's visual playtest remains pending.
+
+## 15-team league — 2026-10-28
+
+- ✓ Done. Added Team Standings to the home menu and a View standings link beside the league record. Shows ranks 1–15, wins, losses, ties, winning percentage, and a highlighted YOU row. Home shows the next opponent; gameplay scoreboards, opponent batter label, and final score use that club's name.
+- One player-controlled club plus 14 distinct fictional computer clubs, drawn from the existing club list without duplicating the player's club. The 30-club setup picker remains available. Each saved player has a separate league. Older profiles start the league at 0–0 without changing their career stats, coins, roster, or powerups.
+- Every club faces every other club once over 15 rounds, with one club resting each round; the schedule then repeats. Completed games update both clubs and simulate the other computer matchups. A player's rest round is simulated alongside their next completed game. Ties count as half a win for ranking, followed by wins, run difference, and alphabetical order. Saving and exiting early does not advance the league; stale or duplicate results cannot double-count games or rewards.
+- Published code commit `ab2f3f7` to `origin/master`. Git-connected production deployment `dpl_CaEYnqPf5ZdPEEbfBwWD4fEiKYAj` is Ready at https://diamond-scholar.vercel.app; the live script contains the new standings screen and matchup text. Scalekit has no Vercel connection; used the existing Vercel CLI for deployment inspection.
+- All 40 engine/league/pack/season tests, lint, and production build pass. Rendered Home and Standings checks confirm 15 club rows, one YOU marker, and the home navigation/matchup text. Visual and full-game playtesting remain with Ruben and his son.
 
 ## Pitcher on the mound — 2026-10-08
 
