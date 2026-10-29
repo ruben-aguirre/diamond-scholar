@@ -11,6 +11,8 @@ import PracticeScreen from './screens/PracticeScreen';
 import SeasonalFrame from './screens/SeasonalFrame';
 import SettingsScreen from './screens/SettingsScreen';
 import StandingsScreen from './screens/StandingsScreen';
+import GamesScreen from './screens/GamesScreen';
+import { getCalendarLeague } from './game/leagueCalendar';
 import { getLeague, getLeagueSeason, recordLeagueGame, startNextLeagueSeason } from './game/league';
 import { getSeason } from './game/seasons';
 import { isSecretName } from './data/players';
@@ -63,6 +65,10 @@ function App() {
   }
 
   function handleNavigate(dest) {
+    if ((dest === 'games' || dest === 'game') && activeProfile) {
+      const league = getCalendarLeague(activeProfile);
+      if (league !== activeProfile.league) updateProfile({ league });
+    }
     setScreen(dest);
   }
 
@@ -231,7 +237,9 @@ function App() {
     case 'settings':
       return <SettingsScreen profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'standings':
-      return <StandingsScreen season={season} profile={freshProfile} onBack={() => setScreen('home')} onPlay={() => setScreen('game')} onNextSeason={handleNextSeason} />;
+      return <StandingsScreen season={season} profile={freshProfile} onBack={() => setScreen('home')} onPlay={() => handleNavigate('game')} onNextSeason={handleNextSeason} />;
+    case 'games':
+      return <GamesScreen season={season} profile={freshProfile} onBack={() => setScreen('home')} onPlay={() => handleNavigate('game')} onStandings={() => setScreen('standings')} />;
     case 'shop':
       return <ShopScreen season={season} profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'draft':

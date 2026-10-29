@@ -40,6 +40,7 @@ export function startNextLeagueSeason(profile) {
     ...league,
     round: 0,
     seasonNumber: season.number + 1,
+    scheduleStartDate: null,
     previousSeason: { number: season.number, standings: getStandings(profile) },
     teams: league.teams.map((team) => ({ ...team, ...emptyRecord })),
   };

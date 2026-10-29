@@ -7,6 +7,7 @@ import { getLeague, getLeagueSeason, getNextLeagueGame } from '../game/league';
 export default function HomeScreen({ profile, onNavigate, onSwitchProfile, season }) {
   const menuItems = [
     { id: 'team', label: 'My Team', icon: '&#128101;', enabled: true, description: 'Set your lineup' },
+    { id: 'games', label: 'Games', icon: '&#128197;', enabled: true, description: 'Your game calendar' },
     { id: 'standings', label: 'Team Standings', icon: '&#127942;', enabled: true, description: 'Your 15-team league' },
     { id: 'batting-practice', label: 'Batting Practice', icon: '&#127951;', enabled: true, description: 'Time your swing' },
     { id: 'fielding-practice', label: 'Fielding Practice', icon: '&#129351;', enabled: true, description: 'Make the right throw' },
