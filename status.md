@@ -1,8 +1,15 @@
 # Diamond Scholar — Status
 
-**Current state:** All six agreed build passes are playable. The live game also has a 15-team league, larger Halloween standings, a five-second matchup screen, and one game maximum per club per league day. Older standings automatically remove extra simulated rest-round games while preserving actual player results and rewards. All 46 tests, lint, production build, and rendered-screen checks pass; the production bundle is verified.
+**Current state:** All six agreed build passes are playable. The live game has 20-game seasons in the 15-team league, final standings and a next-season button, larger Halloween standings, a five-second matchup screen, and no doubleheaders. Existing progress and rewards are preserved. All 48 tests, lint, production build, and rendered-screen checks pass; the production bundle is verified.
 
-**Next move:** Refresh https://diamond-scholar.vercel.app and check the repaired standings. Finish a game: the league day should advance once, each playing club should gain exactly one game, and one computer club should rest. Ruben and his son's visual playtest remains pending.
+**Next move:** Refresh https://diamond-scholar.vercel.app and check Game N of 20 on Home, Standings, and the pregame matchup. After game 20, review final standings and the champion; Start Next Season should reset league records while keeping players and rewards. Ruben and his son's visual playtest remains pending.
+
+## 20-game seasons — 2026-10-28
+
+- ✓ Done. Ruben shortened the season to 20 player games. Home, Standings, and the five-second matchup now show Game N of 20 and season progress. Wins, losses, and ties each count as one finished game. Leaving early does not count; the existing single-game innings setting remains separate.
+- Game 20 leads to final standings and names the champion using the established ranking rules. Further league games are blocked until the player chooses Start Next Season. That action starts another 20-game season, retains players/rewards/career stats, and saves the preceding final standings under `league.previousSeason`. Existing league results are retained; an older save with 20 or more finished games is treated as complete without trimming its records.
+- Added season-number checking so a stale result from the preceding season cannot count in the new season. The one-game-per-league-day rule remains in force across season restarts.
+- Code commit `4c3f203` pushed to `origin/master`. Production deployment `dpl_59LLbrF4udwZ9oAdvYyR6vp6xzaq` is Ready at https://diamond-scholar.vercel.app; the live script contains the 20-game rule, final standings, champion, and next-season button. All 48 tests, lint, build, and rendered-screen checks pass, including exact game-20 completion, blocking extra games, safe restart, and first/final/completed-screen rendering. Visual playtest remains with Ruben and his son.
 
 ## One game per league day — 2026-10-28
 
