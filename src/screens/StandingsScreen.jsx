@@ -3,7 +3,7 @@ import HalloweenDecorations from './HalloweenDecorations';
 
 export default function StandingsScreen({ profile, onBack, onPlay, season }) {
   const standings = getStandings(profile);
-  const { opponent } = getNextLeagueGame(profile);
+  const { opponent, day } = getNextLeagueGame(profile);
   const rank = standings.findIndex((team) => team.id === PLAYER_TEAM_ID) + 1;
   return (
     <div className="standings-screen">
@@ -19,7 +19,7 @@ export default function StandingsScreen({ profile, onBack, onPlay, season }) {
           <p>Your team is #{rank} of 15. The other 14 teams are computer teams.</p>
         </div>
         <section className="league-matchup" aria-label="Next game">
-          <div><strong>Up next: {opponent.name}</strong><p>Your record updates when you finish a game and return home.</p></div>
+          <div><strong>Day {day}: {opponent.name}</strong><p>Your record updates when you finish a game and return home.</p></div>
           <button className="btn btn-primary" onClick={onPlay}>Play Ball!</button>
         </section>
         {season?.id === 'halloween' && <HalloweenDecorations garland />}
@@ -39,7 +39,7 @@ export default function StandingsScreen({ profile, onBack, onPlay, season }) {
         </table>
         {season?.id === 'halloween' && <HalloweenDecorations garland />}
         <p className="standings-help">W = wins · L = losses · T = ties · PCT = winning percentage.</p>
-        <p className="standings-help">Computer teams play their games when you finish yours. One team rests each round. Everyone plays every other team before the schedule repeats. Ties count as half a win.</p>
+        <p className="standings-help">Each finished game advances one league day. Every team plays at most once per day, and one computer team rests. Your team faces all 14 opponents before your schedule repeats. Ties count as half a win.</p>
         <p className="standings-help">Your league starts at 0–0. Earlier games stay in your career record. Saving and leaving a game early does not change standings.</p>
       </main>
     </div>

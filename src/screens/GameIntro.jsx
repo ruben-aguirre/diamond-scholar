@@ -19,7 +19,7 @@ export default function GameIntro({ profile, season, onBack, onGameEnd, onSaveAn
     <div className="matchup-screen">
       <main className="matchup-card" aria-labelledby="matchup-title">
         {season?.id === 'halloween' && <HalloweenDecorations garland />}
-        <span className="matchup-kicker">DIAMOND SCHOLAR LEAGUE</span>
+        <span className="matchup-kicker">DIAMOND SCHOLAR LEAGUE · DAY {matchup.day}</span>
         <h1 id="matchup-title">Today&apos;s matchup</h1>
         <div className="matchup-teams">
           <section className="matchup-team" aria-label="Your team">

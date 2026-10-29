@@ -17,7 +17,7 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile, seaso
 
   const record = getLeague(profile).teams[0];
   const gamesPlayed = record.wins + record.losses + record.ties;
-  const { opponent } = getNextLeagueGame(profile);
+  const { opponent, day } = getNextLeagueGame(profile);
 
   return (
     <div className="home-screen">
@@ -61,7 +61,7 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile, seaso
           {season?.id === 'halloween' && <NightStadium />}
           <div className="home-hero-shade" />
           <div className="home-hero-copy">
-            <span className="home-hero-kicker">&#9918; TODAY&apos;S GAME</span>
+            <span className="home-hero-kicker">&#9918; LEAGUE DAY {day}</span>
             <h2>Take the field,<br />{profile.name}!</h2>
             <p>Next opponent: <strong>{opponent.name}</strong></p>
             <button className="home-play-button" onClick={() => onNavigate('game')}>
