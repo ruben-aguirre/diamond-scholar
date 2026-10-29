@@ -149,6 +149,15 @@
 .halloween-garland .pumpkin { width: 52px; }
 .halloween-garland .halloween-piece:nth-child(even) { transform: rotate(18deg); }
 
+[data-season='halloween'] .standings-card {
+  border: 2px solid #ed9d4d;
+  box-shadow: 0 0 25px #ef862122, 0 14px 34px #0004;
+}
+.standings-card > .halloween-garland { padding: 12px 8px 20px; }
+.standings-card > .halloween-garland .halloween-piece { width: clamp(30px, 5vw, 54px); }
+.standings-card > .halloween-garland .pumpkin { width: clamp(40px, 6vw, 66px); }
+.standings-table + .halloween-garland { padding-top: 24px; padding-bottom: 4px; }
+
 .night-stadium {
   position: absolute;
   inset: 0;

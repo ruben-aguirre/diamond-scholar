@@ -225,7 +225,7 @@ function App() {
     case 'settings':
       return <SettingsScreen profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'standings':
-      return <StandingsScreen profile={freshProfile} onBack={() => setScreen('home')} onPlay={() => setScreen('game')} />;
+      return <StandingsScreen season={season} profile={freshProfile} onBack={() => setScreen('home')} onPlay={() => setScreen('game')} />;
     case 'shop':
       return <ShopScreen season={season} profile={freshProfile} onUpdateProfile={updateProfile} onBack={() => setScreen('home')} />;
     case 'draft':
