@@ -1,8 +1,15 @@
 # Diamond Scholar — Status
 
-**Current state:** All six agreed build passes are playable. The live game now also has a 15-team league, larger standings with Halloween decorations, and a five-second matchup screen before each game. All 43 tests, lint, production build, and rendered-screen checks pass; the production bundle is verified.
+**Current state:** All six agreed build passes are playable. The live game also has a 15-team league, larger Halloween standings, a five-second matchup screen, and one game maximum per club per league day. Older standings automatically remove extra simulated rest-round games while preserving actual player results and rewards. All 46 tests, lint, production build, and rendered-screen checks pass; the production bundle is verified.
 
-**Next move:** Refresh https://diamond-scholar.vercel.app and press Play Ball from Home or Team Standings. Check that the matchup shows both teams, counts down five seconds, and starts a game against the same opponent. Ruben and his son's visual playtest remains pending.
+**Next move:** Refresh https://diamond-scholar.vercel.app and check the repaired standings. Finish a game: the league day should advance once, each playing club should gain exactly one game, and one computer club should rest. Ruben and his son's visual playtest remains pending.
+
+## One game per league day — 2026-10-28
+
+- ✓ Done. Ruben's screenshot showed some computer teams with two games after the player's first game. The cause was simulating a skipped player rest round alongside the next played round. Finished games now process only that day's seven fixtures: the player's game plus six computer games, with one computer club resting. No club plays twice in a league day. A league day advances when the player finishes a game; this does not impose a real-calendar waiting period.
+- Version-1 leagues are repaired at read time by subtracting only the repeatable computer results from skipped player rest rounds; the next completed game saves version 2. Actual player games, scores, wins, career stats, roster, coins, tokens, and powerups remain intact. Repeated reads do not subtract twice. The standings, home page, and matchup intro now show the upcoming league day.
+- The player still faces all 14 opponents before their schedule repeats. Because skipped player rest rounds are omitted, computer clubs now play 13 games for each 14 player games; the UI explains the one-computer-club rest day instead of promising a complete round-robin among all computer clubs.
+- Code commit `50cf8fa` pushed to `origin/master`. Production deployment `dpl_2bNojMn6uwFmLzkiRfiPdPHyq76s` is Ready at https://diamond-scholar.vercel.app; the live script contains league-day labels and the one-game-per-day rule. All 46 tests, lint, build, and rendered-screen checks pass. Regression tests cover 60 league days and repairs of actual 1-game and 16-game legacy save snapshots. Visual playtest remains with Ruben and his son.
 
 ## Five-second matchup intro — 2026-10-28
 
