@@ -72,6 +72,8 @@ const PITCH_SEL_TYPES = [
 
 // Opponent batters wear red so the kid instantly knows who's up.
 const OPP_COLOR = '#c0392b';
+// Your runners match the blue batter sprite, even for a red club color.
+const PLAYER_RUNNER_COLOR = '#2456a8';
 
 function getRandomFact() {
   const facts = scienceQuestions.didYouKnow;
@@ -2039,7 +2041,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
         for (let i = 0; i < 3; i++) {
           if (game.bases[i] && i !== stealingFrom) {
             const pos = BASE_POSITIONS[i];
-            drawRunner(ctx, pos.x, pos.y, profile.teamColor?.primary || '#1f3a93');
+            drawRunner(ctx, pos.x, pos.y, game.isTopHalf ? PLAYER_RUNNER_COLOR : OPP_COLOR);
           }
         }
       }
@@ -2059,7 +2061,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
         // Runner position — straight line from fromPos to toPos
         const runX = fromPos.x + (toPos.x - fromPos.x) * t;
         const runY = fromPos.y + (toPos.y - fromPos.y) * t;
-        drawRunner(ctx, runX, runY, profile.teamColor?.primary || '#1f3a93');
+        drawRunner(ctx, runX, runY, PLAYER_RUNNER_COLOR);
 
         // Animation finished — resolve the steal (advance runner or out)
         if (t >= 1 && !s.resolved) {
