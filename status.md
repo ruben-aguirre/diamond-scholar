@@ -2,7 +2,15 @@
 
 **Current state:** All six agreed build passes are playable. The live game has a monthly Games calendar with saved season dates and ranked daily matchups, 20-game seasons in the 15-team league, final standings, a five-second matchup intro, Halloween decorations, and no doubleheaders. Existing progress and rewards are preserved. All 53 tests, lint, production build, and rendered-screen checks pass; the production bundle is verified.
 
-**Next move:** Refresh https://diamond-scholar.vercel.app, open Games from Home, and choose a calendar date. Check the month arrows, next-game shortcut, seven ranked matchups, resting club, and Play Game button for the next scheduled game. Ruben and his son's visual playtest remains pending.
+**Next move:** Refresh https://diamond-scholar.vercel.app and check the next Did You Know popup during a game. The fact, heading, and close button should be clearly readable against the white card in the Halloween theme. Ruben and his son's visual playtest remains pending.
+
+## Did You Know contrast fix — 2026-10-29
+
+• ✓ Done. Ruben's screenshot showed near-white fact text and close icon on a white card. The card and close button inherited the Halloween theme's light text color. Both now use fixed dark slate text; the heading uses dark orange, and the fact text is slightly bolder. Close-button hover and keyboard focus are also clearly visible.
+
+• Lint and production build pass. Checked the actual color pairs: fact/white 14.68:1, heading/white 6.21:1, close-button foreground/background 12.79:1, and hovered close button 6.57:1. No gameplay or saved-data changes; existing game tests were not rerun for this CSS-only fix.
+
+• Code commit `a0eef56` pushed to `origin/master`. Production deployment `dpl_9zmYQsdt86TduwVzGzvJSN4XyHBy` is Ready at https://diamond-scholar.vercel.app; verified the live card, close-button, and heading color rules. Scalekit has no Vercel connection, so the existing Vercel CLI was used for release inspection. Visual playtest remains with Ruben and his son.
 
 ## Monthly Games calendar — 2026-10-28
 
