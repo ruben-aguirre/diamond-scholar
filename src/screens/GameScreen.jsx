@@ -18,6 +18,8 @@ import WinFireworks from './WinFireworks';
 import { drawNightAtmosphere, drawNightStadium } from '../game/nightStadium';
 import { getPitcherPose } from '../game/pitcherPose';
 import { getNextLeagueGame } from '../game/league';
+import { getStudyTokenProgress } from '../game/studyTokens';
+import StudyTokenStatus from './StudyTokenStatus';
 import scienceQuestions from '../data/questions/science-4th.json';
 
 // Canvas internal drawing size
@@ -1896,10 +1898,13 @@ function drawBatterSprite(ctx, sprites, batSwingT, opponent = false) {
 
 // ---- Component ----
 
-export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, leagueMatchup }) {
+export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, leagueMatchup, onTokenReward }) {
   const halloween = season?.id === 'halloween';
   const [matchup] = useState(() => leagueMatchup || getNextLeagueGame(profile));
   const [game, setGame] = useState(() => ({ ...createGameState(profile), opponentName: matchup.opponent.name }));
+  const [tokenRewardId] = useState(() => crypto.randomUUID());
+  const earnedTokensRef = useRef(0);
+  const settledRef = useRef(false);
   const [swingType, setSwingType] = useState('normal');
   const [diamondBatEquipped, setDiamondBatEquipped] = useState(false);
   const [swingResult, setSwingResult] = useState(null);
@@ -2707,34 +2712,25 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
     });
   }
 
+  function handleStudyTokenEarned(amount) {
+    earnedTokensRef.current += amount;
+    const totalEarned = earnedTokensRef.current;
+    onTokenReward?.(tokenRewardId, totalEarned);
+    setGame((prev) => ({ ...prev, tokensEarned: totalEarned }));
+  }
+
   function handleStudyBreakComplete(results) {
     const correctCount = results.filter((r) => r.correct).length;
     const coinsFromBreak = correctCount * 10;
 
-    // Token streak: 5 correct answers IN A ROW earns a token. The streak
-    // carries across study breaks in this game; a wrong answer resets it.
-    let streak = game.tokenStreak || 0;
-    let tokensWon = 0;
-    for (const r of results) {
-      if (r.correct) {
-        streak += 1;
-        if (streak >= 5) { tokensWon += 1; streak = 0; }
-      } else {
-        streak = 0;
-      }
-    }
-    if (tokensWon > 0) {
-      setSwingResult({
-        type: 'token',
-        description: `🎟️ TOKEN EARNED — 5 in a row! ${tokensWon > 1 ? `(x${tokensWon}!)` : ''}`,
-      });
-      setTimeout(() => setSwingResult(null), 2500);
-    }
+    // The fifth answer already credited its token. Carry only the remaining
+    // streak forward; leaving the quiz must not pay those tokens again.
+    const { streak } = getStudyTokenProgress(game.tokenStreak || 0, results);
 
     setGame((prev) => {
-      const newResults = [...prev.studyBreakResults, { correct: correctCount, total: 5 }];
+      const newResults = [...prev.studyBreakResults, { correct: correctCount, total: results.length }];
       const newCoins = prev.coinsEarned + coinsFromBreak;
-      const tokenPatch = { tokenStreak: streak, tokensEarned: (prev.tokensEarned || 0) + tokensWon };
+      const tokenPatch = { tokenStreak: streak };
       const nextPhase = getPostStudyPhase(prev, correctCount);
 
       if (nextPhase === GAME_PHASES.BONUS_ROUND) {
@@ -2774,10 +2770,11 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
     });
   }
 
-  function handleBonusComplete(bonusCoins) {
+  function handleBonusComplete(bonusCoins, streak) {
     setGame((prev) => ({
       ...prev,
       coinsEarned: prev.coinsEarned + bonusCoins,
+      tokenStreak: streak ?? prev.tokenStreak,
       phase: GAME_PHASES.GAME_OVER,
     }));
   }
@@ -2790,8 +2787,10 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
   }
 
   function handleExitSave() {
+    if (settledRef.current) return;
+    settledRef.current = true;
     setShowExitDialog(false);
-    onSaveAndExit(battingStatsRef.current, game.fireballs, game.coinsEarned, game.tokensEarned, game.diamondBatUses);
+    onSaveAndExit(battingStatsRef.current, game.fireballs, game.coinsEarned, game.tokensEarned, game.diamondBatUses, tokenRewardId);
   }
 
   function handleExitClose() {
@@ -2799,6 +2798,8 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
   }
 
   function handleGameOver() {
+    if (settledRef.current) return;
+    settledRef.current = true;
     onGameEnd({
       leagueRound: matchup.round,
       seasonNumber: matchup.seasonNumber,
@@ -2812,6 +2813,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
       fireballs: game.fireballs,
       diamondBatUses: game.diamondBatUses,
       tokensEarned: game.tokensEarned,
+      tokenRewardId,
     });
   }
 
@@ -2820,15 +2822,19 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
   if (game.phase === GAME_PHASES.STUDY_BREAK && studyQuestions) {
     return (
       <StudyBreak
+        key={game.studyBreakNumber}
         questions={studyQuestions}
         breakNumber={game.studyBreakNumber}
+        startingStreak={game.tokenStreak}
+        tokenBalance={profile.tokens || 0}
+        onTokenEarned={handleStudyTokenEarned}
         onComplete={handleStudyBreakComplete}
       />
     );
   }
 
   if (game.phase === GAME_PHASES.BONUS_ROUND) {
-    return <BonusRound onComplete={handleBonusComplete} />;
+    return <BonusRound onComplete={handleBonusComplete} startingStreak={game.tokenStreak} tokenBalance={profile.tokens || 0} onTokenEarned={handleStudyTokenEarned} />;
   }
 
   if (game.phase === GAME_PHASES.GAME_OVER) {
@@ -2855,6 +2861,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
             <span className="coin-icon big">&#x1FA99;</span>
             <span className="coins-text">+{game.coinsEarned} Scholar Coins</span>
           </div>
+          {game.tokensEarned > 0 && <p className="game-tokens-earned">🎟️ {game.tokensEarned} {game.tokensEarned === 1 ? 'token earned' : 'tokens earned'} and saved!</p>}
           <button className="btn btn-primary btn-big" onClick={handleGameOver}>
             {matchup.day === matchup.totalGames ? 'Final Standings' : 'Back to Home'}
           </button>
@@ -3038,7 +3045,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
       {/* Coins HUD */}
       <div className="game-coins">
         <span className="coin-icon">&#x1FA99;</span> {game.coinsEarned}
-        {game.tokensEarned > 0 && <span className="token-hud"> 🎟️ {game.tokensEarned}</span>}
+        <span className="token-hud"> 🎟️ {profile.tokens || 0} tokens</span>
       </div>
 
       {/* Did You Know overlay */}
@@ -3073,7 +3080,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
 
 // Bases diamond drawn in top-right corner of canvas
 // ---- Bonus Round (manual-advance version) ----
-function BonusRound({ onComplete }) {
+function BonusRound({ onComplete, startingStreak = 0, tokenBalance = 0, onTokenEarned }) {
   const [questions] = useState(() => {
     const pool = [...scienceQuestions.questions];
     return pool.sort(() => Math.random() - 0.5);
@@ -3083,31 +3090,49 @@ function BonusRound({ onComplete }) {
   const [coins, setCoins] = useState(0);
   const [selected, setSelected] = useState(null);
   const [showResult, setShowResult] = useState(false);
+  const [answers, setAnswers] = useState([]);
+  const answeredRef = useRef(false);
+  const finishedRef = useRef(false);
+  const tokenProgress = getStudyTokenProgress(startingStreak, answers);
 
   const current = questions[currentIdx];
 
+  useEffect(() => {
+    if (!current && !finishedRef.current) {
+      finishedRef.current = true;
+      onComplete(coins, tokenProgress.streak);
+    }
+  }, [current, coins, tokenProgress.streak, onComplete]);
+
   function handleAnswer(optionIdx) {
-    if (showResult) return;
+    if (answeredRef.current || finishedRef.current) return;
+    answeredRef.current = true;
     setSelected(optionIdx);
     setShowResult(true);
     const isCorrect = optionIdx === current.answer;
+    const nextAnswers = [...answers, { correct: isCorrect }];
+    const nextProgress = getStudyTokenProgress(startingStreak, nextAnswers);
+    setAnswers(nextAnswers);
+    if (nextProgress.tokensEarned > tokenProgress.tokensEarned) onTokenEarned?.(1);
     if (isCorrect) setCoins((c) => c + 10);
     else setWrongCount((w) => w + 1);
   }
 
   function handleNext() {
+    if (!answeredRef.current || finishedRef.current) return;
     const isCorrect = selected === current.answer;
     if (!isCorrect && wrongCount >= 3) {
-      onComplete(coins);
+      finishedRef.current = true;
+      onComplete(coins, tokenProgress.streak);
       return;
     }
     setSelected(null);
+    answeredRef.current = false;
     setShowResult(false);
     setCurrentIdx((i) => i + 1);
   }
 
   if (!current) {
-    onComplete(coins);
     return null;
   }
 
@@ -3120,6 +3145,7 @@ function BonusRound({ onComplete }) {
         <div className="bonus-header">
           <h2>Bonus Round!</h2>
           <p>Keep going until you get 3 wrong.</p>
+          <StudyTokenStatus progress={tokenProgress} balance={tokenBalance} />
           <div className="bonus-status">
             <span className="coin-icon">&#x1FA99;</span> +{coins}
             <span className="wrong-count">

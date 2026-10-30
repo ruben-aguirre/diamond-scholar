@@ -1791,6 +1791,10 @@ body {
 }
 
 /* Study Break */
+.study-token-status { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; padding: 14px; border: 2px solid #d99b15; border-radius: 12px; background: #fff4d6; color: #382a09; font-size: 1rem; line-height: 1.5; text-align: center; }
+.study-token-status strong { font-size: 1.15rem; }
+.game-tokens-earned { margin: 12px 0 24px; font-size: 1.3rem; font-weight: 600; }
+
 .study-screen {
   min-height: 100vh;
   display: flex;

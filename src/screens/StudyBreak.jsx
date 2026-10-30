@@ -1,33 +1,45 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { getStudyTokenProgress } from '../game/studyTokens';
+import StudyTokenStatus from './StudyTokenStatus';
 
-export default function StudyBreak({ questions, breakNumber, onComplete }) {
+export default function StudyBreak({ questions, breakNumber, onComplete, startingStreak = 0, tokenBalance = 0, onTokenEarned }) {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [results, setResults] = useState([]);
   const [selected, setSelected] = useState(null);
   const [showResult, setShowResult] = useState(false);
+  const answeredRef = useRef(false);
+  const completedRef = useRef(false);
+  const tokenProgress = getStudyTokenProgress(startingStreak, results);
 
   const current = questions[currentIdx];
   const correct = results.filter((r) => r.correct).length;
   const isLast = currentIdx + 1 >= questions.length;
 
   function handleAnswer(optionIdx) {
-    if (showResult) return;
+    if (answeredRef.current) return;
+    answeredRef.current = true;
     setSelected(optionIdx);
     setShowResult(true);
 
     const isCorrect = optionIdx === current.answer;
-    setResults((prev) => [...prev, { questionId: current.id, correct: isCorrect }]);
+    const nextResults = [...results, { questionId: current.id, correct: isCorrect }];
+    const nextProgress = getStudyTokenProgress(startingStreak, nextResults);
+    setResults(nextResults);
+    if (nextProgress.tokensEarned > tokenProgress.tokensEarned) onTokenEarned?.(1);
   }
 
   function handleNext() {
+    if (!answeredRef.current || completedRef.current) return;
     if (isLast) {
       // The last answer is already in `results` — you must answer (which calls
       // setResults) before the "See Results" button appears, and that state has
       // flushed by the time this click fires.
+      completedRef.current = true;
       onComplete(results);
       return;
     }
     setSelected(null);
+    answeredRef.current = false;
     setShowResult(false);
     setCurrentIdx((i) => i + 1);
   }
@@ -41,6 +53,7 @@ export default function StudyBreak({ questions, breakNumber, onComplete }) {
             <span>Question {currentIdx + 1} of {questions.length}</span>
             <span className="coin-icon">&#x1FA99;</span> +{correct * 10}
           </div>
+          <StudyTokenStatus progress={tokenProgress} balance={tokenBalance} />
           <div className="progress-dots">
             {questions.map((_, i) => (
               <span

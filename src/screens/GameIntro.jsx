@@ -4,7 +4,7 @@ import { startMatchupCountdown } from '../game/matchupCountdown';
 import GameScreen from './GameScreen';
 import HalloweenDecorations from './HalloweenDecorations';
 
-export default function GameIntro({ profile, season, onBack, onGameEnd, onSaveAndExit }) {
+export default function GameIntro({ profile, season, onBack, onGameEnd, onSaveAndExit, onTokenReward }) {
   const [matchup] = useState(() => getNextLeagueGame(profile));
   const [seconds, setSeconds] = useState(5);
   const [started, setStarted] = useState(false);
@@ -18,7 +18,7 @@ export default function GameIntro({ profile, season, onBack, onGameEnd, onSaveAn
   }
 
   if (started) {
-    return <GameScreen profile={profile} season={season} leagueMatchup={matchup} onGameEnd={onGameEnd} onSaveAndExit={onSaveAndExit} />;
+    return <GameScreen profile={profile} season={season} leagueMatchup={matchup} onGameEnd={onGameEnd} onSaveAndExit={onSaveAndExit} onTokenReward={onTokenReward} />;
   }
 
   const yourRecord = getLeague(profile).teams[0];

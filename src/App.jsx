@@ -13,6 +13,7 @@ import SettingsScreen from './screens/SettingsScreen';
 import StandingsScreen from './screens/StandingsScreen';
 import GamesScreen from './screens/GamesScreen';
 import { getCalendarLeague } from './game/leagueCalendar';
+import { creditStudyTokens } from './game/studyTokens';
 import { getLeague, getLeagueSeason, recordLeagueGame, startNextLeagueSeason } from './game/league';
 import { getSeason } from './game/seasons';
 import { isSecretName } from './data/players';
@@ -108,14 +109,22 @@ function App() {
   // Save-and-exit: keep the batting stats, any Fireballs, AND the coins earned
   // from study breaks so far, but don't count this as a finished game (no
   // win/loss, no games-played bump).
-  function handleSaveAndExit(battingStats, fireballs, coinsEarned, tokensEarned, diamondBatUses) {
-    updateProfile({
-      coins: activeProfile.coins + (coinsEarned || 0),
-      tokens: (activeProfile.tokens || 0) + (tokensEarned || 0),
-      roster: applyBattingStats(activeProfile.roster, battingStats),
-      fireballs: fireballs != null ? fireballs : (activeProfile.fireballs || 0),
-      diamondBatUses: diamondBatUses ?? activeProfile.diamondBatUses ?? 0,
-    });
+  function handleTokenReward(gameId, totalEarned) {
+    setProfiles((prev) => prev.map((profile) => profile.id === activeProfileId
+      ? creditStudyTokens(profile, gameId, totalEarned) : profile));
+  }
+
+  function handleSaveAndExit(battingStats, fireballs, coinsEarned, tokensEarned, diamondBatUses, tokenRewardId) {
+    setProfiles((prev) => prev.map((profile) => {
+      if (profile.id !== activeProfileId) return profile;
+      return {
+        ...creditStudyTokens(profile, tokenRewardId, tokensEarned),
+        coins: profile.coins + (coinsEarned || 0),
+        roster: applyBattingStats(profile.roster, battingStats),
+        fireballs: fireballs != null ? fireballs : (profile.fireballs || 0),
+        diamondBatUses: diamondBatUses ?? profile.diamondBatUses ?? 0,
+      };
+    }));
     setScreen('team');
   }
 
@@ -125,10 +134,9 @@ function App() {
       const league = recordLeagueGame(profile, results);
       if (league.round === getLeague(profile).round) return profile;
       return {
-        ...profile,
+        ...creditStudyTokens(profile, results.tokenRewardId, results.tokensEarned),
         league,
         coins: profile.coins + results.coinsEarned,
-        tokens: (profile.tokens || 0) + (results.tokensEarned || 0),
         roster: applyBattingStats(profile.roster, results.battingStats),
         fireballs: results.fireballs != null ? results.fireballs : (profile.fireballs || 0),
         diamondBatUses: results.diamondBatUses ?? profile.diamondBatUses ?? 0,
@@ -258,6 +266,7 @@ function App() {
           onBack={() => setScreen('home')}
           onGameEnd={handleGameEnd}
           onSaveAndExit={handleSaveAndExit}
+          onTokenReward={handleTokenReward}
         />
       );
     default:
