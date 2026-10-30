@@ -1,8 +1,18 @@
 # Diamond Scholar — Status
 
-**Current state:** All six agreed build passes are playable. The live game has a monthly Games calendar with saved season dates and ranked daily matchups, 20-game seasons in the 15-team league, final standings, a five-second matchup intro, Halloween decorations, and no doubleheaders. Existing progress and rewards are preserved. All 53 tests, lint, production build, and rendered-screen checks pass; the production bundle is verified.
+**Current state:** All six agreed build passes are playable. The live game includes the 20-game league/calendar, readable Did You Know cards, blue player runners, and immediately saved science streak tokens in regular quizzes and bonus rounds. Existing progress and rewards are preserved. All 60 tests, lint, production build, and rendered-screen checks pass; the production bundle is verified.
 
-**Next move:** Refresh https://diamond-scholar.vercel.app and get a runner on base. Your runner should wear blue to match the batter, including while stealing. Opponent runners remain red. Ruben and his son's visual playtest remains pending.
+**Next move:** Refresh https://diamond-scholar.vercel.app, finish an inning, and answer five science questions correctly in a row. The fifth answer should show Token earned and an increased saved wallet balance immediately. Check bonus-round streaks too. Ruben and his son's visual playtest remains pending.
+
+## Immediate science streak tokens — 2026-10-29
+
+• ✓ Done. Ruben reported five right answers without a token. Regular quizzes computed the award only on See Results, showed a short message that could be hidden by the bonus/game-over screen, and saved the wallet only on game exit/completion. Bonus questions did not count toward tokens at all. Regular and bonus questions now share the same five-correct-answer streak calculation and award on the fifth answer.
+
+• Added a visible token-earned message, wallet total, and 0–4 out of 5 streak meter to both quiz types. Streaks carry across inning quizzes and into the bonus round; wrong answers reset only the unfinished streak. Each earned token updates the saved profile immediately, so refreshing after earning it retains it. The game HUD shows the saved wallet balance and the final screen lists tokens earned.
+
+• Per-game cumulative reward receipts prevent the immediate award from being credited again on quiz completion, Save, or finished-game settlement. Answer/completion guards prevent repeated clicks from duplicating rewards. Save now uses the latest saved profile so it cannot overwrite a newly credited wallet balance. Existing coin and batting-stat settlement remains on Save/game completion.
+
+• Code commit `bb972dd` pushed to `origin/master`. Production deployment `dpl_AePgEgAH6UqGqEbQQEqmWjSxwtzT` is Ready at https://diamond-scholar.vercel.app; the live script contains immediate reward saving, saved-wallet messaging, and the streak meter. All 60 tests, lint, and build pass. Seven new tests cover five/ten right answers, wrong answers, cross-quiz/bonus carry, persistence, duplicate settlement, separate games/profiles, and invalid totals. Rendered component checks verify the award message, saved balance, and carried streak. Full-game visual playtest remains with Ruben and his son.
 
 ## Blue player runners — 2026-10-29
 
