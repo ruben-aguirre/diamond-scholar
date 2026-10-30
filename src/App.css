@@ -1668,7 +1668,7 @@ body {
 .dyk-card {
   position: relative;
   background: #fff;
-  color: var(--text);
+  color: #1f2937;
   padding: 28px 28px 24px;
   border-radius: 20px;
   max-width: 460px;
@@ -1683,7 +1683,7 @@ body {
   top: 10px;
   right: 12px;
   background: #ecf0f1;
-  color: var(--text);
+  color: #1f2937;
   border: none;
   font-size: 1.1rem;
   font-weight: 700;
@@ -1698,14 +1698,19 @@ body {
 }
 
 .dyk-close:hover {
-  background: var(--red);
+  background: #b42318;
   color: #fff;
+}
+
+.dyk-close:focus-visible {
+  outline: 3px solid #1f2937;
+  outline-offset: 3px;
 }
 
 .dyk-hint {
   margin-top: 14px;
   font-size: 0.85rem;
-  color: var(--text-light);
+  color: #475569;
   font-style: italic;
 }
 
@@ -1718,7 +1723,7 @@ body {
   display: block;
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--orange);
+  color: #9a4b00;
   text-transform: uppercase;
   letter-spacing: 2px;
   margin-bottom: 10px;
@@ -1728,7 +1733,7 @@ body {
   margin-top: 6px;
   font-size: 1.2rem;
   line-height: 1.45;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 @keyframes slideUp {
