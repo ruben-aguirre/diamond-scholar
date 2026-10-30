@@ -2,7 +2,13 @@
 
 **Current state:** All six agreed build passes are playable. The live game has a monthly Games calendar with saved season dates and ranked daily matchups, 20-game seasons in the 15-team league, final standings, a five-second matchup intro, Halloween decorations, and no doubleheaders. Existing progress and rewards are preserved. All 53 tests, lint, production build, and rendered-screen checks pass; the production bundle is verified.
 
-**Next move:** Refresh https://diamond-scholar.vercel.app and check the next Did You Know popup during a game. The fact, heading, and close button should be clearly readable against the white card in the Halloween theme. Ruben and his son's visual playtest remains pending.
+**Next move:** Refresh https://diamond-scholar.vercel.app and get a runner on base. Your runner should wear blue to match the batter, including while stealing. Opponent runners remain red. Ruben and his son's visual playtest remains pending.
+
+## Blue player runners — 2026-10-29
+
+• ✓ Done. Ruben's screenshot showed a red player on first base who looked like an opposing fielder. That character is the player's baserunner; it was inheriting the red Archers club color while the batter sprite stayed blue. Player runners now use blue on base and during steals. Opponent runners use red during their batting half.
+
+• Code commit `20b7d49` pushed to `origin/master`. Production deployment `dpl_7ESm4RS4VgEa7ca6bXAg2iQZkSKM` is Ready at https://diamond-scholar.vercel.app. Verified the live script matches the new local production bundle and contains the blue uniform color. Lint and production build pass. No scoring, movement, saved-data, or defender-color changes. Visual playtest remains with Ruben and his son.
 
 ## Did You Know contrast fix — 2026-10-29
 
