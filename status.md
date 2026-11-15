@@ -1,6 +1,6 @@
 # Diamond Scholar — Status
 
-**Current state:** Settings now offers Easy, Medium, Hard, and Pro. Each higher level speeds up incoming pitches, narrows swing timing, and makes opposing batters miss less and hit harder. The choice saves per profile and is fixed when a game begins. All 73 tests, lint, production build, and browser settings/save/game-launch checks pass. Live verification is in progress.
+**Current state:** Settings now offers Easy, Medium, Hard, and Pro. Each higher level speeds up incoming pitches, narrows swing timing, and makes opposing batters miss less and hit harder. The choice saves per profile and is fixed when a game begins. All 73 tests, lint, production build, and browser settings/save/game-launch checks pass. The production bundle is verified live.
 
 **Next move:** Refresh https://diamond-scholar.vercel.app, open the Settings gear, and choose a difficulty. Play a game on Easy, then try the higher levels and report whether Pro feels hard enough.
 
@@ -11,6 +11,8 @@
 • Incoming pitch duration uses multipliers 1.00 / 0.85 / 0.70 / 0.55; swing timing windows use 0.65 / 0.50 / 0.35 / 0.22. Opposing batters' strike-looking and whiff chances use 1.00 / 0.85 / 0.65 / 0.45, and contact strength uses 1.00 / 1.12 / 1.25 / 1.40. All regular pitch types and earned CPU Fireballs use the speed setting. The player's own pitch animation, the previously requested 75% bunt chance, quizzes, rewards, transfers, and practice modes retain their existing rules.
 
 • All 73 tests pass. Five new tests cover defaults and saved choices, fixed in-game difficulty, strictly faster pitches at every level/team strength, tighter timing, tougher opponent results across all three defensive pitch types, and preserved bunt behavior. Lint and build pass. Browser checks verified all four choices, immediate saved labels, Pro and one inning surviving reload, the 390-pixel settings layout without horizontal overflow, and a game launching with the Pro label; no browser errors. Difficulty balance across full games remains for Ruben and his son's playtest.
+
+• ✓ Done. Code commit `2a270fe` reached `origin/master`. Vercel deployment `dpl_DsYxmH9XUxHhs2syM4t4VWCuiHMZ` is Ready at https://diamond-scholar.vercel.app; the live bundle matches the tested build and includes the four difficulty choices and gameplay tuning.
 
 ## Player sales to league teams — 2026-11-15
 
