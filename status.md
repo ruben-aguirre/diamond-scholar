@@ -1,6 +1,6 @@
 # Diamond Scholar — Status
 
-**Current state:** November's Thanksgiving theme is built and pushed: warm harvest colors, baseball-cap turkeys, pumpkins, leaves, and a free Gold Pack per profile each November. All 61 tests, lint, and production build pass; desktop and phone browser checks cover home, standings, calendar, and game launch. Final live verification is in progress.
+**Current state:** November's Thanksgiving theme is built and pushed: warm harvest colors, baseball-cap turkeys, pumpkins, leaves, and a free Gold Pack per profile each November. All 61 tests, lint, and production build pass; desktop and phone browser checks cover home, standings, calendar, and game launch. The production bundle is verified live.
 
 **Next move:** Refresh https://diamond-scholar.vercel.app and play the Thanksgiving update. Ruben and his son's visual playtest remains the final check.
 
@@ -11,6 +11,8 @@
 • Reused the existing saved holiday gift system for one free Thanksgiving Gold Pack per profile per year. Added November boundary and independent yearly claim coverage. Existing players, standings, coins, tokens, and other holiday claims are preserved.
 
 • Browser checks passed at 390, 760, 980, and 1907 pixels wide. Fixed the Thanksgiving phone layout so the league record sits below Play Ball, the in-game wallet sits below the holiday banner, and the standings Play Ball button fits its card. No new dependencies or gameplay-rule changes. All 61 tests, lint, and production build pass. Full-inning playtest remains with Ruben and his son.
+
+• ✓ Done. Code commits `c9b39ce` and `36d9bc3` reached `origin/master`. Vercel deployment `dpl_9mFPhJbePNKK8jwYBHMy4DqLPN7K` is Ready at https://diamond-scholar.vercel.app. Live JavaScript and CSS match the checked build, including the Thanksgiving greeting, artwork, and final layout fixes.
 
 ## Immediate science streak tokens — 2026-10-29
 
