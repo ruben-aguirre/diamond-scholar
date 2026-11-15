@@ -1,17 +1,12 @@
 import { useState } from 'react';
-import { battingAverage, playerAverage } from '../data/players';
+import { battingAverage } from '../data/players';
+import PlayerSaleDialog from './PlayerSaleDialog';
 
 // Upgrading a player costs this many coins and raises ONE skill of the kid's
 // choice by 1 (batting, pitching, fielding, or running/speed). Skills cap at 10.
 const UPGRADE_COST = 500;
 const UPGRADE_TOKEN_COST = 2;  // tokens (earned from 5-in-a-row science streaks)
 
-// Selling a player pays 50 coins for a good player, 30 for the rest.
-// "Good" = overall rating (average of the four skills) of 4.5 or better.
-const MIN_ROSTER = 9;  // can't sell below a full lineup
-function sellPrice(player) {
-  return playerAverage(player) >= 4.5 ? 50 : 30;
-}
 const UPGRADE_SKILLS = [
   { key: 'batting', label: 'Batting', icon: '\u{1F3CF}' },   // cricket bat+ball reads as "bat"
   { key: 'speed', label: 'Running', icon: '\u{1F3C3}' },
@@ -56,25 +51,6 @@ export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
     setPayWith(canAffordCoins || !canAffordTokens ? 'coins' : 'tokens');
     setUpgradingId(playerId);
   }
-  const sellingPlayer = profile.roster.find((p) => p.id === sellingId) || null;
-  const canSell = profile.roster.length > MIN_ROSTER;
-
-  // YES on the sell dialog: player leaves the team, coins come in. The
-  // player also comes out of the batting order (their slot disappears) and
-  // their field position opens up.
-  function confirmSell() {
-    if (!sellingPlayer || !canSell) return;
-    const price = sellPrice(sellingPlayer);
-    const newRoster = profile.roster.filter((p) => p.id !== sellingPlayer.id);
-    const newLineup = (profile.lineup || []).filter((id) => id !== sellingPlayer.id);
-    onUpdateProfile({
-      roster: newRoster,
-      lineup: newLineup,
-      coins: profile.coins + price,
-    });
-    setSellingId(null);
-  }
-
   // Spend the coins and raise the chosen skill by 1. Closes the dialog so the
   // kid sees the new number on the row right away.
   function upgradeSkill(skillKey) {
@@ -359,37 +335,9 @@ export default function TeamScreen({ profile, onUpdateProfile, onBack }) {
         </div>
       )}
 
-      {sellingPlayer && (
-        <div className="exit-dialog-backdrop" onClick={() => setSellingId(null)}>
-          <div className="exit-dialog upgrade-dialog" onClick={(e) => e.stopPropagation()}>
-            <h2 className="exit-dialog-title">Sell {sellingPlayer.name}?</h2>
-            {canSell ? (
-              <p className="exit-dialog-text">
-                Do you want to sell your player? You get{' '}
-                <strong>&#x1FA99; {sellPrice(sellingPlayer)}</strong> coins, but{' '}
-                {sellingPlayer.name} leaves the team forever.
-              </p>
-            ) : (
-              <p className="upgrade-no-coins">
-                You can't sell right now — you need at least {MIN_ROSTER} players
-                on your team. Buy a new player in the Shop first!
-              </p>
-            )}
-            <div className="exit-dialog-buttons">
-              <button
-                className="btn-exit-save"
-                disabled={!canSell}
-                onClick={confirmSell}
-              >
-                Yes
-              </button>
-              <button className="btn-exit-close" onClick={() => setSellingId(null)}>
-                No
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {sellingId && <PlayerSaleDialog key={sellingId} profile={profile} playerId={sellingId}
+        onUpdateProfile={onUpdateProfile} onClose={() => setSellingId(null)} />}
+
     </div>
   );
 }

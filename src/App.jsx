@@ -75,7 +75,7 @@ function App() {
 
   function updateProfile(updates) {
     setProfiles((prev) =>
-      prev.map((p) => (p.id === activeProfileId ? { ...p, ...updates } : p))
+      prev.map((p) => (p.id === activeProfileId ? { ...p, ...(typeof updates === 'function' ? updates(p) : updates) } : p))
     );
   }
 

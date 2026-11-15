@@ -53,6 +53,17 @@ export default function StandingsScreen({ profile, onBack, onPlay, onNextSeason,
         </table>
         {season?.id === 'halloween' && <HalloweenDecorations garland />}
         {season?.id === 'thanksgiving' && <ThanksgivingDecorations garland />}
+        {standings.some((team) => team.roster?.length) && (
+          <section className="league-transfers" aria-label="Player transfers">
+            <h2>Players signed by other teams</h2>
+            {standings.filter((team) => team.roster?.length).map((team) => (
+              <div key={team.id}>
+                <h3>{team.name}</h3>
+                <ul>{team.roster.map((player) => <li key={player.id}>{player.name} · {player.transferPrice} coins</li>)}</ul>
+              </div>
+            ))}
+          </section>
+        )}
         <p className="standings-help">W = wins · L = losses · T = ties · PCT = winning percentage.</p>
         <p className="standings-help">Your season lasts 20 finished games. Each game advances one league day. Every team plays at most once per day, and one computer team rests. Your team faces all 14 opponents before any rematches. Ties count as half a win.</p>
         <p className="standings-help">Your league starts at 0–0. Earlier games stay in your career record. Saving and leaving a game early does not change standings.</p>

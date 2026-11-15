@@ -1,8 +1,16 @@
 # Diamond Scholar — Status
 
-**Current state:** November's Thanksgiving theme is built and pushed: warm harvest colors, baseball-cap turkeys, pumpkins, leaves, and a free Gold Pack per profile each November. All 61 tests, lint, and production build pass; desktop and phone browser checks cover home, standings, calendar, and game launch. The production bundle is verified live.
+**Current state:** Player sales now use team offers: choose one of the other 14 league teams, set 0–100 coins, and ask. Acceptance falls from 100% at zero coins to 10% at 100. Accepted offers save the player on the buying team's roster and credit coins once; declined offers change nothing. All 68 tests, lint, production build, and browser sale-flow checks pass. Live verification is in progress.
 
-**Next move:** Refresh https://diamond-scholar.vercel.app and play the Thanksgiving update. Ruben and his son's visual playtest remains the final check.
+**Next move:** Refresh https://diamond-scholar.vercel.app, open My Team, and tap Sell. Try choosing a team and changing the asking price. Keep at least nine players; add a player from Card Shop or Draft Day first if needed.
+
+## Player sales to league teams — 2026-11-15
+
+• ✓ Done. Replaced the old fixed 30/50-coin sale with a team selector, keyboard-accessible 0–100 coin slider, visible acceptance odds, and Ask team button. Each offer rolls once; a rejection keeps the player and invites a different team or price. Cancel and Escape make no sale. The offer explains that a yes immediately transfers the player, including an explicit free-transfer notice at zero coins.
+
+• Accepted offers remove the player from the seller's roster and batting order, fill their fielding position from the bench when available, and save their full player record on the selected league team's roster. Coins and lifetime coins earned update together from the latest profile state. Stale/repeated sales, invalid prices/teams, and sales leaving fewer than nine players are blocked. Transfers survive reload, game results, and new seasons. Team Standings lists which teams signed players and their prices. CPU match simulation remains unchanged; transferred-player skills do not alter opponent difficulty in this pass.
+
+• All 68 tests pass, including seven new sales tests covering odds, rejection, acceptance, zero-price transfers, exact payment, duplicate/stale requests, roster protection, and season persistence. Lint and production build pass. Browser checks cover all 14 destinations, keyboard slider endpoints, cancellation, rejection then a revised accepted offer, saved ownership/coins after refresh, nine-player guard, Escape, and the standings transfer list, with no browser errors. My Team rows and the sale dialog fit at 320, 390, 600, and 1280 pixels wide. Full-game playtest remains with Ruben and his son.
 
 ## Thanksgiving theme — 2026-11-15
 
