@@ -1,4 +1,4 @@
-import { getGameInnings } from './gameSettings.js';
+import { getGameInnings, getGameDifficulty } from './gameSettings.js';
 
 // Game state machine
 export const GAME_PHASES = {
@@ -18,6 +18,7 @@ export function createGameState(profile) {
   return {
     inning: 1,
     totalInnings: getGameInnings(profile),
+    difficulty: getGameDifficulty(profile).id,
     isTopHalf: true,
     outs: 0,
     strikes: 0,
@@ -106,7 +107,8 @@ export const PLAYER_PITCH_TYPES = {
 //   - paint the corners → whiffs and weak contact
 //   - miss just off the zone → batters chase
 //   - groove it middle-middle → get punished
-export function calculateDefensePitchResult(typeKey, target) {
+export function calculateDefensePitchResult(typeKey, target, difficulty = 'easy') {
+  const level = getGameDifficulty({ gameDifficulty: difficulty });
   const mods = {
     'Fastball': { whiff: 0.34, power: 1.2 },   // blows by them, but dangerous over the middle
     'Slider': { whiff: 0.44, power: 0.95 },    // best swing-and-miss pitch
@@ -128,19 +130,19 @@ export function calculateDefensePitchResult(typeKey, target) {
   }
 
   // In the zone. Batters occasionally freeze looking.
-  if (Math.random() < 0.10) {
+  if (Math.random() < 0.10 * level.opponentWhiff) {
     return { kind: 'strike-looking', description: 'Right in there — strike looking!' };
   }
 
   // 0 = middle-middle meatball, 1 = painted on the edge
   const edge = Math.min(1, Math.hypot(target.x, target.y));
-  const whiffChance = mods.whiff * (0.45 + 0.85 * edge);
+  const whiffChance = mods.whiff * (0.45 + 0.85 * edge) * level.opponentWhiff;
   if (Math.random() < whiffChance) {
     return { kind: 'strike-swinging', description: 'Swing and a miss!' };
   }
 
   // Contact. Edge pitches produce weak contact; middle pitches get crushed.
-  const quality = (1 - edge * 0.65) * mods.power * (0.4 + Math.random() * 0.6);
+  const quality = (1 - edge * 0.65) * mods.power * (0.4 + Math.random() * 0.6) * level.opponentPower;
   const roll = Math.random();
   if (roll < 0.22) return { kind: 'foul', description: 'Fouled off.' };
   if (quality > 0.62) return { kind: 'homerun', description: 'CRUSHED — home run. That one caught too much plate!' };
@@ -154,11 +156,11 @@ export function calculateDefensePitchResult(typeKey, target) {
 // Map team strength to pitch duration in ms (lower = faster = harder).
 // speedMul (from the pitch type) scales it: fastballs come quicker, changeups
 // float in slower.
-export function pitchDurationMs(teamAvg, speedMul = 1) {
+export function pitchDurationMs(teamAvg, speedMul = 1, difficulty = 'easy') {
   // Starts slow (~2400ms) at avg 3, ramps to ~1200ms at avg 9 — gentler curve
   const clamped = Math.max(2, Math.min(10, teamAvg));
   const base = 2400 - (clamped - 3) * 200;
-  return Math.round(base * speedMul);
+  return Math.round(base * speedMul * getGameDifficulty({ gameDifficulty: difficulty }).pitchSpeed);
 }
 
 // Swing type modifiers

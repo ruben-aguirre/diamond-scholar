@@ -1,8 +1,16 @@
 # Diamond Scholar — Status
 
-**Current state:** Player sales now use team offers: choose one of the other 14 league teams, set 0–100 coins, and ask. Acceptance falls from 100% at zero coins to 10% at 100. Accepted offers save the player on the buying team's roster and credit coins once; declined offers change nothing. All 68 tests, lint, production build, and browser sale-flow checks pass. The production bundle is verified live.
+**Current state:** Settings now offers Easy, Medium, Hard, and Pro. Each higher level speeds up incoming pitches, narrows swing timing, and makes opposing batters miss less and hit harder. The choice saves per profile and is fixed when a game begins. All 73 tests, lint, production build, and browser settings/save/game-launch checks pass. Live verification is in progress.
 
-**Next move:** Refresh https://diamond-scholar.vercel.app, open My Team, and tap Sell. Try choosing a team and changing the asking price. Keep at least nine players; add a player from Card Shop or Draft Day first if needed.
+**Next move:** Refresh https://diamond-scholar.vercel.app, open the Settings gear, and choose a difficulty. Play a game on Easy, then try the higher levels and report whether Pro feels hard enough.
+
+## Four difficulty levels — 2026-11-15
+
+• ✓ Done. Added Easy, Medium, Hard, and Pro radio choices with short descriptions and an immediate saved confirmation in Settings. The home Play Ball button and in-game inning label show the chosen level. New profiles, older saves, and unrecognized values default to Easy, preserving the prior gameplay. Innings still save independently.
+
+• Incoming pitch duration uses multipliers 1.00 / 0.85 / 0.70 / 0.55; swing timing windows use 0.65 / 0.50 / 0.35 / 0.22. Opposing batters' strike-looking and whiff chances use 1.00 / 0.85 / 0.65 / 0.45, and contact strength uses 1.00 / 1.12 / 1.25 / 1.40. All regular pitch types and earned CPU Fireballs use the speed setting. The player's own pitch animation, the previously requested 75% bunt chance, quizzes, rewards, transfers, and practice modes retain their existing rules.
+
+• All 73 tests pass. Five new tests cover defaults and saved choices, fixed in-game difficulty, strictly faster pitches at every level/team strength, tighter timing, tougher opponent results across all three defensive pitch types, and preserved bunt behavior. Lint and build pass. Browser checks verified all four choices, immediate saved labels, Pro and one inning surviving reload, the 390-pixel settings layout without horizontal overflow, and a game launching with the Pro label; no browser errors. Difficulty balance across full games remains for Ruben and his son's playtest.
 
 ## Player sales to league teams — 2026-11-15
 

@@ -2,7 +2,7 @@ import { canClaimSeasonalPack } from '../game/seasons';
 import HalloweenDecorations from './HalloweenDecorations';
 import ThanksgivingDecorations from './ThanksgivingDecorations';
 import NightStadium from './NightStadium';
-import { getGameInnings } from '../game/gameSettings';
+import { getGameInnings, getGameDifficulty } from '../game/gameSettings';
 import { getLeague, getLeagueSeason, getNextLeagueGame } from '../game/league';
 
 export default function HomeScreen({ profile, onNavigate, onSwitchProfile, season }) {
@@ -69,7 +69,7 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile, seaso
             <h2>{leagueSeason.complete ? 'Season complete,' : season?.id === 'thanksgiving' ? 'Gobble up some hits,' : 'Take the field,'}<br />{profile.name}!</h2>
             <p>{leagueSeason.complete ? 'Your final standings are ready!' : <>Next opponent: <strong>{matchup.opponent.name}</strong></>}</p>
             <button className="home-play-button" onClick={() => onNavigate(leagueSeason.complete ? 'standings' : 'game')}>
-              <span>{leagueSeason.complete ? 'FINAL STANDINGS' : 'PLAY BALL!'}<small className="home-game-length">{leagueSeason.complete ? '20-game season finished' : `${getGameInnings(profile)} ${getGameInnings(profile) === 1 ? 'inning' : 'innings'}`}</small></span>
+              <span>{leagueSeason.complete ? 'FINAL STANDINGS' : 'PLAY BALL!'}<small className="home-game-length">{leagueSeason.complete ? '20-game season finished' : `${getGameInnings(profile)} ${getGameInnings(profile) === 1 ? 'inning' : 'innings'} · ${getGameDifficulty(profile).label}`}</small></span>
               <span className="home-play-arrow">&#9654;</span>
             </button>
           </div>

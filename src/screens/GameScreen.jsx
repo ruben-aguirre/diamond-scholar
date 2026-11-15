@@ -18,6 +18,7 @@ import WinFireworks from './WinFireworks';
 import { drawNightAtmosphere, drawNightStadium } from '../game/nightStadium';
 import { getPitcherPose } from '../game/pitcherPose';
 import { getNextLeagueGame } from '../game/league';
+import { getGameDifficulty, swingTiming } from '../game/gameSettings';
 import { getStudyTokenProgress } from '../game/studyTokens';
 import StudyTokenStatus from './StudyTokenStatus';
 import scienceQuestions from '../data/questions/science-4th.json';
@@ -2286,7 +2287,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
     } else {
       pitch = generatePitch(teamAvg);
     }
-    const duration = pitchDurationMs(teamAvg, pitch.speedMul);
+    const duration = pitchDurationMs(teamAvg, pitch.speedMul, game.difficulty);
     pitchRef.current = { pitch, startTime: Date.now(), duration, resolved: false };
     hitBallRef.current = null;  // clear any leftover hit-ball animation from the previous pitch
     fielderChaseRef.current = null;  // and snap fielders back home
@@ -2323,10 +2324,9 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
     if (!p || p.resolved) return;
 
     const t = (Date.now() - p.startTime) / p.duration;
-    // Sweet spot centered at 0.92 (ball nearly at plate). Wider window so any
-    // swing within ~65% of pitch duration of perfect still has a real shot.
+    // Sweet spot stays at 0.92; harder levels narrow the timing window.
     const rawOffset = t - 0.92;
-    const timing = Math.min(1, Math.abs(rawOffset) / 0.65);
+    const timing = swingTiming(rawOffset, game.difficulty);
 
     batRef.current = { startTime: Date.now(), duration: 520 };  // 2× slower so the 8 frames read clearly
     p.resolved = true;
@@ -2453,7 +2453,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
       };
     });
     setTimeout(() => { setSwingResult(null); afterPlay(); }, 2200);
-  }, [game.phase, game.strikes, game.diamondBatUses, currentBatter, swingType, diamondBatEquipped, recordHit]);
+  }, [game.phase, game.strikes, game.diamondBatUses, game.difficulty, currentBatter, swingType, diamondBatEquipped, recordHit]);
 
   function resolveStrike(wasFireball) {
     setGame((g) => {
@@ -2570,7 +2570,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
       defense: true,
     };
     const duration = pitchDurationMs(6, prof.speedMul);  // fixed mid speed — it's YOUR arm
-    const result = calculateDefensePitchResult(pitchSel, target);
+    const result = calculateDefensePitchResult(pitchSel, target, game.difficulty);
     hitBallRef.current = null;
     fielderChaseRef.current = null;
     pitchRef.current = { pitch, startTime: Date.now(), duration, resolved: false, defResult: result };
@@ -2913,7 +2913,7 @@ export default function GameScreen({ profile, onGameEnd, onSaveAndExit, season, 
       <div className={`phase-banner ${defending ? 'pitching' : 'batting'}`}>
         {defending ? 'YOU’RE PITCHING — TAP THE ZONE TO AIM' : 'YOU’RE BATTING'}
       </div>
-      <div className="inning-progress">Inning {game.inning} of {game.totalInnings}</div>
+      <div className="inning-progress">Inning {game.inning} of {game.totalInnings} · {getGameDifficulty({ gameDifficulty: game.difficulty }).label}</div>
 
       {/* Field scene */}
       <div className="field-wrap">
