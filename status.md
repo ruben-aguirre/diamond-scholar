@@ -1,8 +1,16 @@
 # Diamond Scholar — Status
 
-**Current state:** All six agreed build passes are playable. The live game includes the 20-game league/calendar, readable Did You Know cards, blue player runners, and immediately saved science streak tokens in regular quizzes and bonus rounds. Existing progress and rewards are preserved. All 60 tests, lint, production build, and rendered-screen checks pass; the production bundle is verified.
+**Current state:** November's Thanksgiving theme is built and pushed: warm harvest colors, baseball-cap turkeys, pumpkins, leaves, and a free Gold Pack per profile each November. All 61 tests, lint, and production build pass; desktop and phone browser checks cover home, standings, calendar, and game launch. Final live verification is in progress.
 
-**Next move:** Refresh https://diamond-scholar.vercel.app, finish an inning, and answer five science questions correctly in a row. The fifth answer should show Token earned and an increased saved wallet balance immediately. Check bonus-round streaks too. Ruben and his son's visual playtest remains pending.
+**Next move:** Refresh https://diamond-scholar.vercel.app and play the Thanksgiving update. Ruben and his son's visual playtest remains the final check.
+
+## Thanksgiving theme — 2026-11-15
+
+• ✓ Done. Thanksgiving runs November 1–30 using the existing local-calendar check. October Halloween and December Christmas remain intact. Added original vector turkeys in baseball caps, uncarved harvest pumpkins, and leaves to home, standings, Games, and matchup intro; the holiday banner and warm palette carry across screens. The home stadium gets a golden tint and the greeting reads “Gobble up some hits.”
+
+• Reused the existing saved holiday gift system for one free Thanksgiving Gold Pack per profile per year. Added November boundary and independent yearly claim coverage. Existing players, standings, coins, tokens, and other holiday claims are preserved.
+
+• Browser checks passed at 390, 760, 980, and 1907 pixels wide. Fixed the Thanksgiving phone layout so the league record sits below Play Ball, the in-game wallet sits below the holiday banner, and the standings Play Ball button fits its card. No new dependencies or gameplay-rule changes. All 61 tests, lint, and production build pass. Full-inning playtest remains with Ruben and his son.
 
 ## Immediate science streak tokens — 2026-10-29
 

@@ -31,6 +31,8 @@
 [data-season='thanksgiving'] .menu-card::after { background: #cc7a30; }
 [data-season='thanksgiving'] .menu-icon-wrap { background: #fae8c9; }
 [data-season='thanksgiving'] .standings-card { border: 2px solid var(--holiday-accent); }
+[data-season='thanksgiving'] .league-matchup { border-color: var(--holiday-accent); }
+[data-season='thanksgiving'] .league-matchup .btn { width: auto; background: #f2b943; color: #493021; }
 /* Light holiday backgrounds need dark gameplay labels. */
 [data-season='thanksgiving'] .game-screen { color: var(--text); }
 [data-season='thanksgiving'] .swing-type-btn { background: #fae8c9; color: #493021; border-color: #a97c47; }
