@@ -1,5 +1,6 @@
 import { getLeagueSeason, getNextLeagueGame, getStandings, PLAYER_TEAM_ID } from '../game/league';
 import HalloweenDecorations from './HalloweenDecorations';
+import ThanksgivingDecorations from './ThanksgivingDecorations';
 
 export default function StandingsScreen({ profile, onBack, onPlay, onNextSeason, season }) {
   const standings = getStandings(profile);
@@ -14,6 +15,7 @@ export default function StandingsScreen({ profile, onBack, onPlay, onNextSeason,
       </header>
       <main className="standings-card">
         {season?.id === 'halloween' && <HalloweenDecorations />}
+        {season?.id === 'thanksgiving' && <ThanksgivingDecorations />}
         <div className="standings-intro">
           <span className="home-section-kicker">DIAMOND SCHOLAR LEAGUE</span>
           <h2>{leagueSeason.complete ? 'Final standings!' : '15 teams. 20 games. One climb to the top!'}</h2>
@@ -34,6 +36,7 @@ export default function StandingsScreen({ profile, onBack, onPlay, onNextSeason,
           )}
         </section>
         {season?.id === 'halloween' && <HalloweenDecorations garland />}
+        {season?.id === 'thanksgiving' && <ThanksgivingDecorations garland />}
         <table className="standings-table">
           <caption>Ranked by winning percentage, then wins, run difference, and team name.</caption>
           <thead><tr><th scope="col">#</th><th scope="col">Team</th><th scope="col">W</th><th scope="col">L</th><th scope="col">T</th><th scope="col">PCT</th></tr></thead>
@@ -49,6 +52,7 @@ export default function StandingsScreen({ profile, onBack, onPlay, onNextSeason,
           </tbody>
         </table>
         {season?.id === 'halloween' && <HalloweenDecorations garland />}
+        {season?.id === 'thanksgiving' && <ThanksgivingDecorations garland />}
         <p className="standings-help">W = wins · L = losses · T = ties · PCT = winning percentage.</p>
         <p className="standings-help">Your season lasts 20 finished games. Each game advances one league day. Every team plays at most once per day, and one computer team rests. Your team faces all 14 opponents before any rematches. Ties count as half a win.</p>
         <p className="standings-help">Your league starts at 0–0. Earlier games stay in your career record. Saving and leaving a game early does not change standings.</p>

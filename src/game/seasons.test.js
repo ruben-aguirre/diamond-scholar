@@ -7,10 +7,10 @@ const halloween = getSeason(new Date(2026, 9, 8));
 const christmas = getSeason(new Date(2026, 11, 25));
 const makePlayer = () => ({ id: 'gift-player', name: 'Gold Player', tier: 'gold' });
 
-test('Halloween runs October 1–31; Christmas runs December 1–31', () => {
+test('holidays cover October, November and December with local month boundaries', () => {
   for (const [month, day, expected] of [
     [8, 30, null], [9, 1, 'halloween'], [9, 31, 'halloween'],
-    [10, 1, null], [10, 30, null], [11, 1, 'christmas'], [11, 31, 'christmas'], [0, 1, null],
+    [10, 1, 'thanksgiving'], [10, 15, 'thanksgiving'], [10, 30, 'thanksgiving'], [11, 1, 'christmas'], [11, 31, 'christmas'], [0, 1, null],
   ]) {
     assert.equal(getSeason(new Date(2026, month, day))?.id ?? null, expected);
   }
@@ -58,4 +58,19 @@ test('a full team can open a saved reward without replacing anyone automatically
   const updated = { ...fullTeam, ...claimSeasonalPack(fullTeam, christmas, makePlayer) };
   assert.equal(updated.roster.length, 12);
   assert.equal(updated.seasonalPackReveal.player.id, 'gift-player');
+});
+
+
+test('Thanksgiving has its own yearly gift and preserves other holiday claims', () => {
+  const thanksgiving = getSeason(new Date(2026, 10, 15));
+  assert.equal(thanksgiving.name, 'Thanksgiving');
+  assert.equal(thanksgiving.emoji, '🦃');
+  const previous = { ...profile, seasonalPackClaims: [halloween.key] };
+  const saved = JSON.parse(JSON.stringify({ ...previous, ...claimSeasonalPack(previous, thanksgiving, makePlayer) }));
+  assert.deepEqual(saved.seasonalPackClaims, ['2026-halloween', '2026-thanksgiving']);
+  assert.equal(saved.seasonalPackReveal.player.id, 'gift-player');
+  saved.seasonalPackReveal = null;
+  assert.equal(canClaimSeasonalPack(saved, thanksgiving), false);
+  assert.equal(canClaimSeasonalPack(saved, christmas), true);
+  assert.equal(canClaimSeasonalPack(saved, getSeason(new Date(2027, 10, 1))), true);
 });

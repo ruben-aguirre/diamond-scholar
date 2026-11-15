@@ -1,4 +1,70 @@
 /* Calendar-driven decorations stay outside the playing field and controls. */
+:root[data-season='thanksgiving'] {
+  --bg: #fff4e3;
+  --card: #fffdf7;
+  --text: #493021;
+  --text-light: #795b43;
+  --shadow: 0 4px 16px #78401c1a;
+  --holiday-accent: #b75b25;
+}
+[data-season='thanksgiving'] .holiday-banner { background: #6e3425; color: #fff4df; }
+[data-season='thanksgiving'] .holiday-lights i { background: #f7b543; color: #f7b543; }
+[data-season='thanksgiving'] .holiday-lights i:nth-child(even) { background: #ea7441; color: #ea7441; }
+[data-season='thanksgiving'] .holiday-lights i:nth-child(3n) { background: #b3bb60; color: #b3bb60; }
+[data-season='thanksgiving'] .home-screen {
+  overflow-x: clip;
+  background: radial-gradient(ellipse at 8% 48%, #edaa4640, transparent 35%), radial-gradient(ellipse at 95% 30%, #bb522229, transparent 35%), var(--bg);
+}
+[data-season='thanksgiving'] .home-content { position: relative; }
+[data-season='thanksgiving'] .home-header { background-image: linear-gradient(100deg, #713524f5, #9e5426f5); }
+[data-season='thanksgiving'] .home-hero {
+  border-color: #e2a550;
+  background-image: linear-gradient(#f7b64a30, #a9592230), url('/field/stadium.png');
+  box-shadow: 0 14px 34px #71352433;
+}
+[data-season='thanksgiving'] .home-hero-shade { background: linear-gradient(90deg, #36251de8, #36251d80 55%, transparent); }
+[data-season='thanksgiving'] .home-record-card { background: #462e20ed; border-color: #dfb774; }
+[data-season='thanksgiving'] .home-record-label { color: #f5cf8c; }
+[data-season='thanksgiving'] :is(.home-section-heading h2, .menu-label) { color: #57341f; }
+[data-season='thanksgiving'] :is(.home-section-kicker, .menu-description) { color: #87502e; }
+[data-season='thanksgiving'] .menu-card { border: 1px solid #edd6b3; }
+[data-season='thanksgiving'] .menu-card::after { background: #cc7a30; }
+[data-season='thanksgiving'] .menu-icon-wrap { background: #fae8c9; }
+[data-season='thanksgiving'] .standings-card { border: 2px solid var(--holiday-accent); }
+/* Light holiday backgrounds need dark gameplay labels. */
+[data-season='thanksgiving'] .game-screen { color: var(--text); }
+[data-season='thanksgiving'] .swing-type-btn { background: #fae8c9; color: #493021; border-color: #a97c47; }
+[data-season='thanksgiving'] .swing-type-btn.active { border-color: #493021; }
+[data-season='thanksgiving'] .diamond-bat-bar p { color: #795b43; }
+[data-season='thanksgiving'] .batter-stat { background: #fae8c9; }
+[data-season='thanksgiving'] .game-coins { position: static; order: -1; align-self: flex-end; margin: 12px; background: #613c25; }
+.thanksgiving-yard, .thanksgiving-garland { pointer-events: none; user-select: none; }
+.harvest-piece { display: block; color: #d7992e; }
+.harvest-piece:nth-child(3n) { color: #bd5330; }
+.harvest-piece svg { display: block; width: 100%; height: auto; }
+.thanksgiving-garland { display: flex; align-items: center; justify-content: space-around; gap: 12px; padding: 0 12px 16px; }
+.thanksgiving-garland .harvest-piece { width: clamp(30px, 5vw, 55px); transform: rotate(-12deg); }
+.thanksgiving-garland .turkey { width: clamp(55px, 7vw, 80px); transform: none; }
+.thanksgiving-garland .harvest-piece:nth-child(even) { transform: rotate(12deg); }
+.thanksgiving-yard { position: absolute; inset: 0; }
+.thanksgiving-yard .harvest-piece { position: absolute; width: 120px; filter: drop-shadow(0 9px 8px #71352422); }
+.thanksgiving-yard .turkey { width: 160px; }
+.thanksgiving-yard .harvest-0 { left: -185px; top: 90px; transform: rotate(-8deg); }
+.thanksgiving-yard .harvest-1 { right: -175px; top: 90px; transform: rotate(12deg); }
+.thanksgiving-yard .harvest-2 { left: -160px; top: 330px; transform: rotate(-20deg); }
+.thanksgiving-yard .harvest-3 { right: -190px; top: 390px; transform: rotate(8deg); }
+.thanksgiving-yard .harvest-4 { left: -180px; top: 570px; }
+.thanksgiving-yard .harvest-5 { right: -160px; top: 660px; transform: rotate(24deg); }
+@media (max-width: 1450px) { .thanksgiving-yard { display: none; } }
+@media (max-width: 760px) {
+  [data-season='thanksgiving'] .home-hero-copy { padding-bottom: 24px; }
+  [data-season='thanksgiving'] .home-record-card { position: relative; inset: auto; margin: 0 16px 16px; }
+}
+@media (max-width: 480px) {
+  .thanksgiving-garland { gap: 6px; padding-inline: 0; }
+  .thanksgiving-garland .harvest-2, .thanksgiving-garland .harvest-4 { display: none; }
+}
+
 :root[data-season='halloween'] {
   --bg: #26262d;
   --card: #35353f;

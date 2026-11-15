@@ -3,6 +3,7 @@ import { getLeague, getNextLeagueGame } from '../game/league';
 import { startMatchupCountdown } from '../game/matchupCountdown';
 import GameScreen from './GameScreen';
 import HalloweenDecorations from './HalloweenDecorations';
+import ThanksgivingDecorations from './ThanksgivingDecorations';
 
 export default function GameIntro({ profile, season, onBack, onGameEnd, onSaveAndExit, onTokenReward }) {
   const [matchup] = useState(() => getNextLeagueGame(profile));
@@ -26,6 +27,7 @@ export default function GameIntro({ profile, season, onBack, onGameEnd, onSaveAn
     <div className="matchup-screen">
       <main className="matchup-card" aria-labelledby="matchup-title">
         {season?.id === 'halloween' && <HalloweenDecorations garland />}
+        {season?.id === 'thanksgiving' && <ThanksgivingDecorations garland />}
         <span className="matchup-kicker">GAME {matchup.day} OF {matchup.totalGames}</span>
         <h1 id="matchup-title">Today&apos;s matchup</h1>
         <div className="matchup-teams">

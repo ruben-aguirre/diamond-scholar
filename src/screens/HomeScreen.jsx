@@ -1,5 +1,6 @@
 import { canClaimSeasonalPack } from '../game/seasons';
 import HalloweenDecorations from './HalloweenDecorations';
+import ThanksgivingDecorations from './ThanksgivingDecorations';
 import NightStadium from './NightStadium';
 import { getGameInnings } from '../game/gameSettings';
 import { getLeague, getLeagueSeason, getNextLeagueGame } from '../game/league';
@@ -49,6 +50,7 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile, seaso
             <HalloweenDecorations garland />
           </>
         )}
+        {season?.id === 'thanksgiving' && <><ThanksgivingDecorations /><ThanksgivingDecorations garland /></>}
         {(canClaimSeasonalPack(profile, season) || profile.seasonalPackReveal) && (
           <section className="holiday-gift">
             <span className="holiday-gift-icon" aria-hidden="true">🎁</span>
@@ -64,7 +66,7 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile, seaso
           <div className="home-hero-shade" />
           <div className="home-hero-copy">
             <span className="home-hero-kicker">&#9918; {leagueSeason.complete ? 'SEASON COMPLETE' : `GAME ${matchup.day} OF ${matchup.totalGames}`}</span>
-            <h2>{leagueSeason.complete ? 'Season complete,' : 'Take the field,'}<br />{profile.name}!</h2>
+            <h2>{leagueSeason.complete ? 'Season complete,' : season?.id === 'thanksgiving' ? 'Gobble up some hits,' : 'Take the field,'}<br />{profile.name}!</h2>
             <p>{leagueSeason.complete ? 'Your final standings are ready!' : <>Next opponent: <strong>{matchup.opponent.name}</strong></>}</p>
             <button className="home-play-button" onClick={() => onNavigate(leagueSeason.complete ? 'standings' : 'game')}>
               <span>{leagueSeason.complete ? 'FINAL STANDINGS' : 'PLAY BALL!'}<small className="home-game-length">{leagueSeason.complete ? '20-game season finished' : `${getGameInnings(profile)} ${getGameInnings(profile) === 1 ? 'inning' : 'innings'}`}</small></span>
@@ -84,7 +86,7 @@ export default function HomeScreen({ profile, onNavigate, onSwitchProfile, seaso
             <span className="home-section-kicker">YOUR CLUBHOUSE</span>
             <h2>What do you want to do?</h2>
           </div>
-          <span className="home-section-ball" aria-hidden="true">{season?.id === 'halloween' ? '🎃' : '⚾'}</span>
+          <span className="home-section-ball" aria-hidden="true">{season?.id === 'thanksgiving' ? '🦃' : season?.id === 'halloween' ? '🎃' : '⚾'}</span>
         </div>
 
         <div className="menu-grid">

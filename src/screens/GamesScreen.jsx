@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { getLeagueSeason } from '../game/league';
 import { calendarDateKey, parseCalendarDate, getSeasonSchedule, calendarMonthGrid, shiftCalendarMonth } from '../game/leagueCalendar';
 import HalloweenDecorations from './HalloweenDecorations';
+import ThanksgivingDecorations from './ThanksgivingDecorations';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const STATUS_LABEL = { played: 'Played', next: 'Next up', scheduled: 'Coming up' };
@@ -48,6 +49,7 @@ export default function GamesScreen({ profile, season, onBack, onPlay, onStandin
       </header>
       <main className="games-card">
         {season?.id === 'halloween' && <HalloweenDecorations garland />}
+        {season?.id === 'thanksgiving' && <ThanksgivingDecorations garland />}
         <div className="games-heading">
           <div><span className="home-section-kicker">SEASON {progress.number} · 20 GAMES</span><h2>Your game calendar</h2><p>Pick a date to see who is playing.</p></div>
           <button className="btn btn-secondary" onClick={onStandings}>Team Standings</button>

@@ -7,7 +7,7 @@ export default function SeasonalFrame({ season, children }) {
     return () => { delete document.documentElement.dataset.season; };
   }, [season]);
 
-  const decorations = season?.id === 'halloween' ? '🎃 🍬 🎃 🍭 🎃' : '🎄 🎁 🎄 🎁 🎄';
+  const decorations = season?.id === 'halloween' ? '🎃 🍬 🎃 🍭 🎃' : season?.id === 'thanksgiving' ? '🍂 🌽 🦃 🌽 🍂' : '🎄 🎁 🎄 🎁 🎄';
   return (
     <div className="seasonal-app">
       {season && (
@@ -17,7 +17,7 @@ export default function SeasonalFrame({ season, children }) {
           </div>
           <span aria-hidden="true">{season.emoji}</span>
           <strong>{season.name} at the ballpark</strong>
-          <span aria-hidden="true">{season.id === 'halloween' ? '🍬' : '🎁'}</span>
+          <span aria-hidden="true">{season.id === 'halloween' ? '🍬' : season.id === 'thanksgiving' ? '🍁' : '🎁'}</span>
         </div>
       )}
       {children}

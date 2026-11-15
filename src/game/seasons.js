@@ -3,13 +3,13 @@ import { createPlayerFromPool } from '../data/players.js';
 // Use the player's local calendar. Each holiday returns every year.
 export function getSeason(date = new Date()) {
   const month = date.getMonth();
-  const id = month === 9 ? 'halloween' : month === 11 ? 'christmas' : null;
+  const id = month === 9 ? 'halloween' : month === 10 ? 'thanksgiving' : month === 11 ? 'christmas' : null;
   if (!id) return null;
   return {
     id,
     key: `${date.getFullYear()}-${id}`,
-    name: id === 'halloween' ? 'Halloween' : 'Christmas',
-    emoji: id === 'halloween' ? '🎃' : '🎄',
+    name: id === 'halloween' ? 'Halloween' : id === 'thanksgiving' ? 'Thanksgiving' : 'Christmas',
+    emoji: id === 'halloween' ? '🎃' : id === 'thanksgiving' ? '🦃' : '🎄',
   };
 }
 
